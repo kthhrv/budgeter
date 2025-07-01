@@ -1,0 +1,42 @@
+# /my_addon/config.yaml
+
+# Human-readable name of your addon
+name: "Budgeter"
+# The version of your addon. Bump this when you make changes.
+version: "1.0.0"
+# The unique slug/ID for your addon.
+slug: "budgeter"
+# A short description.
+description: "A budgeting app"
+# Your addon's documentation URL (optional)
+url: "https://github.com/kthhrv/budgeter"
+
+# --- Integration Settings ---
+# The architectures your addon supports. This list is a safe default.
+arch:
+  - aarch64
+  - amd64
+  - armv7
+  - i386
+# Tells HA not to use its default init system. Essential for our custom run.sh.
+init: false
+# Start the addon automatically when Home Assistant boots.
+boot: auto
+
+# --- Web Interface Settings ---
+# This enables the "Open Web UI" button and Ingress support.
+ingress: true
+# An icon for the side panel from Material Design Icons (https://materialdesignicons.com/)
+panel_icon: mdi:rocket-launch
+# This tells Ingress that the service inside your container is listening on port 80.
+# THIS IS A CRITICAL LINE.
+webui: "http://[HOST]:[PORT:80]"
+
+# --- User Configuration ---
+# Define options that the user can set in the HA UI.
+options:
+  secret_key: ""
+# Define the schema for those options.
+schema:
+  # Make the secret_key a required, non-empty string (but not a password type, so it's visible).
+  secret_key: "str"

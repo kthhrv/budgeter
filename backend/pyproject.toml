@@ -1,0 +1,12 @@
+[project]
+name = "budgeter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.2.3",
+    "django-cors-headers>=4.7.0",
+    "django-ninja>=1.4.3",
+    "gunicorn>=23.0.0",
+]
