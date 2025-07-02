@@ -25,12 +25,14 @@ boot: auto
 
 # --- Web Interface Settings ---
 # This enables the "Open Web UI" button and Ingress support.
-ingress: true
 # An icon for the side panel from Material Design Icons (https://materialdesignicons.com/)
 panel_icon: mdi:rocket-launch
 # This tells Ingress that the service inside your container is listening on port 80.
 # THIS IS A CRITICAL LINE.
 webui: "http://[HOST]:[PORT:80]"
+startup: services
+ports:
+  80/tcp: 80
 
 # --- User Configuration ---
 # Define options that the user can set in the HA UI.

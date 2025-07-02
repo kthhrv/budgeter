@@ -3,9 +3,10 @@
 ARG BUILD_FROM=homeassistant/amd64-base-python
 
 # STAGE 1: Build the React Frontend (Unchanged)
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
-COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/ .
+WORKDIR /app/frontend
 RUN npm ci
 COPY frontend/ ./
 RUN npm run build
@@ -33,7 +34,7 @@ WORKDIR /app
 
 # Copy and install Python packages using uv.
 # This is the step where uv provides the most value in an addon.
-COPY backend/pyproject.toml backend/uv.lock .
+COPY backend/pyproject.toml backend/uv.lock ./
 COPY --from=ghcr.io/astral-sh/uv:0.7.14 /uv /usr/local/bin/uv
 RUN uv sync --locked --no-install-project
 
