@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Edit2, PlusCircle, Save, XCircle, MoreVertical, Users, User, DollarSign, TrendingUp, TrendingDown, Wallet, Trash2, AlertTriangle, Home, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, PlusCircle, Save, XCircle, MoreVertical, Users, User, DollarSign, TrendingUp, TrendingDown, Wallet, Trash2, AlertTriangle, Home, ChevronDown, Search, X } from 'lucide-react';
 
 // --- Configuration ---
 const API_BASE_URL = 'https://budgeter.ddns.net/api';
@@ -105,6 +105,30 @@ const LoadingSpinner = () => (
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
     </div>
 );
+
+const SearchComponent = ({ searchTerm, onSearchChange, onClearSearch }) => {
+    return (
+        <div className="relative flex items-center bg-white rounded-lg shadow-md p-2">
+            <Search className="h-5 w-5 text-gray-400 ml-2" />
+            <input
+                type="text"
+                placeholder="Search items by name, description, or owner..."
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="flex-1 px-3 py-2 text-gray-700 bg-transparent border-none outline-none placeholder-gray-400"
+            />
+            {searchTerm && (
+                <button
+                    onClick={onClearSearch}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Clear search"
+                >
+                    <X className="h-4 w-4" />
+                </button>
+            )}
+        </div>
+    );
+};
 
 const MonthSelector = ({ currentDate, onDateChange, isLoading }) => {
     const changeMonth = (offset) => {
@@ -362,11 +386,21 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete }) => {
     );
 };
 
-const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType }) => {
+const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, searchTerm = '' }) => {
     const [collapsedGroups, setCollapsedGroups] = useState({});
 
     const processedItems = useMemo(() => {
-        const filtered = items.filter(i => i.item_type === itemType);
+        let filtered = items.filter(i => i.item_type === itemType);
+        
+        // Apply search filter if search term exists
+        if (searchTerm.trim()) {
+            const searchLower = searchTerm.toLowerCase();
+            filtered = filtered.filter(item => 
+                item.item_name.toLowerCase().includes(searchLower) ||
+                (item.description && item.description.toLowerCase().includes(searchLower)) ||
+                item.owner.toLowerCase().includes(searchLower)
+            );
+        }
 
         // For income, just return a flat, sorted list.
         if (itemType === 'income') {
@@ -389,24 +423,34 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
             if (ib !== -1) return 1;
             return a.localeCompare(b);
         });
-    }, [items, itemType]);
+    }, [items, itemType, searchTerm]);
 
     useEffect(() => {
         if (itemType === 'expense') {
             const initialState = {};
             processedItems.forEach(([owner]) => {
-                initialState[owner] = true;
+                // If there's a search term, expand groups that have matching items
+                // If no search term, keep groups collapsed by default
+                initialState[owner] = searchTerm.trim() ? false : true;
             });
             setCollapsedGroups(initialState);
         }
-    }, [items, itemType]); // Re-calculate when items change
+    }, [items, itemType, processedItems, searchTerm]); // Re-calculate when items or search term change
 
     const toggleGroup = (owner) => {
         setCollapsedGroups(prev => ({ ...prev, [owner]: !prev[owner] }));
     };
 
-    if (items.filter(i => i.item_type === itemType).length === 0) {
+    const allTypeItems = items.filter(i => i.item_type === itemType);
+    const hasItemsOfType = allTypeItems.length > 0;
+    const hasFilteredResults = itemType === 'income' ? processedItems.length > 0 : processedItems.some(([, items]) => items.length > 0);
+
+    if (!hasItemsOfType) {
         return <div className="bg-white p-6 rounded-lg shadow-md mb-6"><h3 className="text-xl font-bold mb-2 text-gray-700">{title}</h3><p className="text-gray-500">No {itemType} items for this month.</p></div>;
+    }
+
+    if (!hasFilteredResults && searchTerm.trim()) {
+        return <div className="bg-white p-6 rounded-lg shadow-md mb-6"><h3 className="text-xl font-bold mb-2 text-gray-700">{title}</h3><p className="text-gray-500">No {itemType} items match your search.</p></div>;
     }
 
     return (
@@ -591,6 +635,7 @@ export default function App() {
     const [toast, setToast] = useState({ message: '', type: '', key: 0 });
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type, key: new Date().getTime() });
@@ -600,7 +645,7 @@ export default function App() {
     const fetchData = useCallback(async (date) => {
         setIsLoading(true);
         try {
-            const [monthData, items, categories, months] = await Promise.all([
+            const [, items, categories, months] = await Promise.all([
                 apiService.createOrGetMonth(date),
                 apiService.getBudgetItemsForMonth(formatDate(date, 'YYYY-MM')),
                 apiService.getAllBudgetItemCategories(),
@@ -720,6 +765,14 @@ export default function App() {
         }
     };
 
+    const handleSearchChange = (newSearchTerm) => {
+        setSearchTerm(newSearchTerm);
+    };
+
+    const handleClearSearch = () => {
+        setSearchTerm('');
+    };
+
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
             <header className="bg-indigo-600 text-white p-4 shadow-lg">
@@ -727,16 +780,23 @@ export default function App() {
             </header>
             <main className="container mx-auto p-4 max-w-5xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                    <MonthSelector currentDate={currentDate} onDateChange={handleDateChange} isLoading={isLoading} />
-                    <div className="flex md:justify-end">
-                        <button 
-                            onClick={handleOpenNewCategoryModal} 
-                            className="w-full h-full flex items-center justify-center space-x-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition-colors duration-300"
-                        >
-                            <PlusCircle /><span>Add New Item</span>
-                        </button>
+                <div className="space-y-4 mb-6">
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <MonthSelector currentDate={currentDate} onDateChange={handleDateChange} isLoading={isLoading} />
+                        <div className="flex md:justify-end">
+                            <button 
+                                onClick={handleOpenNewCategoryModal} 
+                                className="w-full h-full flex items-center justify-center space-x-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition-colors duration-300"
+                            >
+                                <PlusCircle /><span>Add New Item</span>
+                            </button>
+                        </div>
                     </div>
+                    <SearchComponent 
+                        searchTerm={searchTerm} 
+                        onSearchChange={handleSearchChange} 
+                        onClearSearch={handleClearSearch} 
+                    />
                 </div>
                 {isLoading && budgetItems.length === 0 ? (
                     <LoadingSpinner />
@@ -744,8 +804,8 @@ export default function App() {
                     <>
                         <OwnerTotals items={processedBudgetItems} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                           <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal}/>
-                           <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal}/>
+                           <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm}/>
+                           <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm}/>
                         </div>
                     </>
                 )}
