@@ -429,11 +429,13 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
         if (itemType === 'expense') {
             const initialState = {};
             processedItems.forEach(([owner]) => {
-                initialState[owner] = true;
+                // If there's a search term, expand groups that have matching items
+                // If no search term, keep groups collapsed by default
+                initialState[owner] = searchTerm.trim() ? false : true;
             });
             setCollapsedGroups(initialState);
         }
-    }, [items, itemType]); // Re-calculate when items change
+    }, [items, itemType, processedItems, searchTerm]); // Re-calculate when items or search term change
 
     const toggleGroup = (owner) => {
         setCollapsedGroups(prev => ({ ...prev, [owner]: !prev[owner] }));
