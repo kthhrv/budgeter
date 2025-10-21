@@ -399,7 +399,7 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
             });
             setCollapsedGroups(initialState);
         }
-    }, [items, itemType]); // Re-calculate when items change
+    }, [processedItems, itemType]); // Re-calculate when items change
 
     const toggleGroup = (owner) => {
         setCollapsedGroups(prev => ({ ...prev, [owner]: !prev[owner] }));
@@ -600,7 +600,7 @@ export default function App() {
     const fetchData = useCallback(async (date) => {
         setIsLoading(true);
         try {
-            const [monthData, items, categories, months] = await Promise.all([
+            const [, items, categories, months] = await Promise.all([
                 apiService.createOrGetMonth(date),
                 apiService.getBudgetItemsForMonth(formatDate(date, 'YYYY-MM')),
                 apiService.getAllBudgetItemCategories(),
