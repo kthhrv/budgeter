@@ -263,7 +263,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     );
 };
 
-const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete }) => {
+const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, isRecentlyEdited }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [value, setValue] = useState(item.effective_value);
@@ -303,7 +303,7 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete }) => {
                 title="Delete Item"
                 message={`Are you sure you want to delete '${item.item_name}'? This action cannot be undone.`}
             />
-            <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow mb-3">
+            <div className={`bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow mb-3 ${isRecentlyEdited ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}>
                 <div className="flex flex-wrap items-center justify-between">
                     <div className="w-full sm:w-auto flex-grow mb-2 sm:mb-0">
                         <div className="flex items-center">
@@ -362,8 +362,7 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete }) => {
     );
 };
 
-const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType }) => {
-    const [collapsedGroups, setCollapsedGroups] = useState({});
+const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, collapsedGroups, setCollapsedGroups, editingItemId }) => {
 
     const processedItems = useMemo(() => {
         const filtered = items.filter(i => i.item_type === itemType);
@@ -391,15 +390,20 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
         });
     }, [items, itemType]);
 
+    // Initialize collapsed groups for new owners if not already set
     useEffect(() => {
-        if (itemType === 'expense') {
-            const initialState = {};
-            processedItems.forEach(([owner]) => {
-                initialState[owner] = true;
+        if (itemType === 'expense' && processedItems.length > 0) {
+            setCollapsedGroups(prevState => {
+                const newState = { ...prevState };
+                processedItems.forEach(([owner]) => {
+                    if (!(owner in newState)) {
+                        newState[owner] = true; // Default to collapsed
+                    }
+                });
+                return newState;
             });
-            setCollapsedGroups(initialState);
         }
-    }, [processedItems, itemType]); // Re-calculate when items change
+    }, [processedItems, itemType, setCollapsedGroups]);
 
     const toggleGroup = (owner) => {
         setCollapsedGroups(prev => ({ ...prev, [owner]: !prev[owner] }));
@@ -427,14 +431,14 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
                                 </button>
                                 {!isCollapsed && (
                                     <div className="pl-4 pt-2 mt-2 border-l-2 border-indigo-200">
-                                        {ownerItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory}/>)}
+                                        {ownerItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} isRecentlyEdited={item.budget_item_id === editingItemId}/>)}
                                     </div>
                                 )}
                             </div>
                         )
                     })
                 ) : (
-                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory}/>)
+                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} isRecentlyEdited={item.budget_item_id === editingItemId}/>)
                 )}
             </div>
         </div>
@@ -591,6 +595,9 @@ export default function App() {
     const [toast, setToast] = useState({ message: '', type: '', key: 0 });
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
+    const [incomeCollapsedGroups, setIncomeCollapsedGroups] = useState({});
+    const [expenseCollapsedGroups, setExpenseCollapsedGroups] = useState({});
+    const [editingItemId, setEditingItemId] = useState(null);
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type, key: new Date().getTime() });
@@ -664,12 +671,34 @@ export default function App() {
     const handleUpdateItemValue = async (budgetItemId, payload) => {
         try {
             if(String(budgetItemId).includes('-repay-income')) return;
+            
+            // Store current scroll position and edited item
+            const scrollY = window.scrollY;
+            setEditingItemId(budgetItemId);
+            
+            // Find the item being edited to ensure its group stays expanded
+            const itemToEdit = processedBudgetItems.find(item => item.budget_item_id === budgetItemId);
+            if (itemToEdit && itemToEdit.item_type === 'expense') {
+                setExpenseCollapsedGroups(prev => ({
+                    ...prev,
+                    [itemToEdit.owner]: false  // Ensure the group is expanded
+                }));
+            }
+            
             await apiService.updateBudgetItemValue(formatDate(currentDate, 'YYYY-MM'), budgetItemId, payload);
             showToast('Item value updated successfully!');
-            fetchData(currentDate);
+            
+            await fetchData(currentDate);
+            
+            // Restore scroll position and focus on edited item after a brief delay for DOM updates
+            setTimeout(() => {
+                window.scrollTo(0, scrollY);
+                setEditingItemId(null);
+            }, 100);
         } catch (error) {
             console.error(error);
             showToast(error.message, 'error');
+            setEditingItemId(null);
         }
     };
 
@@ -744,8 +773,8 @@ export default function App() {
                     <>
                         <OwnerTotals items={processedBudgetItems} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                           <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal}/>
-                           <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal}/>
+                           <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} collapsedGroups={incomeCollapsedGroups} setCollapsedGroups={setIncomeCollapsedGroups} editingItemId={editingItemId}/>
+                           <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} collapsedGroups={expenseCollapsedGroups} setCollapsedGroups={setExpenseCollapsedGroups} editingItemId={editingItemId}/>
                         </div>
                     </>
                 )}
