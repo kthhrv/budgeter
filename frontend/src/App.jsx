@@ -17,6 +17,13 @@ const formatDate = (date, format = 'YYYY-MM') => {
     return date.toISOString().split('T')[0];
 };
 
+const isMonthInPast = (date) => {
+    const currentDate = new Date();
+    const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const targetMonthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+    return targetMonthStart < currentMonthStart;
+};
+
 // --- API Service ---
 const apiService = {
     async createOrGetMonth(date) {
@@ -287,7 +294,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     );
 };
 
-const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete }) => {
+const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, isEditingDisabled = false }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [value, setValue] = useState(item.effective_value);
@@ -368,14 +375,19 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete }) => {
                     </div>
                 ) : (
                     <div className="mt-2 flex items-center justify-between">
-                        <div onClick={() => !isSynthetic && setIsEditing(true)} className={`text-xl font-semibold p-2 rounded-md ${item.item_type === 'income' ? 'text-green-600' : 'text-red-600'} ${!isSynthetic && 'cursor-pointer hover:bg-gray-100'}`}>
+                        <div onClick={() => !isSynthetic && !isEditingDisabled && setIsEditing(true)} className={`text-xl font-semibold p-2 rounded-md ${item.item_type === 'income' ? 'text-green-600' : 'text-red-600'} ${!isSynthetic && !isEditingDisabled && 'cursor-pointer hover:bg-gray-100'} ${isEditingDisabled && 'opacity-75'}`}>
                             £{(parseFloat(item.effective_value) || 0).toFixed(2)}
                         </div>
-                        {!isSynthetic && (
+                        {!isSynthetic && !isEditingDisabled && (
                             <div className="flex items-center">
                                 <button onClick={() => setIsEditing(true)} className="p-2 text-gray-500 hover:text-indigo-600"><Edit2 className="h-5 w-5"/></button>
                                 <button onClick={() => onEditCategory(item.budget_item_id)} className="p-2 text-gray-500 hover:text-indigo-600"><MoreVertical className="h-5 w-5"/></button>
                                 <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-gray-500 hover:text-red-600"><Trash2 className="h-5 w-5"/></button>
+                            </div>
+                        )}
+                        {!isSynthetic && isEditingDisabled && (
+                            <div className="flex items-center">
+                                <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded">Past month - editing locked</span>
                             </div>
                         )}
                     </div>
@@ -386,7 +398,7 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete }) => {
     );
 };
 
-const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, searchTerm = '' }) => {
+const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, searchTerm = '', isEditingDisabled = false }) => {
     const [collapsedGroups, setCollapsedGroups] = useState({});
 
     const processedItems = useMemo(() => {
@@ -471,14 +483,14 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
                                 </button>
                                 {!isCollapsed && (
                                     <div className="pl-4 pt-2 mt-2 border-l-2 border-indigo-200">
-                                        {ownerItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory}/>)}
+                                        {ownerItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} isEditingDisabled={isEditingDisabled}/>)}
                                     </div>
                                 )}
                             </div>
                         )
                     })
                 ) : (
-                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory}/>)
+                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} isEditingDisabled={isEditingDisabled}/>)
                 )}
             </div>
         </div>
@@ -637,6 +649,8 @@ export default function App() {
     const [editingCategory, setEditingCategory] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const isEditingDisabled = useMemo(() => isMonthInPast(currentDate), [currentDate]);
+
     const showToast = (message, type = 'success') => {
         setToast({ message, type, key: new Date().getTime() });
         setTimeout(() => setToast({ ...toast, message: '' }), 3000);
@@ -786,9 +800,14 @@ export default function App() {
                         <div className="flex md:justify-end">
                             <button 
                                 onClick={handleOpenNewCategoryModal} 
-                                className="w-full h-full flex items-center justify-center space-x-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition-colors duration-300"
+                                disabled={isEditingDisabled}
+                                className={`w-full h-full flex items-center justify-center space-x-2 font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 ${
+                                    isEditingDisabled 
+                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                }`}
                             >
-                                <PlusCircle /><span>Add New Item</span>
+                                <PlusCircle /><span>{isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}</span>
                             </button>
                         </div>
                     </div>
@@ -804,8 +823,8 @@ export default function App() {
                     <>
                         <OwnerTotals items={processedBudgetItems} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                           <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm}/>
-                           <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm}/>
+                           <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} isEditingDisabled={isEditingDisabled}/>
+                           <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} isEditingDisabled={isEditingDisabled}/>
                         </div>
                     </>
                 )}
@@ -814,4 +833,3 @@ export default function App() {
         </div>
     );
 }
-
