@@ -147,10 +147,18 @@ def list_budget_items_for_month(request, month_id: str):
             ))
     return budget_items_data
 
-@api.put("/months/{month_id}/items/{budget_item_id}/value/", response=BudgetItemVersionSchema)
+@api.put("/months/{month_id}/items/{budget_item_id}/value/", response={200: BudgetItemVersionSchema, 403: dict})
 def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid.UUID, payload: BudgetItemVersionInputSchema):
     month = get_object_or_404(Month, month_id=month_id)
     budget_item = get_object_or_404(BudgetItem, budget_item_id=budget_item_id)
+    
+    # Check if the month is in the past (before current month)
+    current_date = datetime.date.today()
+    current_month_start = datetime.date(current_date.year, current_date.month, 1)
+    
+    if month.start_date < current_month_start:
+        return 403, {"detail": "Cannot edit budget items for previous months"}
+    
     with transaction.atomic():
         budget_item_version, created = BudgetItemVersion.objects.update_or_create(
             budget_item=budget_item, month=month,
@@ -169,10 +177,17 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         notes=budget_item_version.notes, is_one_off=budget_item_version.is_one_off
     )
 
-@api.delete("/months/{month_id}/items/{budget_item_id}/", response={204: None})
+@api.delete("/months/{month_id}/items/{budget_item_id}/", response={204: None, 403: dict})
 def delete_budget_item_from_month(request, month_id: str, budget_item_id: uuid.UUID):
     current_month = get_object_or_404(Month, month_id=month_id)
     budget_item = get_object_or_404(BudgetItem, budget_item_id=budget_item_id)
+    
+    # Check if the month is in the past (before current month)
+    current_date = datetime.date.today()
+    current_month_start = datetime.date(current_date.year, current_date.month, 1)
+    
+    if current_month.start_date < current_month_start:
+        return 403, {"detail": "Cannot delete budget items for previous months"}
 
     # Calculate the previous month's date and ID
     prev_month_date = current_month.start_date - datetime.timedelta(days=1)
