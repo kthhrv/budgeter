@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Edit2, PlusCircle, Save, XCircle, MoreVertical, Users, User, DollarSign, TrendingUp, TrendingDown, Wallet, Trash2, AlertTriangle, Home, ChevronDown, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, PlusCircle, Save, XCircle, MoreVertical, Users, User, DollarSign, TrendingUp, TrendingDown, Wallet, Trash2, AlertTriangle, Home, ChevronDown, Search, X, Download } from 'lucide-react';
 
 // --- Configuration ---
 const API_BASE_URL = `${window.location.origin}/api`;
@@ -779,6 +779,30 @@ export default function App() {
         }
     };
 
+    const handleDownloadSpreadsheet = () => {
+        const monthId = formatDate(currentDate, 'YYYY-MM');
+        const headers = ['Name', 'Description', 'Owner', 'Type', 'Value', 'Notes'];
+        const rows = processedBudgetItems.map(item => [
+            item.item_name,
+            item.description,
+            item.owner,
+            item.item_type,
+            item.effective_value,
+            item.notes
+        ].join(','));
+
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `budget-${monthId}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleSearchChange = (newSearchTerm) => {
         setSearchTerm(newSearchTerm);
     };
@@ -808,6 +832,12 @@ export default function App() {
                                 }`}
                             >
                                 <PlusCircle /><span>{isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}</span>
+                            </button>
+                            <button 
+                                onClick={handleDownloadSpreadsheet} 
+                                className={`w-full h-full flex items-center justify-center space-x-2 font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 ml-2 bg-green-600 text-white hover:bg-green-700`}
+                            >
+                                <Download /><span>Download</span>
                             </button>
                         </div>
                     </div>
