@@ -630,6 +630,10 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
 
 // --- Main App Component ---
 const getInitialDate = () => {
+    // If running as a standalone app, always default to the current date
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        return new Date();
+    }
     const hash = window.location.hash;
     const match = hash.match(/^#(\d{4}-\d{2})$/);
     if (match && match[1]) {
