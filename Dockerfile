@@ -8,7 +8,6 @@ WORKDIR /app
 COPY frontend/ .
 WORKDIR /app/frontend
 RUN npm ci
-COPY frontend/ ./
 RUN npm run build
 
 # STAGE 2: Build the Final Production Image
