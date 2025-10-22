@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Edit2, PlusCircle, Save, XCircle, MoreVertical, Users, User, DollarSign, TrendingUp, TrendingDown, Wallet, Trash2, AlertTriangle, Home, ChevronDown, Search, X } from 'lucide-react';
 
 // --- Configuration ---
-const API_BASE_URL = 'https://budgeter.ddns.net/api';
+const API_BASE_URL = `${window.location.origin}/api`;
 
 // --- Helper Functions ---
 const formatDate = (date, format = 'YYYY-MM') => {
