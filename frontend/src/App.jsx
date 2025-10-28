@@ -392,7 +392,7 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, isEditingDisa
                         )}
                     </div>
                 )}
-                {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-500 mt-1">Calculated weekly on day {item.weekly_payment_day}</p>}
+                {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-500 mt-1">Calculated weekly on day {item.weekly_payment_day} (before the 28th of the month)</p>}
             </div>
         </>
     );
@@ -582,6 +582,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
                             <div>
                                 <label htmlFor="weekly_payment_day" className="block text-sm font-medium text-gray-700">Payment Day</label>
                                 <select name="weekly_payment_day" value={formData.weekly_payment_day} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required><option value="">Select a day...</option>{Object.entries(DAY_CHOICES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+                                <p className="text-xs text-gray-500 mt-1">Weekly items are only calculated for days before the 28th of the month.</p>
                             </div>
                         )}
                     </div>
