@@ -2,6 +2,7 @@
 
 from django.test import TestCase, Client
 from django.urls import reverse # Useful for complex URLs, though not strictly necessary for ninja
+from unittest.mock import patch
 import datetime
 import json
 import uuid
@@ -9,6 +10,12 @@ import uuid
 # Import your models and the API instance
 from .models import Month, BudgetItem, BudgetItemVersion
 from .api import api # Assuming api.py is in the same app directory
+
+
+class FakeDate(datetime.date):
+    @classmethod
+    def today(cls):
+        return cls(2025, 10, 15)
 
 
 class BudgetAPITestCase(TestCase):
@@ -21,6 +28,12 @@ class BudgetAPITestCase(TestCase):
         Set up initial data for tests, including months and budget items.
         """
         self.client = Client() # Initialize a Django test client
+
+        # Patch datetime.date in budget.api to freeze time at 2025-10-15
+        # This ensures that "2025-10" is considered the current month for these tests
+        self.date_patcher = patch('budget.api.datetime.date', FakeDate)
+        self.date_patcher.start()
+        self.addCleanup(self.date_patcher.stop)
 
         # Create some Month instances (using current and future months to allow editing)
         self.month_jan = Month.objects.create(
