@@ -84,7 +84,7 @@ def calculate_weekly_occurrences(year, month_num, day_of_week):
     cal = calendar.Calendar()
     for week in cal.monthdays2calendar(year, month_num):
         for day, weekday_num in week:
-            if day != 0 and day < 28 and weekday_num + 1 == day_of_week:
+            if day != 0 and weekday_num + 1 == day_of_week:
                 count += 1
     return count
 
