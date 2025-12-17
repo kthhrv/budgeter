@@ -137,11 +137,11 @@ const SearchComponent = ({ searchTerm, onSearchChange, onClearSearch }) => {
     );
 };
 
-const MonthSelector = ({ currentDate, onDateChange, isLoading }) => {
+const MonthSelector = ({ currentDate, isLoading }) => {
     const changeMonth = (offset) => {
         const newDate = new Date(currentDate);
         newDate.setMonth(currentDate.getMonth() + offset);
-        onDateChange(newDate);
+        window.location.hash = formatDate(newDate, 'YYYY-MM');
     };
 
     return (
@@ -705,19 +705,28 @@ export default function App() {
     }, [budgetItems]);
     
     useEffect(() => {
-        fetchData(currentDate);
-        const monthId = formatDate(currentDate, 'YYYY-MM');
-        const newHash = `#${monthId}`;
-        if (window.location.hash !== newHash) {
-            window.location.hash = newHash;
-        }
-    }, [currentDate, fetchData]);
+        // This effect syncs the date state with the URL hash
+        const syncDateFromHash = () => {
+            const newDate = getInitialDate();
+            setCurrentDate(current => {
+                // Only update state if the date is actually different
+                if (!current || current.getTime() !== newDate.getTime()) {
+                    return newDate;
+                }
+                return current;
+            });
+        };
+
+        window.addEventListener('hashchange', syncDateFromHash);
+        syncDateFromHash(); // Sync on initial load
+
+        return () => window.removeEventListener('hashchange', syncDateFromHash);
+    }, []); // Empty dependency array ensures this runs only once to set up the listener
 
     useEffect(() => {
-        const handleHashChange = () => setCurrentDate(getInitialDate());
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
+        // This effect fetches data whenever the date changes
+        fetchData(currentDate);
+    }, [currentDate, fetchData]);
 
     const handleDateChange = (newDate) => setCurrentDate(newDate);
 
@@ -797,7 +806,7 @@ export default function App() {
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
                 <div className="space-y-4 mb-6">
                     <div className="grid md:grid-cols-2 gap-4">
-                        <MonthSelector currentDate={currentDate} onDateChange={handleDateChange} isLoading={isLoading} />
+                        <MonthSelector currentDate={currentDate} isLoading={isLoading} />
                         <div className="flex md:justify-end">
                             <button 
                                 onClick={handleOpenNewCategoryModal} 
