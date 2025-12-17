@@ -72,6 +72,7 @@ class BudgetItemVersionSchema(Schema):
     effective_from_month_name: str
     notes: Optional[str] = None
     is_one_off: bool
+    occurrences: Optional[int] = None
 
 class BudgetItemVersionInputSchema(Schema):
     value: float
@@ -134,6 +135,7 @@ def list_budget_items_for_month(request, month_id: str):
 
         if effective_version:
             calculated_value = float(effective_version.value)
+            occurrences = None
             if budget_item.calculation_type == 'weekly_count' and budget_item.weekly_payment_day:
                 occurrences = calculate_weekly_occurrences(month_obj.start_date.year, month_obj.start_date.month, budget_item.weekly_payment_day)
                 calculated_value = float(effective_version.value) * occurrences
@@ -143,7 +145,8 @@ def list_budget_items_for_month(request, month_id: str):
                 description=budget_item.description, owner=budget_item.owner, bills_pot=budget_item.bills_pot,
                 calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
                 effective_value=calculated_value, effective_from_month_name=effective_version.effective_from_month.month_name,
-                notes=effective_version.notes, is_one_off=effective_version.is_one_off
+                notes=effective_version.notes, is_one_off=effective_version.is_one_off,
+                occurrences=occurrences
             ))
     return budget_items_data
 
@@ -166,6 +169,7 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         )
     budget_item.refresh_from_db()
     calculated_value = float(budget_item_version.value)
+    occurrences = None
     if budget_item.calculation_type == 'weekly_count' and budget_item.weekly_payment_day:
         occurrences = calculate_weekly_occurrences(month.start_date.year, month.start_date.month, budget_item.weekly_payment_day)
         calculated_value = float(budget_item_version.value) * occurrences
@@ -174,7 +178,8 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         description=budget_item.description, owner=budget_item.owner, bills_pot=budget_item.bills_pot,
         calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
         effective_value=calculated_value, effective_from_month_name=budget_item_version.effective_from_month.month_name,
-        notes=budget_item_version.notes, is_one_off=budget_item_version.is_one_off
+        notes=budget_item_version.notes, is_one_off=budget_item_version.is_one_off,
+        occurrences=occurrences
     )
 
 @api.delete("/months/{month_id}/items/{budget_item_id}/", response={204: None, 403: dict})

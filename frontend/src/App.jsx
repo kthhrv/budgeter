@@ -392,7 +392,7 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, isEditingDisa
                         )}
                     </div>
                 )}
-                {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-500 mt-1">Calculated weekly on day {item.weekly_payment_day}</p>}
+                {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-500 mt-1">Calculated weekly on day {item.weekly_payment_day}{item.occurrences !== undefined && item.occurrences !== null ? ` (${item.occurrences} occurrences)` : ''}</p>}
             </div>
         </>
     );
