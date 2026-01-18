@@ -16,6 +16,10 @@ export default defineConfig({
         short_name: 'Budgeter',
         description: 'A simple budgeting app.',
         theme_color: '#ffffff',
+        start_url: '/',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
         icons: [
           {
             src: 'vite.svg',
