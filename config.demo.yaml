@@ -1,0 +1,37 @@
+# /my_addon/config.yaml (Demo Version)
+
+# Change the name to distinguish it in the HA UI
+name: "Budgeter (Demo)"
+# The version of your addon.
+version: "1.0.0-demo"
+# The unique slug/ID MUST be different for parallel installation
+slug: "budgeter_demo"
+description: "A budgeting app (Demo Instance)"
+url: "https://github.com/kthhrv/budgeter"
+
+arch:
+  - aarch64
+  - amd64
+  - armv7
+  - i386
+init: false
+boot: auto
+
+panel_icon: mdi:rocket-launch
+# Ingress will handle the routing, so this can stay port 80
+webui: "http://[HOST]:[PORT:80]"
+startup: services
+
+# If you want to access it via a specific port on your network (not just via Ingress)
+# ensure this doesn't conflict with your main Budgeter port.
+ports:
+  80/tcp: 8081
+
+options:
+  secret_key: ""
+  google_client_id: ""
+  google_client_secret: ""
+schema:
+  secret_key: "str"
+  google_client_id: "str?"
+  google_client_secret: "str?"

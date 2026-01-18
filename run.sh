@@ -32,12 +32,19 @@ bashio::log.info "Configuration loaded."
 cd /app
 
 # Apply database migrations to ensure the database schema is up to date.
-# The '--no-input' flag prevents it from asking for user confirmation.
 bashio::log.info "Running Django database migrations..."
 ./manage.py migrate --no-input
 
-# Collect all static files (e.g., for the Django Admin) into a single directory.
-# Nginx is configured to serve files from this directory at the /static/ URL.
+# Setup OAuth (Google SocialApp/Site)
+export GOOGLE_CLIENT_ID=$(bashio::config 'google_client_id')
+export GOOGLE_CLIENT_SECRET=$(bashio::config 'google_client_secret')
+# Try to determine domain for Site ID
+export ADDON_DOMAIN=$(hostname)
+
+bashio::log.info "Initializing OAuth configuration..."
+./manage.py setup_oauth
+
+# Collect all static files
 bashio::log.info "Collecting Django static files..."
 ./manage.py collectstatic --no-input
 

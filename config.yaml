@@ -38,7 +38,11 @@ ports:
 # Define options that the user can set in the HA UI.
 options:
   secret_key: ""
+  google_client_id: ""
+  google_client_secret: ""
 # Define the schema for those options.
 schema:
   # Make the secret_key a required, non-empty string (but not a password type, so it's visible).
   secret_key: "str"
+  google_client_id: "str?"
+  google_client_secret: "str?"
