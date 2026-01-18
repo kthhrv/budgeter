@@ -11,3 +11,9 @@ wheels/
 
 # sqlite
 db.sqlite3
+
+# Logs
+*.log
+
+# System files
+.DS_Store
