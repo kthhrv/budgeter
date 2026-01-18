@@ -730,9 +730,11 @@ const App = () => {
     }, []); // Empty dependency array ensures this runs only once to set up the listener
 
     useEffect(() => {
-        // This effect fetches data whenever the date changes
-        fetchData(currentDate);
-    }, [currentDate, fetchData]);
+        // Only fetch data if we are NOT currently checking auth and we HAVE a valid user
+        if (!isAuthLoading && user) {
+            fetchData(currentDate);
+        }
+    }, [currentDate, fetchData, isAuthLoading, user]);
 
     const handleDateChange = (newDate) => setCurrentDate(newDate);
 
