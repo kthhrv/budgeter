@@ -36,8 +36,8 @@ bashio::log.info "Running Django database migrations..."
 ./manage.py migrate --no-input
 
 # Setup OAuth (Google SocialApp/Site)
-export GOOGLE_CLIENT_ID=$(bashio::config 'google_client_id')
-export GOOGLE_CLIENT_SECRET=$(bashio::config 'google_client_secret')
+export GOOGLE_CLIENT_ID=$(bashio::config 'google_client_id' '')
+export GOOGLE_CLIENT_SECRET=$(bashio::config 'google_client_secret' '')
 # Try to determine domain for Site ID
 export ADDON_DOMAIN=$(hostname)
 

@@ -20,9 +20,9 @@ class Command(BaseCommand):
         client_id = os.environ.get('GOOGLE_CLIENT_ID')
         client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
 
-        if not client_id or not client_secret:
-            self.stdout.write(self.style.ERROR('FATAL: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing or empty!'))
-            self.stdout.write(f'Environment check: ID length={len(client_id) if client_id else 0}, Secret length={len(client_secret) if client_secret else 0}')
+        if not client_id or not client_secret or client_id == 'null' or client_secret == 'null':
+            self.stdout.write(self.style.ERROR('FATAL: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing, empty, or "null"!'))
+            self.stdout.write(f'Environment check: ID="{client_id}", Secret length={len(client_secret) if client_secret and client_secret != "null" else 0}')
             return
 
         self.stdout.write(f'Updating SocialApp "google" with Client ID: {client_id[:10]}...')
