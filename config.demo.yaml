@@ -3,7 +3,7 @@
 # Change the name to distinguish it in the HA UI
 name: "Budgeter (Demo)"
 # The version of your addon.
-version: "1.0.0-demo"
+version: "1.1.0-demo"
 # The unique slug/ID MUST be different for parallel installation
 slug: "budgeter_demo"
 description: "A budgeting app (Demo Instance)"
@@ -34,4 +34,4 @@ options:
 schema:
   secret_key: "str"
   google_client_id: "str?"
-  google_client_secret: "str?"
+  google_client_secret: "password?"
