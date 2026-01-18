@@ -22,8 +22,11 @@ class Command(BaseCommand):
         client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
 
         if not client_id or not client_secret:
-            self.stdout.write(self.style.WARNING('GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set. Skipping SocialApp configuration.'))
+            self.stdout.write(self.style.ERROR('GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing or empty! Skipping SocialApp setup.'))
+            self.stdout.write(f'Current GOOGLE_CLIENT_ID: "{client_id}"')
             return
+
+        self.stdout.write(f'Setting up SocialApp with Client ID starting with: {client_id[:10]}...')
 
         app, created = SocialApp.objects.get_or_create(
             provider='google',
