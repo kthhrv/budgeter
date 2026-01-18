@@ -1,6 +1,7 @@
 # api.py for a Django Budget Management Application using django-ninja
 
 from ninja import NinjaAPI, Schema
+from ninja.security import django_auth
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from typing import List, Optional
@@ -10,9 +11,15 @@ import calendar
 
 from .models import Month, BudgetItem, BudgetItemVersion
 
-api = NinjaAPI()
+api = NinjaAPI(auth=django_auth)
 
 # --- Schemas ---
+
+class UserSchema(Schema):
+    username: str
+    email: str
+    first_name: str
+    last_name: str
 
 class MonthSchema(Schema):
     month_id: str
@@ -102,6 +109,10 @@ def create_month(request, payload: MonthInputSchema):
         defaults={'month_name': month_name, 'start_date': start_date, 'end_date': end_date}
     )
     return month
+
+@api.get("/auth/me", response=UserSchema)
+def get_me(request):
+    return request.user
 
 @api.get("/months/", response=List[MonthSchema])
 def list_all_months(request):

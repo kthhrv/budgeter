@@ -26,29 +26,35 @@ const isMonthInPast = (date) => {
 
 // --- API Service ---
 const apiService = {
+    async getCurrentUser() {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+        if (!response.ok) return null;
+        return await response.json();
+    },
     async createOrGetMonth(date) {
         const monthId = formatDate(date, 'YYYY-MM');
         const payload = { month: monthId };
         const response = await fetch(`${API_BASE_URL}/months/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            credentials: 'include'
         });
         if (!response.ok) throw new Error('Failed to create or get month');
         return await response.json();
     },
     async getBudgetItemsForMonth(monthId) {
-        const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/`);
+        const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/`, { credentials: 'include' });
         if (!response.ok) throw new Error('Failed to fetch budget items');
         return await response.json();
     },
     async getAllBudgetItemCategories() {
-        const response = await fetch(`${API_BASE_URL}/budgetitems/`);
+        const response = await fetch(`${API_BASE_URL}/budgetitems/`, { credentials: 'include' });
         if (!response.ok) throw new Error('Failed to fetch budget item categories');
         return await response.json();
     },
     async getAllMonths() {
-        const response = await fetch(`${API_BASE_URL}/months/`);
+        const response = await fetch(`${API_BASE_URL}/months/`, { credentials: 'include' });
         if (!response.ok) throw new Error('Failed to fetch months');
         return await response.json();
     },
@@ -56,7 +62,8 @@ const apiService = {
         const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/${budgetItemId}/value/`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            credentials: 'include'
         });
         if (!response.ok) {
             const errorData = await response.json();
@@ -68,7 +75,8 @@ const apiService = {
         const response = await fetch(`${API_BASE_URL}/months/${monthId}/budgetitems/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            credentials: 'include'
         });
         if (!response.ok) throw new Error('Failed to create budget item');
         return await response.json();
@@ -77,7 +85,8 @@ const apiService = {
         const response = await fetch(`${API_BASE_URL}/budgetitems/${budgetItemId}/`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            credentials: 'include'
         });
         if (!response.ok) throw new Error('Failed to update budget item category');
         return await response.json();
@@ -85,6 +94,7 @@ const apiService = {
     async deleteBudgetItemForMonth(monthId, budgetItemId) {
         const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/${budgetItemId}/`, {
             method: 'DELETE',
+            credentials: 'include'
         });
         if (!response.ok) {
             throw new Error('Failed to delete budget item');
@@ -589,16 +599,32 @@ const getInitialDate = () => {
     return new Date();
 };
 
-export default function App() {
+const App = () => {
+    const [user, setUser] = useState(null);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(getInitialDate());
     const [budgetItems, setBudgetItems] = useState([]);
     const [allBudgetCategories, setAllBudgetCategories] = useState([]);
     const [allMonths, setAllMonths] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [toast, setToast] = useState({ message: '', type: '', key: 0 });
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [toast, setToast] = useState({ message: '', type: 'success', key: 0 });
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const currentUser = await apiService.getCurrentUser();
+                setUser(currentUser);
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            } finally {
+                setIsAuthLoading(false);
+            }
+        };
+        checkAuth();
+    }, []);
 
     const isEditingDisabled = useMemo(() => isMonthInPast(currentDate), [currentDate]);
 
@@ -768,10 +794,58 @@ export default function App() {
         setSearchTerm('');
     };
 
+    const handleGoogleLogin = () => {
+        window.location.href = `${window.location.origin}/accounts/google/login/`;
+    };
+
+    const handleLogout = () => {
+        window.location.href = `${window.location.origin}/accounts/logout/`;
+    };
+
+    if (isAuthLoading) {
+        return (
+            <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+                <LoadingSpinner />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="bg-indigo-600 min-h-screen flex items-center justify-center p-4">
+                <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
+                    <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Wallet className="w-10 h-10 text-indigo-600" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Budgeter</h1>
+                    <p className="text-gray-600 mb-8">Please sign in to access your budget.</p>
+                    <button
+                        onClick={handleGoogleLogin}
+                        className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 py-3 px-4 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+                    >
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
+                        <span>Sign in with Google</span>
+                    </button>
+                    <p className="mt-8 text-xs text-gray-400">Restricted access enabled.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
-            <header className="bg-indigo-600 text-white p-4 shadow-lg">
-                <h1 className="text-2xl md:text-3xl font-bold text-center">Monthly Budget</h1>
+            <header className="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-40">
+                <div className="container mx-auto flex justify-between items-center max-w-5xl">
+                    <h1 className="text-2xl md:text-3xl font-bold flex items-center">
+                        <Wallet className="mr-3 h-8 w-8" /> Budgeter
+                    </h1>
+                    <div className="flex items-center space-x-4">
+                        <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
+                        <button onClick={handleLogout} className="p-2 hover:bg-indigo-500 rounded-full transition-colors" title="Logout">
+                            <XCircle className="h-6 w-6" />
+                        </button>
+                    </div>
+                </div>
             </header>
             <main className="container mx-auto p-4 max-w-5xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
@@ -813,3 +887,5 @@ export default function App() {
         </div>
     );
 }
+
+export default App;
