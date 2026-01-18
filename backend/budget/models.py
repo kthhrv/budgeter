@@ -72,11 +72,6 @@ class BudgetItem(models.Model):
         default='expense',
         help_text="Type of the item: 'expense' or 'income'."
     )
-    description = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Optional detailed description of the budget item."
-    )
     owner = models.CharField(
         max_length=50,
         choices=OWNER_CHOICES,
@@ -161,11 +156,6 @@ class BudgetItemVersion(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text="Timestamp when this budget item version was created."
-    )
-    notes = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Optional notes regarding this specific version (e.g., reason for change)."
     )
     is_one_off = models.BooleanField(
         default=False,

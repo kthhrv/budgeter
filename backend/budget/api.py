@@ -25,7 +25,6 @@ class BudgetItemSchema(Schema):
     budget_item_id: uuid.UUID
     item_name: str
     item_type: str
-    description: Optional[str] = None
     owner: str
     bills_pot: bool
     calculation_type: str
@@ -39,20 +38,17 @@ class BudgetItemSchema(Schema):
 class BudgetItemInputSchema(Schema):
     item_name: str
     item_type: str
-    description: Optional[str] = None
     owner: str
     bills_pot: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
     value: float 
-    notes: Optional[str] = None
     is_one_off: bool = False
 
 class BudgetItemEditSchema(Schema):
     item_name: Optional[str] = None
     item_type: Optional[str] = None
-    description: Optional[str] = None
     owner: Optional[str] = None
     bills_pot: Optional[bool] = None
     calculation_type: Optional[str] = None
@@ -63,20 +59,17 @@ class BudgetItemVersionSchema(Schema):
     budget_item_id: uuid.UUID
     item_name: str
     item_type: str
-    description: Optional[str] = None
     owner: str
     bills_pot: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     effective_value: float
     effective_from_month_name: str
-    notes: Optional[str] = None
     is_one_off: bool
     occurrences: Optional[int] = None
 
 class BudgetItemVersionInputSchema(Schema):
     value: float
-    notes: Optional[str] = None
     is_one_off: bool = False
 
 # --- Helper ---
@@ -142,10 +135,10 @@ def list_budget_items_for_month(request, month_id: str):
             
             budget_items_data.append(BudgetItemVersionSchema(
                 budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-                description=budget_item.description, owner=budget_item.owner, bills_pot=budget_item.bills_pot,
+                owner=budget_item.owner, bills_pot=budget_item.bills_pot,
                 calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
                 effective_value=calculated_value, effective_from_month_name=effective_version.effective_from_month.month_name,
-                notes=effective_version.notes, is_one_off=effective_version.is_one_off,
+                is_one_off=effective_version.is_one_off,
                 occurrences=occurrences
             ))
     return budget_items_data
@@ -165,7 +158,7 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
     with transaction.atomic():
         budget_item_version, created = BudgetItemVersion.objects.update_or_create(
             budget_item=budget_item, month=month,
-            defaults={'value': payload.value, 'effective_from_month': month, 'notes': payload.notes, 'is_one_off': payload.is_one_off}
+            defaults={'value': payload.value, 'effective_from_month': month, 'is_one_off': payload.is_one_off}
         )
     budget_item.refresh_from_db()
     calculated_value = float(budget_item_version.value)
@@ -175,10 +168,10 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         calculated_value = float(budget_item_version.value) * occurrences
     return BudgetItemVersionSchema(
         budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-        description=budget_item.description, owner=budget_item.owner, bills_pot=budget_item.bills_pot,
+        owner=budget_item.owner, bills_pot=budget_item.bills_pot,
         calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
         effective_value=calculated_value, effective_from_month_name=budget_item_version.effective_from_month.month_name,
-        notes=budget_item_version.notes, is_one_off=budget_item_version.is_one_off,
+        is_one_off=budget_item_version.is_one_off,
         occurrences=occurrences
     )
 
@@ -226,7 +219,7 @@ def create_budget_item(request, month_id: str, payload: BudgetItemInputSchema):
     month = get_object_or_404(Month, month_id=month_id)
     
     with transaction.atomic():
-        budget_item_data = payload.dict(exclude={'value', 'notes', 'is_one_off', 'last_payment_month_id'})
+        budget_item_data = payload.dict(exclude={'value', 'is_one_off', 'last_payment_month_id'})
         if payload.last_payment_month_id:
             budget_item_data['last_payment_month'] = get_object_or_404(Month, month_id=payload.last_payment_month_id)
         if budget_item_data.get('calculation_type') != 'weekly_count':
@@ -236,7 +229,7 @@ def create_budget_item(request, month_id: str, payload: BudgetItemInputSchema):
         
         BudgetItemVersion.objects.create(
             budget_item=budget_item, month=month, effective_from_month=month,
-            value=payload.value, notes=payload.notes, is_one_off=payload.is_one_off
+            value=payload.value, is_one_off=payload.is_one_off
         )
     return budget_item
 
@@ -253,10 +246,16 @@ def edit_budget_item(request, budget_item_id: uuid.UUID, payload: BudgetItemEdit
         month_id = update_data.pop('last_payment_month_id')
         budget_item.last_payment_month = get_object_or_404(Month, month_id=month_id) if month_id else None
     
-    if 'calculation_type' in update_data and update_data['calculation_type'] != 'weekly_count':
+    new_calc_type = update_data.get('calculation_type', budget_item.calculation_type)
+    
+    if new_calc_type != 'weekly_count':
         update_data['weekly_payment_day'] = None
-    elif 'weekly_payment_day' in update_data and budget_item.calculation_type != 'weekly_count':
-        update_data['weekly_payment_day'] = None
+    elif 'weekly_payment_day' in update_data and new_calc_type == 'weekly_count':
+        # Allow setting weekly_payment_day if we are currently or becoming weekly_count
+        pass
+    elif 'calculation_type' in update_data and update_data['calculation_type'] == 'weekly_count' and not budget_item.weekly_payment_day and 'weekly_payment_day' not in update_data:
+        # If switching to weekly but no day provided, we might want a default or just leave it None/handled by Schema
+        pass
 
     for attr, value in update_data.items():
         setattr(budget_item, attr, value)

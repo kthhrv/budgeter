@@ -65,17 +65,16 @@ class BudgetAPITestCase(TestCase):
         self.item_rent = BudgetItem.objects.create(
             item_name="Rent",
             item_type="expense",
-            description="Monthly apartment rent"
+
         )
         self.item_salary = BudgetItem.objects.create(
             item_name="Salary",
-            item_type="income",
-            description="Monthly salary income"
+            item_type="income"
         )
         self.item_groceries = BudgetItem.objects.create(
             item_name="Groceries",
             item_type="expense",
-            description="Food expenses"
+
         )
 
         # Set an initial version for Rent in October
@@ -123,12 +122,10 @@ class BudgetAPITestCase(TestCase):
         new_item_data = {
             "item_name": "Utilities",
             "item_type": "expense",
-            "description": "Electricity and water bills",
             "owner": "shared",
             "bills_pot": False,
             "calculation_type": "fixed",
             "value": 150.00,
-            "notes": "Initial utilities budget",
             "is_one_off": False
         }
         response = self.client.post(
@@ -146,9 +143,9 @@ class BudgetAPITestCase(TestCase):
         """
         Test the PUT /budgetitems/{budget_item_id}/ endpoint for editing an existing budget item category.
         """
-        updated_description = "Food and household supplies"
+        updated_owner = "keith"
         update_data = {
-            "description": updated_description
+            "owner": updated_owner
         }
         response = self.client.put(
             f'/api/budgetitems/{self.item_groceries.budget_item_id}/',
@@ -158,11 +155,60 @@ class BudgetAPITestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.item_groceries.refresh_from_db()
-        self.assertEqual(self.item_groceries.description, updated_description)
-        self.assertEqual(data['description'], updated_description)
+        self.assertEqual(self.item_groceries.owner, updated_owner)
+        self.assertEqual(data['owner'], updated_owner)
 
 
     # --- Test BudgetItemVersion and Rollover Logic ---
+
+    def test_weekly_count_calculation(self):
+        """
+        Test that items with calculation_type='weekly_count' are calculated correctly
+        based on the number of occurrences of the day in the month.
+        """
+        # Create a weekly item (e.g., Weekly Groceries on Fridays)
+        # Friday is weekday 4 (Monday=0, Sunday=6)
+        # In October 2025:
+        # 1st is Wed (2), 2=Thu (3), 3=Fri (4).
+        # Fridays: 3, 10, 17, 24, 31. Total 5 Fridays.
+        item_weekly = BudgetItem.objects.create(
+            item_name="Weekly Groceries",
+            item_type="expense",
+            calculation_type="weekly_count",
+            weekly_payment_day=5 # Friday (1-indexed in api.py logic? Let's check api.py helper)
+            # Checking api.py: calculate_weekly_occurrences(year, month_num, day_of_week)
+            # helper uses `weekday_num + 1 == day_of_week`.
+            # calendar.monthdays2calendar returns weekday_num where Mon=0...Sun=6.
+            # So if we want Friday (4), we need day_of_week to be 5?
+            # Let's verify `calculate_weekly_occurrences`:
+            # if day != 0 and weekday_num + 1 == day_of_week:
+            # So yes, Friday(4) + 1 = 5.
+        )
+        
+        # Base value per occurrence
+        base_value = 100.00
+        
+        BudgetItemVersion.objects.create(
+            budget_item=item_weekly,
+            month=self.month_jan, # Oct 2025
+            value=base_value,
+            effective_from_month=self.month_jan
+        )
+        
+        response = self.client.get(f'/api/months/{self.month_jan.month_id}/items/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        weekly_item = next((item for item in data if item['item_name'] == 'Weekly Groceries'), None)
+        self.assertIsNotNone(weekly_item)
+        
+        # Oct 2025 has 5 Fridays: 3rd, 10th, 17th, 24th, 31st.
+        expected_occurrences = 5
+        expected_total = base_value * expected_occurrences
+        
+        self.assertEqual(weekly_item['occurrences'], expected_occurrences)
+        self.assertEqual(weekly_item['effective_value'], expected_total)
+
 
     def test_list_items_for_month_initial_versions(self):
         """
@@ -210,10 +256,8 @@ class BudgetAPITestCase(TestCase):
         (e.g., Rent changes for December 2025)
         """
         new_rent_value = 1250.00
-        new_notes = "Rent increased by landlord"
         update_data = {
-            "value": new_rent_value,
-            "notes": new_notes
+            "value": new_rent_value
         }
         response = self.client.put(
             f'/api/months/{self.month_mar.month_id}/items/{self.item_rent.budget_item_id}/value/',
@@ -224,7 +268,6 @@ class BudgetAPITestCase(TestCase):
         data = response.json()
         self.assertEqual(data['effective_value'], new_rent_value)
         self.assertEqual(data['effective_from_month_name'], self.month_mar.month_name) # New effective month
-        self.assertEqual(data['notes'], new_notes)
 
         # Verify that a new BudgetItemVersion record was created
         self.assertEqual(BudgetItemVersion.objects.filter(
@@ -323,8 +366,7 @@ class BudgetAPITestCase(TestCase):
         
         # Try to update the value for the past month
         update_data = {
-            "value": 1150.00,
-            "notes": "Trying to update past month"
+            "value": 1150.00
         }
         response = self.client.put(
             f'/api/months/{past_month.month_id}/items/{self.item_rent.budget_item_id}/value/',

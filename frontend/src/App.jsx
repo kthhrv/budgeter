@@ -87,7 +87,7 @@ const apiService = {
             method: 'DELETE',
         });
         if (!response.ok) {
-             throw new Error('Failed to delete budget item');
+            throw new Error('Failed to delete budget item');
         }
         return response;
     }
@@ -137,6 +137,8 @@ const SearchComponent = ({ searchTerm, onSearchChange, onClearSearch }) => {
     );
 };
 
+const DAY_CHOICES = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' };
+
 const MonthSelector = ({ currentDate, isLoading }) => {
     const changeMonth = (offset) => {
         const newDate = new Date(currentDate);
@@ -158,10 +160,10 @@ const MonthSelector = ({ currentDate, isLoading }) => {
 };
 
 const OwnerTotals = ({ items }) => {
-    const { 
+    const {
         keithShare, tildShare, keithProportion, tildProportion,
         keithRemaining, tildRemaining, keithIncome, tildIncome, keithDirectExpenses, tildDirectExpenses,
-        billsPotTotal 
+        billsPotTotal
     } = useMemo(() => {
         const incomes = items.filter(item => item.item_type === 'income');
         const expenses = items.filter(item => item.item_type === 'expense');
@@ -172,7 +174,7 @@ const OwnerTotals = ({ items }) => {
         const tildSalary = incomes
             .filter(i => i.owner === 'tild' && i.item_name.toLowerCase() === 'salary')
             .reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        
+
         const totalSalaryIncome = keithSalary + tildSalary;
         let kProp = 0.5, tProp = 0.5;
         if (totalSalaryIncome > 0) {
@@ -197,7 +199,7 @@ const OwnerTotals = ({ items }) => {
             .filter(item => item.bills_pot)
             .reduce((sum, item) => sum + (parseFloat(item.effective_value) || 0), 0);
 
-        return { 
+        return {
             keithShare: kShare, tildShare: tShare,
             keithProportion: kProp, tildProportion: tProp,
             keithRemaining: kRemaining, tildRemaining: tRemaining,
@@ -213,17 +215,17 @@ const OwnerTotals = ({ items }) => {
                 <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Shared Expense Breakdown</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="p-4 bg-blue-100 rounded-lg text-center">
-                        <div className="flex justify-center items-center text-blue-800"><User className="mr-2"/> <h4 className="text-lg font-semibold">Keith's Share</h4></div>
+                        <div className="flex justify-center items-center text-blue-800"><User className="mr-2" /> <h4 className="text-lg font-semibold">Keith's Share</h4></div>
                         <p className="text-2xl font-bold text-blue-900">£{keithShare.toFixed(0)}</p>
                         <p className="text-xs text-blue-700 mt-1">({(keithProportion * 100).toFixed(1)}% of shared total)</p>
                     </div>
                     <div className="p-4 bg-purple-100 rounded-lg text-center">
-                        <div className="flex justify-center items-center text-purple-800"><Home className="mr-2"/> <h4 className="text-lg font-semibold">Bills Pot Total</h4></div>
+                        <div className="flex justify-center items-center text-purple-800"><Home className="mr-2" /> <h4 className="text-lg font-semibold">Bills Pot Total</h4></div>
                         <p className="text-2xl font-bold text-purple-900">£{billsPotTotal.toFixed(0)}</p>
                         <p className="text-xs text-purple-700 mt-1">&nbsp;</p>
                     </div>
                     <div className="p-4 bg-pink-100 rounded-lg text-center">
-                        <div className="flex justify-center items-center text-pink-800"><User className="mr-2"/> <h4 className="text-lg font-semibold">Tild's Share</h4></div>
+                        <div className="flex justify-center items-center text-pink-800"><User className="mr-2" /> <h4 className="text-lg font-semibold">Tild's Share</h4></div>
                         <p className="text-2xl font-bold text-pink-900">£{tildShare.toFixed(0)}</p>
                         <p className="text-xs text-pink-700 mt-1">({(tildProportion * 100).toFixed(1)}% of shared total)</p>
                     </div>
@@ -231,30 +233,30 @@ const OwnerTotals = ({ items }) => {
             </div>
 
             <div className="border-t pt-6">
-                 <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Remaining Balances</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Remaining Balances</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-4 bg-blue-50 rounded-lg flex flex-col">
                         <h4 className="text-lg font-semibold text-blue-800 text-center mb-3">Keith</h4>
                         <div className="space-y-2 text-sm flex-grow">
-                           <div className="flex justify-between items-center"><span className="flex items-center text-green-700"><TrendingUp className="mr-2 h-4 w-4"/>Income</span> <span>+ £{keithIncome.toFixed(2)}</span></div>
-                           <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4"/>Personal Expenses</span> <span>- £{keithDirectExpenses.toFixed(2)}</span></div>
-                           <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4"/>Share of Expenses</span> <span>- £{keithShare.toFixed(2)}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center text-green-700"><TrendingUp className="mr-2 h-4 w-4" />Income</span> <span>+ £{keithIncome.toFixed(2)}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Personal Expenses</span> <span>- £{keithDirectExpenses.toFixed(2)}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Share of Expenses</span> <span>- £{keithShare.toFixed(2)}</span></div>
                         </div>
                         <div className="border-t mt-3 pt-3 flex justify-between items-center">
-                           <span className="flex items-center font-bold text-blue-900"><Wallet className="mr-2 h-5 w-5"/>Remaining</span>
-                           <span className={`font-bold text-lg ${keithRemaining >= 0 ? 'text-blue-900' : 'text-red-700'}`}>£{keithRemaining.toFixed(2)}</span>
+                            <span className="flex items-center font-bold text-blue-900"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
+                            <span className={`font-bold text-lg ${keithRemaining >= 0 ? 'text-blue-900' : 'text-red-700'}`}>£{keithRemaining.toFixed(2)}</span>
                         </div>
                     </div>
                     <div className="p-4 bg-pink-50 rounded-lg flex flex-col">
                         <h4 className="text-lg font-semibold text-pink-800 text-center mb-3">Tild</h4>
                         <div className="space-y-2 text-sm flex-grow">
-                           <div className="flex justify-between items-center"><span className="flex items-center text-green-700"><TrendingUp className="mr-2 h-4 w-4"/>Income</span> <span>+ £{tildIncome.toFixed(2)}</span></div>
-                           <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4"/>Personal Expenses</span> <span>- £{tildDirectExpenses.toFixed(2)}</span></div>
-                           <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4"/>Share of Expenses</span> <span>- £{tildShare.toFixed(2)}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center text-green-700"><TrendingUp className="mr-2 h-4 w-4" />Income</span> <span>+ £{tildIncome.toFixed(2)}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Personal Expenses</span> <span>- £{tildDirectExpenses.toFixed(2)}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Share of Expenses</span> <span>- £{tildShare.toFixed(2)}</span></div>
                         </div>
                         <div className="border-t mt-3 pt-3 flex justify-between items-center">
-                           <span className="flex items-center font-bold text-pink-900"><Wallet className="mr-2 h-5 w-5"/>Remaining</span>
-                           <span className={`font-bold text-lg ${tildRemaining >= 0 ? 'text-pink-900' : 'text-red-700'}`}>£{tildRemaining.toFixed(2)}</span>
+                            <span className="flex items-center font-bold text-pink-900"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
+                            <span className={`font-bold text-lg ${tildRemaining >= 0 ? 'text-pink-900' : 'text-red-700'}`}>£{tildRemaining.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
@@ -271,7 +273,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
                 <div className="p-6">
                     <div className="flex items-start">
                         <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                           <AlertTriangle className="h-6 w-6 text-red-600" aria-hidden="true" />
+                            <AlertTriangle className="h-6 w-6 text-red-600" aria-hidden="true" />
                         </div>
                         <div className="ml-4 text-left">
                             <h3 className="text-lg leading-6 font-medium text-gray-900">{title}</h3>
@@ -294,40 +296,20 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     );
 };
 
-const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, isEditingDisabled = false }) => {
-    const [isEditing, setIsEditing] = useState(false);
+const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, isEditingDisabled = false }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [value, setValue] = useState(item.effective_value);
-    const [notes, setNotes] = useState(item.notes || '');
-    const [isOneOff, setIsOneOff] = useState(item.is_one_off);
     const isSynthetic = String(item.budget_item_id).includes('-repay-income');
 
-    useEffect(() => {
-        setValue(item.effective_value);
-        setNotes(item.notes || '');
-        setIsOneOff(item.is_one_off);
-    }, [item]);
-
-    const handleSave = () => {
-        onUpdate(item.budget_item_id, { value: parseFloat(value) || 0, notes, is_one_off: isOneOff });
-        setIsEditing(false);
-    };
-    const handleCancel = () => {
-        setValue(item.effective_value);
-        setNotes(item.notes || '');
-        setIsOneOff(item.is_one_off);
-        setIsEditing(false);
-    };
     const handleDeleteConfirm = () => {
         onDelete(item.budget_item_id);
         setShowDeleteConfirm(false);
     }
-    
+
     const ownerColors = { shared: 'bg-indigo-100 text-indigo-800', keith: 'bg-blue-100 text-blue-800', tild: 'bg-pink-100 text-pink-800' };
 
     return (
         <>
-            <ConfirmationModal 
+            <ConfirmationModal
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
                 onConfirm={handleDeleteConfirm}
@@ -340,76 +322,50 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, isEditingDisa
                         <div className="flex items-center">
                             <span className="font-bold text-lg text-gray-800">{item.item_name}</span>
                             {item.is_one_off && <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full">One-off</span>}
-                            {item.effective_from_month_name !== formatDate(new Date(), 'MonthYYYY') && !isSynthetic &&
-                              <span className="ml-2 text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-1 rounded-full" title={`Value effective from ${item.effective_from_month_name}`}>Inherited</span>}
+                            {item.effective_from_month_name !== formatDate(currentDate, 'MonthYYYY') && !isSynthetic &&
+                                <span className="ml-2 text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-1 rounded-full" title={`Value effective from ${item.effective_from_month_name}`}>Inherited</span>}
                         </div>
-                         <p className="text-sm text-gray-500">{item.description}</p>
+
                     </div>
                     <div className="flex items-center space-x-2 sm:space-x-4">
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>
                         {item.bills_pot && <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Bills Pot</span>}
                     </div>
                 </div>
-                {isEditing ? (
-                    <div className="mt-4 space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-sm font-medium text-gray-700">Value (£)</label>
-                                <input type="number" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"/>
-                            </div>
-                             <div>
-                                <label className="text-sm font-medium text-gray-700">Notes</label>
-                                <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"/>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" checked={isOneOff} onChange={(e) => setIsOneOff(e.target.checked)} className="rounded border-gray-300 text-indigo-600 shadow-sm"/>
-                                <span className="text-sm text-gray-700">Is this a one-off for this month?</span>
-                            </label>
-                            <div className="flex items-center space-x-2">
-                                <button onClick={handleSave} className="p-2 text-green-600 hover:text-green-800"><Save className="h-5 w-5"/></button>
-                                <button onClick={handleCancel} className="p-2 text-red-600 hover:text-red-800"><XCircle className="h-5 w-5"/></button>
-                            </div>
-                        </div>
+                <div className="mt-2 flex items-center justify-between">
+                    <div className={`text-xl font-semibold p-2 rounded-md ${item.item_type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                        £{(parseFloat(item.effective_value) || 0).toFixed(2)}
                     </div>
-                ) : (
-                    <div className="mt-2 flex items-center justify-between">
-                        <div onClick={() => !isSynthetic && !isEditingDisabled && setIsEditing(true)} className={`text-xl font-semibold p-2 rounded-md ${item.item_type === 'income' ? 'text-green-600' : 'text-red-600'} ${!isSynthetic && !isEditingDisabled && 'cursor-pointer hover:bg-gray-100'} ${isEditingDisabled && 'opacity-75'}`}>
-                            £{(parseFloat(item.effective_value) || 0).toFixed(2)}
+                    {!isSynthetic && !isEditingDisabled && (
+                        <div className="flex items-center">
+                            <button onClick={() => onEditCategory(item.budget_item_id)} className="p-2 text-gray-500 hover:text-indigo-600"><Edit2 className="h-5 w-5" /></button>
+                            <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-gray-500 hover:text-red-600"><Trash2 className="h-5 w-5" /></button>
                         </div>
-                        {!isSynthetic && !isEditingDisabled && (
-                            <div className="flex items-center">
-                                <button onClick={() => setIsEditing(true)} className="p-2 text-gray-500 hover:text-indigo-600"><Edit2 className="h-5 w-5"/></button>
-                                <button onClick={() => onEditCategory(item.budget_item_id)} className="p-2 text-gray-500 hover:text-indigo-600"><MoreVertical className="h-5 w-5"/></button>
-                                <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-gray-500 hover:text-red-600"><Trash2 className="h-5 w-5"/></button>
-                            </div>
-                        )}
-                        {!isSynthetic && isEditingDisabled && (
-                            <div className="flex items-center">
-                                <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded">Past month - editing locked</span>
-                            </div>
-                        )}
-                    </div>
-                )}
-                {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-500 mt-1">Calculated weekly on day {item.weekly_payment_day}{item.occurrences !== undefined && item.occurrences !== null ? ` (${item.occurrences} occurrences)` : ''}</p>}
+                    )}
+                    {!isSynthetic && isEditingDisabled && (
+                        <div className="flex items-center">
+                            <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded">Past month - editing locked</span>
+                        </div>
+                    )}
+                </div>
+                {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-500 mt-1">Calculated weekly on {DAY_CHOICES[item.weekly_payment_day] || 'unknown day'}{item.occurrences !== undefined && item.occurrences !== null ? ` (${item.occurrences} occurrences)` : ''}</p>}
             </div>
         </>
     );
 };
 
-const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, searchTerm = '', isEditingDisabled = false }) => {
+const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, searchTerm = '', currentDate, isEditingDisabled = false }) => {
     const [collapsedGroups, setCollapsedGroups] = useState({});
 
     const processedItems = useMemo(() => {
         let filtered = items.filter(i => i.item_type === itemType);
-        
+
         // Apply search filter if search term exists
         if (searchTerm.trim()) {
             const searchLower = searchTerm.toLowerCase();
-            filtered = filtered.filter(item => 
+            filtered = filtered.filter(item =>
                 item.item_name.toLowerCase().includes(searchLower) ||
-                (item.description && item.description.toLowerCase().includes(searchLower)) ||
+
                 item.owner.toLowerCase().includes(searchLower)
             );
         }
@@ -441,9 +397,8 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
         if (itemType === 'expense') {
             const initialState = {};
             processedItems.forEach(([owner]) => {
-                // If there's a search term, expand groups that have matching items
-                // If no search term, keep groups collapsed by default
-                initialState[owner] = searchTerm.trim() ? false : true;
+                // Always expand groups by default for easier testing
+                initialState[owner] = false;
             });
             setCollapsedGroups(initialState);
         }
@@ -474,8 +429,8 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
                         const isCollapsed = collapsedGroups[owner];
                         return (
                             <div key={owner} className="border-b border-gray-200 last:border-b-0 pb-2 mb-2">
-                                <button 
-                                    onClick={() => toggleGroup(owner)} 
+                                <button
+                                    onClick={() => toggleGroup(owner)}
                                     className="w-full flex justify-between items-center text-left p-2 rounded-md hover:bg-gray-100 transition-colors"
                                 >
                                     <h4 className="text-lg font-semibold text-gray-700 capitalize">{owner}</h4>
@@ -483,14 +438,14 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
                                 </button>
                                 {!isCollapsed && (
                                     <div className="pl-4 pt-2 mt-2 border-l-2 border-indigo-200">
-                                        {ownerItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} isEditingDisabled={isEditingDisabled}/>)}
+                                        {ownerItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />)}
                                     </div>
                                 )}
                             </div>
                         )
                     })
                 ) : (
-                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} isEditingDisabled={isEditingDisabled}/>)
+                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />)
                 )}
             </div>
         </div>
@@ -499,26 +454,31 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
 
 const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
     const isNew = !item?.budget_item_id;
-    const [formData, setFormData] = useState({});
+    const [formData, setFormData] = useState({
+        item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false,
+        calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
+        last_payment_month_id: ''
+    });
 
     useEffect(() => {
         if (isOpen) {
             if (isNew) {
                 setFormData({
-                    item_name: '', item_type: 'expense', description: '', owner: 'shared', bills_pot: false,
-                    calculation_type: 'fixed', weekly_payment_day: '', value: '', notes: '', is_one_off: false,
+                    item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false,
+                    calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
                     last_payment_month_id: ''
                 });
             } else {
                 setFormData({
                     item_name: item.item_name || '',
                     item_type: item.item_type || 'expense',
-                    description: item.description || '',
                     owner: item.owner || 'shared',
                     bills_pot: item.bills_pot || false,
                     calculation_type: item.calculation_type || 'fixed',
                     weekly_payment_day: item.weekly_payment_day || '',
-                    last_payment_month_id: item.last_payment_month_id || ''
+                    last_payment_month_id: item.last_payment_month_id || '',
+                    value: item.effective_value || '', // Populate value
+                    is_one_off: item.is_one_off || false // Populate is_one_off
                 });
             }
         }
@@ -544,35 +504,31 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
         }
         onSave(isNew ? payload : item.budget_item_id, payload);
     };
-    
+
     const OWNER_CHOICES = ['shared', 'keith', 'tild'];
     const CALCULATION_TYPE_CHOICES = { 'fixed': 'Fixed Monthly', 'weekly_count': 'Weekly Count' };
-    const DAY_CHOICES = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday'};
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto">
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <h2 className="text-2xl font-bold text-gray-800">{isNew ? "Create New Budget Item" : "Edit Budget Item"}</h2>
-                    
+
                     <div>
-                         <label htmlFor="item_name" className="block text-sm font-medium text-gray-700">Item Name</label>
-                         <input type="text" name="item_name" value={formData.item_name} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required />
+                        <label htmlFor="item_name" className="block text-sm font-medium text-gray-700">Item Name</label>
+                        <input type="text" name="item_name" value={formData.item_name} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <div>
-                             <label htmlFor="item_type" className="block text-sm font-medium text-gray-700">Type</label>
-                             <select name="item_type" value={formData.item_type} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"><option value="expense">Expense</option><option value="income">Income</option></select>
+                        <div>
+                            <label htmlFor="item_type" className="block text-sm font-medium text-gray-700">Type</label>
+                            <select name="item_type" value={formData.item_type} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"><option value="expense">Expense</option><option value="income">Income</option></select>
                         </div>
-                         <div>
-                             <label htmlFor="owner" className="block text-sm font-medium text-gray-700">Owner</label>
-                             <select name="owner" value={formData.owner} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{OWNER_CHOICES.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}</select>
+                        <div>
+                            <label htmlFor="owner" className="block text-sm font-medium text-gray-700">Owner</label>
+                            <select name="owner" value={formData.owner} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{OWNER_CHOICES.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}</select>
                         </div>
                     </div>
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                        <textarea name="description" value={formData.description} onChange={handleChange} rows="2" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
-                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="calculation_type" className="block text-sm font-medium text-gray-700">Calculation</label>
@@ -594,27 +550,22 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
                             ))}
                         </select>
                     </div>
-                    {isNew && (
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                             <h3 className="text-lg font-semibold text-gray-700 mb-2">Initial Value</h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <div>
-                                     <label htmlFor="value" className="block text-sm font-medium text-gray-700">Value (£)</label>
-                                     <input type="number" name="value" step="0.01" value={formData.value} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required />
-                                 </div>
-                                 <div>
-                                     <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
-                                     <input type="text" name="notes" value={formData.notes} onChange={handleChange} placeholder="Optional notes" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
-                                 </div>
-                             </div>
-                             <div className="mt-4 flex items-center space-x-2">
-                                <input id="is_one_off_new" type="checkbox" name="is_one_off" checked={formData.is_one_off} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-indigo-600"/>
-                                <label htmlFor="is_one_off_new" className="text-sm text-gray-900">Is this a one-off for this month?</label>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">Value & Options</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                            <div>
+                                <label htmlFor="value" className="block text-sm font-medium text-gray-700">Value (£)</label>
+                                <input type="number" name="value" step="0.01" value={formData.value} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required />
                             </div>
+
                         </div>
-                    )}
+                        <div className="mt-4 flex items-center space-x-2">
+                            <input id="is_one_off_new" type="checkbox" name="is_one_off" checked={formData.is_one_off} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-indigo-600" />
+                            <label htmlFor="is_one_off_new" className="text-sm text-gray-900">Is this a one-off for this month?</label>
+                        </div>
+                    </div>
                     <div className="flex items-center space-x-2">
-                        <input id="bills_pot" type="checkbox" name="bills_pot" checked={formData.bills_pot} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-indigo-600"/>
+                        <input id="bills_pot" type="checkbox" name="bills_pot" checked={formData.bills_pot} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-indigo-600" />
                         <label htmlFor="bills_pot" className="block text-sm text-gray-900">Part of Bills Pot</label>
                     </div>
                     <div className="mt-4 flex justify-end space-x-3">
@@ -690,7 +641,7 @@ export default function App() {
                         description: `Repayment from ${item.owner}`,
                     });
                 } else if (nameLower === 'keith repay') {
-                     additionalIncomes.push({
+                    additionalIncomes.push({
                         ...item,
                         budget_item_id: `${item.budget_item_id}-repay-income`,
                         item_type: 'income',
@@ -702,7 +653,7 @@ export default function App() {
         }
         return [...budgetItems, ...additionalIncomes];
     }, [budgetItems]);
-    
+
     useEffect(() => {
         // This effect syncs the date state with the URL hash
         const syncDateFromHash = () => {
@@ -731,7 +682,7 @@ export default function App() {
 
     const handleUpdateItemValue = async (budgetItemId, payload) => {
         try {
-            if(String(budgetItemId).includes('-repay-income')) return;
+            if (String(budgetItemId).includes('-repay-income')) return;
             await apiService.updateBudgetItemValue(formatDate(currentDate, 'YYYY-MM'), budgetItemId, payload);
             showToast('Item value updated successfully!');
             fetchData(currentDate);
@@ -743,7 +694,7 @@ export default function App() {
 
     const handleDeleteItem = async (budgetItemId) => {
         try {
-            if(String(budgetItemId).includes('-repay-income')) return;
+            if (String(budgetItemId).includes('-repay-income')) return;
             await apiService.deleteBudgetItemForMonth(formatDate(currentDate, 'YYYY-MM'), budgetItemId);
             showToast('Item deleted successfully!');
             fetchData(currentDate);
@@ -752,32 +703,53 @@ export default function App() {
             showToast(error.message, 'error');
         }
     };
-    
+
     const handleOpenNewCategoryModal = () => {
         setEditingCategory(null);
         setIsCategoryModalOpen(true);
     };
-    
+
     const handleOpenEditCategoryModal = (budgetItemId) => {
-        const itemToEdit = allBudgetCategories.find(c => c.budget_item_id === budgetItemId);
-        if(itemToEdit){
+        // Find the item in budgetItems first to get the current month's value
+        let itemToEdit = budgetItems.find(i => i.budget_item_id === budgetItemId);
+        if (!itemToEdit) {
+            // Fallback to basic category info if not in this month list (unlikely given UI)
+            itemToEdit = allBudgetCategories.find(c => c.budget_item_id === budgetItemId);
+        }
+        if (itemToEdit) {
             setEditingCategory(itemToEdit);
             setIsCategoryModalOpen(true);
         }
     };
-    
+
     const handleSaveCategory = async (idOrPayload, payloadIfUpdating) => {
         const isNew = typeof idOrPayload !== 'string';
-        const payload = isNew ? idOrPayload : payloadIfUpdating;
+        const fullPayload = isNew ? idOrPayload : payloadIfUpdating;
 
         try {
             if (isNew) {
                 const monthId = formatDate(currentDate, 'YYYY-MM');
-                await apiService.createBudgetItemCategory(monthId, payload);
+                await apiService.createBudgetItemCategory(monthId, fullPayload);
                 showToast('New item created successfully!');
             } else {
-                await apiService.updateBudgetItemCategory(idOrPayload, payload);
-                showToast('Item category updated!');
+                // Split payload into Category update and Value update
+                const categoryPayload = { ...fullPayload };
+                // Remove value-specific fields from category update
+                delete categoryPayload.value;
+                delete categoryPayload.is_one_off;
+
+                // 1. Update Category Info
+                await apiService.updateBudgetItemCategory(idOrPayload, categoryPayload);
+
+                // 2. Update Value Info for current month
+                const valuePayload = {
+                    value: parseFloat(fullPayload.value) || 0,
+                    is_one_off: fullPayload.is_one_off
+                };
+                const monthId = formatDate(currentDate, 'YYYY-MM');
+                await apiService.updateBudgetItemValue(monthId, idOrPayload, valuePayload);
+
+                showToast('Item updated successfully!');
             }
             fetchData(currentDate);
         } catch (error) {
@@ -807,23 +779,22 @@ export default function App() {
                     <div className="grid md:grid-cols-2 gap-4">
                         <MonthSelector currentDate={currentDate} isLoading={isLoading} />
                         <div className="flex md:justify-end">
-                            <button 
-                                onClick={handleOpenNewCategoryModal} 
+                            <button
+                                onClick={handleOpenNewCategoryModal}
                                 disabled={isEditingDisabled}
-                                className={`w-full h-full flex items-center justify-center space-x-2 font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 ${
-                                    isEditingDisabled 
-                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                                }`}
+                                className={`w-full h-full flex items-center justify-center space-x-2 font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 ${isEditingDisabled
+                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                    }`}
                             >
                                 <PlusCircle /><span>{isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}</span>
                             </button>
                         </div>
                     </div>
-                    <SearchComponent 
-                        searchTerm={searchTerm} 
-                        onSearchChange={handleSearchChange} 
-                        onClearSearch={handleClearSearch} 
+                    <SearchComponent
+                        searchTerm={searchTerm}
+                        onSearchChange={handleSearchChange}
+                        onClearSearch={handleClearSearch}
                     />
                 </div>
                 {isLoading && budgetItems.length === 0 ? (
@@ -832,8 +803,8 @@ export default function App() {
                     <>
                         <OwnerTotals items={processedBudgetItems} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                           <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} isEditingDisabled={isEditingDisabled}/>
-                           <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} isEditingDisabled={isEditingDisabled}/>
+                            <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />
+                            <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />
                         </div>
                     </>
                 )}

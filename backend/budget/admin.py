@@ -10,7 +10,7 @@ class BudgetItemVersionInline(admin.TabularInline):
     """
     model = BudgetItemVersion
     extra = 0 # Do not show extra empty forms by default
-    fields = ('budget_item', 'value', 'effective_from_month', 'notes', 'is_one_off')
+    fields = ('budget_item', 'value', 'effective_from_month', 'is_one_off')
     readonly_fields = ('created_at',) # created_at should not be editable here either
     # Specify the foreign key field name that links BudgetItemVersion to Month
     fk_name = 'month'
@@ -37,7 +37,7 @@ class BudgetItemAdmin(admin.ModelAdmin):
     Displays item name, type, description, owner, and bills_pot in the list view.
     Allows searching by item name and filtering by item type, owner, and bills_pot.
     """
-    list_display = ('item_name', 'item_type', 'owner', 'bills_pot', 'description', 'budget_item_id') # Added 'bills_pot'
+    list_display = ('item_name', 'item_type', 'owner', 'bills_pot', 'budget_item_id') # Added 'bills_pot'
     search_fields = ('item_name', 'owner',)
     list_filter = ('item_type', 'owner', 'bills_pot',) # Added 'bills_pot' to list filters
     readonly_fields = ('budget_item_id',) # budget_item_id is UUIDField and should not be editable
@@ -67,8 +67,7 @@ class BudgetItemVersionAdmin(admin.ModelAdmin):
     )
     search_fields = (
         'budget_item__item_name',
-        'month__month_name',
-        'notes'
+        'month__month_name'
     )
     readonly_fields = ('budget_item_version_id', 'created_at',)
     # raw_id_fields = ('budget_item', 'month', 'effective_from_month',)

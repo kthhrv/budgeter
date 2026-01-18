@@ -6,8 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-	  react(),
-	  tailwindcss(),
+    react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
@@ -32,6 +32,7 @@ export default defineConfig({
     })
   ],
   server: {
+    host: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
