@@ -3,7 +3,7 @@
 # Human-readable name of your addon
 name: "Budgeter"
 # The version of your addon. Bump this when you make changes.
-version: "1.1.0"
+version: "1.1.2"
 # The unique slug/ID for your addon.
 slug: "budgeter"
 # A short description.
@@ -40,9 +40,11 @@ options:
   secret_key: ""
   google_client_id: ""
   google_client_secret: ""
+  domain: ""
 # Define the schema for those options.
 schema:
   # Make the secret_key a required, non-empty string (but not a password type, so it's visible).
   secret_key: "str"
   google_client_id: "str"
   google_client_secret: "password"
+  domain: "str"

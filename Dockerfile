@@ -26,7 +26,8 @@ ENV PYTHONUNBUFFERED=1
 RUN apk add --no-cache \
     nginx \
     bash \
-    curl
+    curl \
+    jq
 
 # Set the working directory
 WORKDIR /app

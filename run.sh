@@ -17,35 +17,20 @@ set -e
 
 # Example: Read the Django secret key from the addon's configuration.
 # Make sure to set this as a required option in your config.yaml.
-export DJANGO_SECRET_KEY=$(bashio::config 'secret_key')
+# Bulletproof Config: Read directly from options.json if bashio fails
+# This bypasses Supervisor API issues
+OPTIONS_FILE="/data/options.json"
+export DJANGO_SECRET_KEY=$(jq -r '.secret_key // ""' $OPTIONS_FILE)
+export GOOGLE_CLIENT_ID=$(jq -r '.google_client_id // ""' $OPTIONS_FILE)
+export GOOGLE_CLIENT_SECRET=$(jq -r '.google_client_secret // ""' $OPTIONS_FILE)
+export ADDON_DOMAIN=$(jq -r '.domain // ""' $OPTIONS_FILE)
 
-# You can export any other settings your Django app needs as environment variables
-# export DATABASE_URL=$(bashio::config 'database_url')
+# Fallback for domain if empty
+if [ -z "$ADDON_DOMAIN" ] || [ "$ADDON_DOMAIN" == "null" ]; then
+    export ADDON_DOMAIN=$(hostname)
+fi
 
-bashio::log.info "Configuration loaded."
-
-
-# ==============================================================================
-# DJANGO SETUP
-# ==============================================================================
-# Navigate to the application directory where manage.py is located.
-cd /app
-
-# Apply database migrations to ensure the database schema is up to date.
-bashio::log.info "Running Django database migrations..."
-./manage.py migrate --no-input
-
-# Setup OAuth (Google SocialApp/Site)
-export GOOGLE_CLIENT_ID=$(bashio::config 'google_client_id')
-export GOOGLE_CLIENT_SECRET=$(bashio::config 'google_client_secret')
-
-# Bashio sometimes returns literal "null" string
-if [ "$GOOGLE_CLIENT_ID" == "null" ]; then export GOOGLE_CLIENT_ID=""; fi
-if [ "$GOOGLE_CLIENT_SECRET" == "null" ]; then export GOOGLE_CLIENT_SECRET=""; fi
-# Try to determine domain for Site ID
-export ADDON_DOMAIN=$(hostname)
-
-bashio::log.info "Initializing OAuth configuration..."
+bashio::log.info "Configuration loaded (Direct JSON read)."
 ./manage.py setup_oauth
 
 # Collect all static files
