@@ -11,6 +11,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
+      workbox: {
+        // Prevent the Service Worker from intercepting these paths so they reach the backend
+        navigateFallbackDenylist: [/^\/accounts/, /^\/api/, /^\/admin/, /^\/static/],
+      },
       manifest: {
         name: 'Budgeter',
         short_name: 'Budgeter',
