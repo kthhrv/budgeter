@@ -36,8 +36,8 @@ bashio::log.info "Running Django database migrations..."
 ./manage.py migrate --no-input
 
 # Setup OAuth (Google SocialApp/Site)
-export GOOGLE_CLIENT_ID=$(bashio::config 'google_client_id' '')
-export GOOGLE_CLIENT_SECRET=$(bashio::config 'google_client_secret' '')
+export GOOGLE_CLIENT_ID=$(bashio::config 'google_client_id')
+export GOOGLE_CLIENT_SECRET=$(bashio::config 'google_client_secret')
 
 # Bashio sometimes returns literal "null" string
 if [ "$GOOGLE_CLIENT_ID" == "null" ]; then export GOOGLE_CLIENT_ID=""; fi
