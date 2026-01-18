@@ -1,0 +1,2003 @@
+nohup: ignoring input
+Watching for file changes with StatReloader
+[18/Jan/2026 17:16:29] "HEAD /accounts/google/login/ HTTP/1.1" 302 0
+/home/keith/ws/budgeter/backend/budgeter/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:16:15
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/2026-01/items/
+Forbidden (CSRF cookie not set.): /api/months/
+[18/Jan/2026 17:16:38] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF cookie not set.): /api/months/
+[18/Jan/2026 17:16:38] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden: /api/months/
+[18/Jan/2026 17:16:38] "GET /api/auth/me HTTP/1.1" 401 26
+Forbidden: /api/months/
+[18/Jan/2026 17:16:38] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:16:38] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:16:38] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:16:38] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:16:38] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:16:38] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:16:38] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+Forbidden (CSRF cookie not set.): /api/months/
+[18/Jan/2026 17:16:38] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:16:38] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:16:38] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:16:38] "GET /api/months/ HTTP/1.1" 401 26
+/home/keith/ws/budgeter/backend/budgeter/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:16:36
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[18/Jan/2026 17:16:54] "HEAD /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:16:57] "HEAD /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:17:00] "GET /accounts/google/login/ HTTP/1.1" 200 1412
+Unauthorized: /api/auth/me
+Forbidden (CSRF token missing.): /api/months/
+Unauthorized: /api/budgetitems/
+Forbidden: /api/months/
+[18/Jan/2026 17:17:28] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:17:28] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+[18/Jan/2026 17:17:28] "POST /api/months/ HTTP/1.1" 403 31
+Forbidden: /api/months/
+[18/Jan/2026 17:17:28] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:17:28] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:17:28] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:17:28] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:17:28] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:17:28] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:17:28] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:17:28] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:17:28] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:17:28] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:17:28] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:17:29] "GET /accounts/google/login/ HTTP/1.1" 200 1412
+[18/Jan/2026 17:17:33] "POST /accounts/google/login/ HTTP/1.1" 302 0
+/home/keith/ws/budgeter/backend/budgeter/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:16:52
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Unauthorized: /api/auth/me
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:19:42] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF cookie not set.): /api/months/
+[18/Jan/2026 17:19:42] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Forbidden (CSRF cookie not set.): /api/months/
+Forbidden: /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:19:42] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:19:42] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/months/
+[18/Jan/2026 17:19:42] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/2026-01/items/
+Forbidden (CSRF cookie not set.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:19:42] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:19:42] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:19:46] "HEAD /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:19:50] "HEAD /accounts/google/login/ HTTP/1.1" 302 0
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:03] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+Forbidden (CSRF token missing.): /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:03] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:03] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:03] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:20:03] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/auth/me
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:03] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:20:03] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:03] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:03] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:03] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:03] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:20:05] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:05] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:20:05] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/auth/me HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:20:05] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:05] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:05] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:05] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:05] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:06] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:20:06] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:06] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:20:06] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:06] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:06] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Unauthorized: /api/budgetitems/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:06] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:06] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:20:06] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:06] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:06] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:06] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:06] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:06] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:07] "GET /accounts/google/login/ HTTP/1.1" 200 1412
+[18/Jan/2026 17:20:11] "POST /accounts/google/login/ HTTP/1.1" 302 0
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:53] "GET /api/auth/me HTTP/1.1" 401 26
+Forbidden (CSRF cookie not set.): /api/months/
+Unauthorized: /api/budgetitems/
+Forbidden: /api/months/
+[18/Jan/2026 17:20:53] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:53] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:20:53] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:20:53] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF cookie not set.): /api/months/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:20:53] "GET /api/auth/me HTTP/1.1" 401 26
+Forbidden: /api/months/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:20:53] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:53] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:20:53] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:53] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+Forbidden (CSRF cookie not set.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:20:53] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:53] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:20:53] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:53] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:20:55] "HEAD /accounts/google/login/ HTTP/1.1" 302 0
+Unauthorized: /api/auth/me
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:21:33] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:21:33] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:33] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:21:33] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:21:33] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:21:33] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:21:33] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:33] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:21:33] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:33] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:21:33] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:21:33] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:33] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:33] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:21:35] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:21:35] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:21:35] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:35] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:35] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:35] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:21:35] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:35] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:35] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:35] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:21:35] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:35] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:35] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:35] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:36] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:21:36] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:21:36] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:36] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:21:36] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:36] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:21:36] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:36] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:36] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:36] "GET /api/months/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:21:36] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:21:36] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:21:36] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:36] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:21:37] "GET /accounts/google/login/ HTTP/1.1" 200 1412
+[18/Jan/2026 17:21:39] "POST /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:21:44] "GET /accounts/google/login/callback/?state=W77hN9dTnPjwxnYj&code=4%2F0ASc3gC3ud-seumeqhNsnHITHYlQNz78WAWgBp4G2ikZBEX7mTmzX6TiVO_2qec1FkBS_Cw&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent HTTP/1.1" 302 0
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:21:44] "POST /api/months/ HTTP/1.1" 403 31
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:21:44] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:21:44] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:21:44] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:21:44] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:21:44] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:21:44] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:21:44] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:21:44] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:21:44] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:21:44] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:21:44] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:21:44] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:21:44] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:22:38] "GET /accounts/logout/ HTTP/1.1" 302 0
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:22:38] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:38] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Forbidden (CSRF token missing.): /api/months/
+[18/Jan/2026 17:22:38] "GET /api/auth/me HTTP/1.1" 401 26
+Forbidden: /api/months/
+[18/Jan/2026 17:22:38] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:22:38] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:22:38] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:22:38] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:22:38] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:22:38] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:22:38] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:38] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:22:38] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:22:38] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:38] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:22:40] "GET /accounts/google/login/ HTTP/1.1" 200 1663
+[18/Jan/2026 17:22:41] "POST /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:22:42] "GET /accounts/google/login/callback/?state=DsMviO46ftKbNO1q&code=4%2F0ASc3gC3glGPPhDz4ZaFaaeGe5r4l7Im6UXrEdNyzj0o2cd0cka8bT4Qwy_IJsDv_0vNSBA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none HTTP/1.1" 302 0
+[18/Jan/2026 17:22:42] "GET /api/auth/me HTTP/1.1" 200 96
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:42] "POST /api/months/ HTTP/1.1" 403 31
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:42] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:42] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:42] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:22:42] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:42] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:42] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:42] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:42] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:42] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:42] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:22:42] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:42] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:44] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:44] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:44] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:44] "GET /api/months/2026-02/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:45] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:45] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:45] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:22:45] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:47] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:47] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:47] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:47] "GET /api/months/2026-02/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:49] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:49] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:49] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:49] "GET /api/months/2026-03/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:55] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:55] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:55] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:55] "GET /api/months/2026-02/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:22:56] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:22:56] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:22:56] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:22:56] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:23:05] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:23:05] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:23:05] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:23:05] "GET /api/months/2026-02/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:23:17] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:23:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:23:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:23:17] "GET /api/months/2026-03/items/ HTTP/1.1" 200 1891
+Forbidden (CSRF token missing.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:23:29] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:23:29] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:23:29] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:23:29] "GET /api/months/2026-04/items/ HTTP/1.1" 200 1891
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:24:00] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:24:00] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Forbidden (CSRF cookie not set.): /api/months/
+Forbidden: /api/months/
+[18/Jan/2026 17:24:00] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:24:00] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:24:00] "POST /api/months/ HTTP/1.1" 200 51
+[18/Jan/2026 17:24:00] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:24:00] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:24:00] "GET /api/months/2026-04/items/ HTTP/1.1" 200 1891
+/home/keith/ws/budgeter/backend/budget/api.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:19:39
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+/home/keith/ws/budgeter/backend/budget/api.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:24:24
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[18/Jan/2026 17:32:52] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:32:52] "POST /api/months/ HTTP/1.1" 200 51
+[18/Jan/2026 17:32:52] "POST /api/months/ HTTP/1.1" 200 51
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:32:52] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:32:52] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:32:52] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:32:52] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:32:52] "GET /api/months/2026-04/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:32:52] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:32:52] "GET /api/months/2026-04/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:32:54] "GET /accounts/google/login/ HTTP/1.1" 200 2199
+[18/Jan/2026 17:32:55] "POST /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:32:56] "GET /accounts/google/login/callback/?state=MonXtuONwsMqV9XS&code=4%2F0ASc3gC1BrJLrnhnn9FVrwuVOVNkQxGFWNMJ2XTyowRlmSvSIMYrnpi1bJEjUE207FYff6A&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.1" 302 0
+[18/Jan/2026 17:32:56] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:32:56] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:32:56] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:32:56] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:32:56] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:32:56] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:32:56] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:32:56] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:32:56] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:32:56] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:32:56] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:32:56] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:32:56] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:32:56] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:32:58] "GET /accounts/google/login/ HTTP/1.1" 200 2199
+[18/Jan/2026 17:33:04] "POST /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:33:05] "GET /accounts/google/login/callback/?state=LFPpMX0qWorrBhTE&code=4%2F0ASc3gC0KLeLXHoElCqf9gDpnV4t_URtYy5ExVSRiMrA8CS6OA2tlZe8F_1jh8Kj64h3kPA&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.1" 302 0
+[18/Jan/2026 17:33:05] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+[18/Jan/2026 17:33:05] "GET /api/months/ HTTP/1.1" 200 324
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:05] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:05] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:05] "GET /api/months/ HTTP/1.1" 200 324
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:05] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:05] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:05] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:05] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:05] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:05] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:05] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:05] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:05] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:07] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+[18/Jan/2026 17:33:07] "POST /api/months/ HTTP/1.1" 200 53
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:07] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:07] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:07] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:07] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:07] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:07] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:07] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:07] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:07] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:07] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:07] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:07] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:16] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:16] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:16] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:16] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:16] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:16] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:16] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:16] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:16] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:16] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:16] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:16] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:16] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:16] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:16] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:16] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:16] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:16] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:16] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:16] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:16] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:16] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:17] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:17] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:17] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:17] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:18] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:18] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:19] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:19] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:19] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:19] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:20] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:20] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:20] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:20] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:20] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:20] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:20] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:20] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:20] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:20] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+[18/Jan/2026 17:33:20] "POST /api/months/ HTTP/1.1" 200 53
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:20] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:20] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:20] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:20] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:20] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:20] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:20] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:20] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:20] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:20] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:20] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:20] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:20] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:21] "GET /accounts/google/login/ HTTP/1.1" 200 2199
+[18/Jan/2026 17:33:23] "POST /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:33:23] "GET /accounts/google/login/callback/?state=3hxMD2BecIRaNCrN&code=4%2F0ASc3gC24X3ObFoaR52RsncY-9Bo0J0FiW74Ex9DwyN6QLOcYFF0p5Xk7W0PyRsznmFLY_Q&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&authuser=0&prompt=none HTTP/1.1" 302 0
+[18/Jan/2026 17:33:23] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:23] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:23] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:23] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:23] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:33:23] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:33:23] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:23] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:33:23] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:33:23] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:23] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:23] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:23] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:33:23] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:33:24] "GET /accounts/google/login/ HTTP/1.1" 200 2199
+[18/Jan/2026 17:34:23] "GET /accounts/3rdparty/ HTTP/1.1" 200 3012
+[18/Jan/2026 17:34:34] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+[18/Jan/2026 17:34:34] "POST /api/months/ HTTP/1.1" 200 53
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:34:34] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:34:34] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:34:34] "GET /api/months/ HTTP/1.1" 200 324
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:34:34] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:34:34] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:34:34] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:34:34] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:34:34] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:34:34] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:34:34] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:34:34] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:34:34] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:34:35] "GET /accounts/google/login/ HTTP/1.1" 200 1977
+[18/Jan/2026 17:34:54] "POST /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:34:54] "GET /accounts/google/login/callback/?state=JqHE09n0qrWQrH98&code=4%2F0ASc3gC39Bek59Ffd2keEEb9IkH2OMsP1CwU3IavTd_tU3hCxd9cO1y5W_dVKOfq6nvFhBw&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&authuser=0&prompt=none HTTP/1.1" 302 0
+[18/Jan/2026 17:34:54] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:34:54] "POST /api/months/ HTTP/1.1" 200 53
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:34:54] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:34:54] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:34:54] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:34:54] "GET /api/months/ HTTP/1.1" 200 324
+'User' object has no attribute 'set_cookie'
+Traceback (most recent call last):
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/ninja/operation.py", line 133, in run
+    result = self.view_func(request, **values)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 196, in _view_wrapper
+    return _post_process_request(request, response)
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/decorators.py", line 163, in _post_process_request
+    return middleware.process_response(request, response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 473, in process_response
+    self._set_csrf_cookie(request, response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/middleware/csrf.py", line 258, in _set_csrf_cookie
+    response.set_cookie(
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/keith/ws/budgeter/backend/.venv/lib/python3.13/site-packages/django/utils/functional.py", line 253, in inner
+    return func(_wrapped, *args)
+AttributeError: 'User' object has no attribute 'set_cookie'
+Internal Server Error: /api/auth/me
+[18/Jan/2026 17:34:54] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:34:54] "GET /api/auth/me HTTP/1.1" 500 1254
+[18/Jan/2026 17:34:54] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:34:54] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:34:54] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:34:54] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:34:54] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:34:54] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+/home/keith/ws/budgeter/backend/budgeter/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:24:26
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+/home/keith/ws/budgeter/backend/budget/api.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:35:28
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+/home/keith/ws/budgeter/backend/budget/api.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:35:47
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+/home/keith/ws/budgeter/backend/budget/api.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:35:58
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[18/Jan/2026 17:36:12] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:12] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:12] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:12] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:12] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:12] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:12] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:12] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:12] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:12] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:12] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:12] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:12] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:12] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:13] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:13] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:13] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:13] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:13] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:13] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:13] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:13] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:13] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:13] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:13] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:13] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:13] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:13] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:13] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:13] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:13] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:13] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:13] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:13] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:13] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:13] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:13] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:13] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:13] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:13] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:13] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:13] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:20] "GET /accounts/logout/ HTTP/1.1" 302 0
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:20] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:36:20] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:20] "POST /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "POST /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:36:20] "GET /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:36:20] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/months/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:20] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "POST /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:20] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:21] "GET /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:36:21] "GET /accounts/google/login/callback/?state=ALEMVNY9ztz44RZV&code=4%2F0ASc3gC2NYGWeZi7JRZ5CM3MQjJTW6WDnUNJZ34dAh_ySbzN_ztxtTlF0_w1IIq1QbzW5kg&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none HTTP/1.1" 302 0
+[18/Jan/2026 17:36:21] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:21] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:21] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:21] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:21] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:21] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:21] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:21] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:22] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:22] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:22] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:22] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:22] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:22] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:23] "GET /accounts/logout/ HTTP/1.1" 302 0
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:36:23] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:23] "POST /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:23] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:23] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:23] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:23] "POST /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/auth/me
+[18/Jan/2026 17:36:23] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+[18/Jan/2026 17:36:23] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:23] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:23] "GET /api/budgetitems/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:23] "POST /api/months/ HTTP/1.1" 401 26
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:36:23] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:23] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:23] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:36:25] "GET /accounts/google/login/ HTTP/1.1" 302 0
+[18/Jan/2026 17:36:25] "GET /accounts/google/login/callback/?state=2tABre8O3HSqzwWY&code=4%2F0ASc3gC3aZZzJ2pTFnBej8kWk-3qUzGKQXPZ_Goy-2PHPNsOXmdzeKeEWbvcsHRNcpO6mpg&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.1" 302 0
+[18/Jan/2026 17:36:25] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:25] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:25] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:25] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:25] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:25] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:25] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:25] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:25] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:25] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:25] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:25] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:25] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:25] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:26] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:27] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:27] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:27] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:27] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:27] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:27] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:27] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:27] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:27] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:27] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:27] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:27] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:27] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:27] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:27] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:27] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:27] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:27] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:27] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:27] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:36:27] "POST /api/months/ HTTP/1.1" 200 53
+[18/Jan/2026 17:36:27] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:27] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:27] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:27] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:27] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:27] "GET /api/months/2026-01/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:36:28] "POST /api/months/ HTTP/1.1" 200 54
+[18/Jan/2026 17:36:28] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:36:28] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:36:28] "GET /api/months/2026-02/items/ HTTP/1.1" 200 1891
+/home/keith/ws/budgeter/backend/budgeter/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 18, 2026 - 17:36:00
+Django version 5.2.3, using settings 'budgeter.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Unauthorized: /api/auth/me
+Forbidden (CSRF cookie not set.): /api/months/
+Unauthorized: /api/months/2026-01/items/
+Forbidden: /api/months/
+[18/Jan/2026 17:37:26] "GET /api/auth/me HTTP/1.1" 401 26
+Unauthorized: /api/budgetitems/
+[18/Jan/2026 17:37:26] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Forbidden (CSRF cookie not set.): /api/months/
+Unauthorized: /api/months/
+[18/Jan/2026 17:37:26] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "POST /api/months/ HTTP/1.1" 403 31
+Forbidden: /api/months/
+[18/Jan/2026 17:37:26] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "POST /api/months/ HTTP/1.1" 403 31
+Unauthorized: /api/auth/me
+Unauthorized: /api/months/2026-01/items/
+Unauthorized: /api/budgetitems/
+Unauthorized: /api/months/
+[18/Jan/2026 17:37:26] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "GET /api/auth/me HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "GET /api/months/ HTTP/1.1" 200 324
+[18/Jan/2026 17:37:26] "POST /api/months/ HTTP/1.1" 200 54
+[18/Jan/2026 17:37:26] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:37:26] "POST /api/months/ HTTP/1.1" 200 54
+[18/Jan/2026 17:37:26] "GET /api/months/ HTTP/1.1" 200 324
+Unauthorized: /api/months/2026-01/items/
+Forbidden (CSRF cookie not set.): /api/months/
+Unauthorized: /api/budgetitems/
+Forbidden: /api/months/
+[18/Jan/2026 17:37:26] "GET /api/months/2026-01/items/ HTTP/1.1" 401 26
+Unauthorized: /api/months/
+[18/Jan/2026 17:37:26] "GET /api/budgetitems/ HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "POST /api/months/ HTTP/1.1" 403 31
+[18/Jan/2026 17:37:26] "GET /api/months/ HTTP/1.1" 401 26
+[18/Jan/2026 17:37:26] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:37:26] "GET /api/auth/me HTTP/1.1" 200 96
+[18/Jan/2026 17:37:26] "GET /api/months/2026-02/items/ HTTP/1.1" 200 1891
+[18/Jan/2026 17:37:26] "GET /api/budgetitems/ HTTP/1.1" 200 4342
+[18/Jan/2026 17:37:26] "GET /api/months/2026-02/items/ HTTP/1.1" 200 1891

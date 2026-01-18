@@ -10,6 +10,7 @@ import uuid
 import calendar
 
 from .models import Month, BudgetItem, BudgetItemVersion
+from django.middleware.csrf import get_token
 
 api = NinjaAPI(auth=django_auth)
 
@@ -112,6 +113,7 @@ def create_month(request, payload: MonthInputSchema):
 
 @api.get("/auth/me", response=UserSchema)
 def get_me(request):
+    get_token(request) # Ensure CSRF cookie is set
     return request.user
 
 @api.get("/months/", response=List[MonthSchema])

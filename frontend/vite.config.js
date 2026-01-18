@@ -40,7 +40,12 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
+        changeOrigin: false,
+        secure: false,
+      },
+      '/accounts': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: false,
         secure: false,
       },
     },
@@ -48,6 +53,7 @@ export default defineConfig({
       'localhost',
       'budget.lan',
       'budgeter.ddns.net',
+      'budgeter-demo.ddns.net',
       '192.168.0.165',
     ],
   },

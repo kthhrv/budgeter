@@ -17,6 +17,21 @@ const formatDate = (date, format = 'YYYY-MM') => {
     return date.toISOString().split('T')[0];
 };
 
+const getCookie = (name) => {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+};
+
 const isMonthInPast = (date) => {
     const currentDate = new Date();
     const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -36,7 +51,10 @@ const apiService = {
         const payload = { month: monthId };
         const response = await fetch(`${API_BASE_URL}/months/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
             body: JSON.stringify(payload),
             credentials: 'include'
         });
@@ -61,7 +79,10 @@ const apiService = {
     async updateBudgetItemValue(monthId, budgetItemId, payload) {
         const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/${budgetItemId}/value/`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
             body: JSON.stringify(payload),
             credentials: 'include'
         });
@@ -74,7 +95,10 @@ const apiService = {
     async createBudgetItemCategory(monthId, payload) {
         const response = await fetch(`${API_BASE_URL}/months/${monthId}/budgetitems/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
             body: JSON.stringify(payload),
             credentials: 'include'
         });
@@ -84,7 +108,10 @@ const apiService = {
     async updateBudgetItemCategory(budgetItemId, payload) {
         const response = await fetch(`${API_BASE_URL}/budgetitems/${budgetItemId}/`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
             body: JSON.stringify(payload),
             credentials: 'include'
         });
@@ -94,6 +121,9 @@ const apiService = {
     async deleteBudgetItemForMonth(monthId, budgetItemId) {
         const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/${budgetItemId}/`, {
             method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
             credentials: 'include'
         });
         if (!response.ok) {

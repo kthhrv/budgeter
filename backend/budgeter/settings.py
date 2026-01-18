@@ -152,7 +152,11 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://budgeter.ddns.net",
+    "https://budgeter-demo.ddns.net",
 ]
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Allauth settings
 AUTHENTICATION_BACKENDS = [
@@ -178,4 +182,8 @@ ALLOWED_GOOGLE_EMAILS = ["kthhrv@gmail.com", "mth.harvey@gmail.com"]
 
 LOGIN_REDIRECT_URL = '/' # Redirect to frontend
 LOGOUT_REDIRECT_URL = '/'
-ACCOUNT_LOGOUT_ON_GET = True # Optional: Allow logout on GET for simplicity in this app
+ACCOUNT_LOGOUT_ON_GET = True 
+SOCIALACCOUNT_LOGIN_ON_GET = True # Skip the intermediate "Continue" page
+ACCOUNT_SESSION_REMEMBER = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
