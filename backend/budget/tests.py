@@ -9,6 +9,7 @@ import uuid
 
 # Import your models and the API instance
 from .models import Month, BudgetItem, BudgetItemVersion
+from django.contrib.auth.models import User
 from .api import api # Assuming api.py is in the same app directory
 
 
@@ -28,6 +29,8 @@ class BudgetAPITestCase(TestCase):
         Set up initial data for tests, including months and budget items.
         """
         self.client = Client() # Initialize a Django test client
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client.login(username='testuser', password='password')
 
         # Patch datetime.date in budget.api to freeze time at 2025-10-15
         # This ensures that "2025-10" is considered the current month for these tests
@@ -222,6 +225,7 @@ class BudgetAPITestCase(TestCase):
         rent_item = next((item for item in data if item['item_name'] == 'Rent'), None)
         self.assertIsNotNone(rent_item)
         self.assertEqual(rent_item['effective_value'], 1200.00)
+        self.assertEqual(rent_item['value'], 1200.00)
         self.assertEqual(rent_item['effective_from_month_name'], self.month_jan.month_name)
 
         salary_item = next((item for item in data if item['item_name'] == 'Salary'), None)

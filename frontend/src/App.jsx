@@ -517,7 +517,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
                     calculation_type: item.calculation_type || 'fixed',
                     weekly_payment_day: item.weekly_payment_day || '',
                     last_payment_month_id: item.last_payment_month_id || '',
-                    value: item.effective_value || '', // Populate value
+                    value: item.value || '', // Populate value
                     is_one_off: item.is_one_off || false // Populate is_one_off
                 });
             }

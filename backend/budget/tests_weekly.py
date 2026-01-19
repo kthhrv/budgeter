@@ -1,5 +1,6 @@
 from django.test import TestCase, Client
 from .models import Month, BudgetItem, BudgetItemVersion
+from django.contrib.auth.models import User
 from .api import calculate_weekly_occurrences
 import datetime
 import json
@@ -7,6 +8,8 @@ import json
 class BudgetWeeklyTestCase(TestCase):
     def setUp(self):
         self.client = Client()
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client.login(username='testuser', password='password')
         self.month_jan_2026 = Month.objects.create(
             month_id="2026-01",
             month_name="January 2026",
@@ -46,6 +49,7 @@ class BudgetWeeklyTestCase(TestCase):
         
         # Expect 4 * 10 = 40
         self.assertEqual(item_data['effective_value'], 40.0)
+        self.assertEqual(item_data['value'], 10.0)
         self.assertEqual(item_data['occurrences'], 4)
 
         # Update item to Thursday (4)

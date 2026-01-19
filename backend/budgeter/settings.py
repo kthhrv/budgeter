@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-q^0c7)&sg4b7clno3*5w3tqs2)dg^kqdcpme!h%pa=sd56v*#0'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-q^0c7)&sg4b7clno3*5w3tqs2)dg^kqdcpme!h%pa=sd56v*#0')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -164,7 +165,7 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if os.environ.get('DJANGO_SECRET_KEY') else 'http'
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [

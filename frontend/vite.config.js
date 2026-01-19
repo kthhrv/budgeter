@@ -48,7 +48,17 @@ export default defineConfig({
         secure: false,
       },
       '/accounts': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://localhost:8000',
+        changeOrigin: false,
+        secure: false,
+      },
+      '/admin': {
+        target: 'http://localhost:8000',
+        changeOrigin: false,
+        secure: false,
+      },
+      '/static': {
+        target: 'http://localhost:8000',
         changeOrigin: false,
         secure: false,
       },
