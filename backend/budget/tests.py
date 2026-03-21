@@ -394,15 +394,24 @@ class BudgetAPITestCase(TestCase):
             start_date=datetime.date(2024, 11, 1),
             end_date=datetime.date(2024, 11, 30)
         )
-        
+
         # Try to delete an item for the past month
         response = self.client.delete(
             f'/api/months/{past_month.month_id}/items/{self.item_rent.budget_item_id}/'
         )
-        
+
         # Should return 403 Forbidden
         self.assertEqual(response.status_code, 403)
         data = response.json()
         self.assertIn("Cannot delete budget items for previous months", data['detail'])
+
+    def test_get_items_for_nonexistent_month_returns_404(self):
+        """
+        Proves that GET /months/{month_id}/items/ returns 404 for a month
+        that hasn't been created yet. This is the root cause of the frontend
+        race condition — if createOrGetMonth hasn't completed, this call fails.
+        """
+        response = self.client.get('/api/months/2099-06/items/')
+        self.assertEqual(response.status_code, 404)
 
 
