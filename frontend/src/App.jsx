@@ -666,8 +666,10 @@ const App = () => {
     const fetchData = useCallback(async (date) => {
         setIsLoading(true);
         try {
-            const [, items, categories, months] = await Promise.all([
-                apiService.createOrGetMonth(date),
+            // Ensure the month exists before fetching its items
+            await apiService.createOrGetMonth(date);
+
+            const [items, categories, months] = await Promise.all([
                 apiService.getBudgetItemsForMonth(formatDate(date, 'YYYY-MM')),
                 apiService.getAllBudgetItemCategories(),
                 apiService.getAllMonths()
