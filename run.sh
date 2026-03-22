@@ -17,7 +17,8 @@ echo "Collecting static files..."
 echo "Starting Gunicorn..."
 gunicorn budgeter.wsgi:application \
     --workers 2 \
-    --bind unix:/tmp/gunicorn.sock &
+    --bind unix:/tmp/gunicorn.sock \
+    --access-logfile - &
 
 echo "Starting Nginx..."
 nginx -g "daemon off;"
