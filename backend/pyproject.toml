@@ -10,7 +10,11 @@ dependencies = [
     "django-allauth>=65.14.0",
     "django-cors-headers>=4.7.0",
     "django-ninja>=1.4.3",
+    "envars",
     "gunicorn>=23.0.0",
     "pyjwt>=2.10.1",
     "requests>=2.32.5",
 ]
+
+[tool.uv.sources]
+envars = { git = "https://github.com/timeoutdigital/envars2", rev = "openbao" }

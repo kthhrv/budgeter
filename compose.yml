@@ -1,0 +1,15 @@
+services:
+  budgeter:
+    build: .
+    image: ${BUDGETER_IMAGE:-budgeter}:${IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-budgeter}
+    restart: unless-stopped
+    ports:
+      - "${BUDGETER_PORT:-8000}:80"
+    volumes:
+      - budgeter-data:/data
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+
+volumes:
+  budgeter-data:

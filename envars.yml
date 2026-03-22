@@ -1,0 +1,54 @@
+configuration:
+  app: budgeter
+  kms_key: openbao:http://192.168.0.191:8200:budgeter
+  description_mandatory: false
+  environments:
+  - demo
+  - local
+  - prod
+  - test
+
+environment_variables:
+  ADDON_DOMAIN:
+    demo: budgeter-demo.ddns.net
+    local: localhost:8000
+    prod: budgeter.ddns.net
+    test: localhost
+
+  DEBUG:
+    default: 'false'
+    local: 'true'
+    test: 'true'
+
+  DJANGO_SECRET_KEY:
+    demo: !secret |-
+      vault:v1:8ChLJLmgkeQPFMuqpSFxOY2fhShgRCudfC1yY9cvOaFUtZ/I4jdcDBsDGQ0ZRl+s56+aEOkxhUGpHbuN
+    local: !secret |-
+      vault:v1:PBDStFg1pKI07UrBaoGcYjHjfYpxiaZOnLF+nMpJ2fXoplK912TmpaY81lU7CO2omasPzBQGRoLDJo17
+    test: django-insecure-test-key
+
+  GOOGLE_CLIENT_ID:
+    default: 481873875422-dairqbj2ncrivlhie49ngcrb2pca0isr.apps.googleusercontent.com
+
+  GOOGLE_CLIENT_SECRET:
+    demo: !secret |-
+      vault:v1:yKwEh/nYOMBlh/0zUbM+2NTIbFPF8NEUjoXFEpE+9WGLzIgH8y7+hM5iEcA52rRpKRMdX5RVMOWboECq5i3k
+    local: !secret |-
+      vault:v1:x4Omz/Q+mzAUbA8Fv0XnXq211jVgAE44knMrrCPDzcPI4KT84Ilrths827UHoQVJaQ2A/iMzsB6ge6jXx7lJ
+    prod: !secret |-
+      vault:v1:fP7lBA8v5SqRnfEJkK6Tf+9mwbyp7tBNosR1tvMHTTrNyLMuICeDkEs3Aq86164kRTZ2+xS3Ndg7FEhAfFt/
+
+  HA_ACCESS_TOKEN:
+    demo: !secret |-
+      vault:v1:TzZcEpkTTCq1E64bFcmCLNemHbqUbd9rdBcMnnNs0WfRmHJXIbpTca7laS7Bbne809UH0GY2xnViwXqu7KhpVk8Lp1KVYijk20r4GUVF9pwpiGpl3rblVGITT3kwRXWjRy7/ShDnjWxMDj2NrIWwQMEhu1ahAcaVRDekPUlMkpB7YQhy9BYq3sCRmvuRJy5xQP7RYPHTES6LVRxXuw4bA5oKmniwhpeskTBpHpbyQnnz2CIcowrjtQ6UUyhtlQxfu7hbv3N/eHGFniQ/EGllqHddtA==
+    local: !secret |-
+      vault:v1:HZOSgxz+L8DdJKx6KAh739Q7GqaoPP4/Ythpyob07wtvhM6OHJqw+g1IVxuppi786cC9LeddnbBOYiDo/Uz6aMc7L3j5b8XiXEY0BphgkTs6s60SMBswPmYMhJyFHniRi3vaNP4eBp3VmOdHp70pEDVSu7PCv/lUa4JpOOEwA1EQyx3pwHrX8pieYNXcFveTa7+Sp9XGEg6gWHf9mIJfz8PDrCuh2DibR95t28yqanHJlm5NW8WwAYPBpxkPtEKlSk5YquqYd31AC8yp6x6gU4+vow==
+    prod: !secret |-
+      vault:v1:XH6IWmxr5F5NmpA+TZgOfmtNNQohHYHK2cXMyaVwvA0zg4snsC4EuHKzGg+bpPze0m6VNPhuHrp6EDav5LmkOUtv5qIfgnyhKSYHXzvfHfWCnN2Yz5ipzDx4oaMSoR6LYp7tHlEqGlysU9NlOj9l0VoXHaF0RHZeq/tm3UCREVOGDuHLL2A6b9ve8rrNrduNQ18NZx5RjCXhPTwcRk+KBWCYqXcyxiJf+vH1q6cJUOwBm6fCkWM+bvBMeC68VxCHyD6TqucCfQXRcVv0XNaVt4uJPg==
+    test: ''
+
+  HA_API_URL:
+    default: http://192.168.0.207:8123
+
+  HA_NOTIFY_ENTITY:
+    default: notify.mobile_app_pixel_8

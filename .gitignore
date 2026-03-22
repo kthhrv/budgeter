@@ -15,5 +15,9 @@ db.sqlite3
 # Logs
 *.log
 
+# Environment variables
+.env
+.env.*
+
 # System files
 .DS_Store
