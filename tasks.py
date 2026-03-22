@@ -83,7 +83,6 @@ def deploy(c, env=DEFAULT_ENV):
     env_lines = [
         f"APP_ENV={env}",
         f"IMAGE_TAG={sha}",
-        f"BUDGETER_IMAGE={IMAGE}",
     ]
     env_lines += [f"{k}={v}" for k, v in compose_vars.items()]
     env_content = "\\n".join(env_lines)
