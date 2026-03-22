@@ -56,7 +56,7 @@ def build(c):
     """Build Docker image tagged with git SHA and latest."""
     sha = _get_sha(c)
     print(f"Building image — SHA: {sha}")
-    c.run(f"docker build -t {IMAGE}:{sha} -t {IMAGE}:latest .")
+    c.run(f"docker build -t {IMAGE}:{sha} -t {IMAGE}:latest -t budgeter:latest .")
 
 
 @task

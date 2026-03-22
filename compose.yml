@@ -1,6 +1,5 @@
 services:
   budgeter:
-    build: .
     image: ${BUDGETER_IMAGE:-budgeter}:${IMAGE_TAG:-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-budgeter}
     restart: unless-stopped
