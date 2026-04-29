@@ -155,7 +155,7 @@ const LoadingSpinner = () => (
 
 const SearchComponent = ({ searchTerm, onSearchChange, onClearSearch }) => {
     return (
-        <div className="relative flex items-center bg-white rounded-lg shadow-md p-2">
+        <div className="relative flex items-center bg-white rounded-xl shadow-md border border-gray-100 p-2">
             <Search className="h-5 w-5 text-gray-400 ml-2" />
             <input
                 type="text"
@@ -187,7 +187,7 @@ const MonthSelector = ({ currentDate, isLoading }) => {
     };
 
     return (
-        <div className="flex items-center justify-between p-4 bg-white shadow-md rounded-lg h-full">
+        <div className="flex items-center justify-between p-4 bg-white shadow-md rounded-xl border border-gray-100 h-full">
             <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={isLoading}>
                 <ChevronLeft className="h-6 w-6" />
             </button>
@@ -250,54 +250,57 @@ const OwnerTotals = ({ items }) => {
     }, [items]);
 
     return (
-        <div className="my-4 p-6 bg-white rounded-lg shadow-md space-y-8">
-            <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Shared Expense Breakdown</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="p-4 bg-blue-100 rounded-lg text-center">
-                        <div className="flex justify-center items-center text-blue-800"><User className="mr-2" /> <h4 className="text-lg font-semibold">Keith's Share</h4></div>
-                        <p className="text-2xl font-bold text-blue-900">£{keithShare.toFixed(0)}</p>
-                        <p className="text-xs text-blue-700 mt-1">({(keithProportion * 100).toFixed(1)}% of shared total)</p>
+        <div className="my-4 space-y-6">
+            <div className="p-6 bg-white rounded-xl shadow-md border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-500 uppercase tracking-wider mb-5 text-center">Shared Expense Breakdown</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl text-center border border-blue-200/50 hover:shadow-md transition-shadow">
+                        <div className="flex justify-center items-center text-blue-600 mb-2"><User className="mr-2 h-5 w-5" /> <h4 className="text-sm font-semibold uppercase tracking-wide">Keith's Share</h4></div>
+                        <p className="text-3xl font-extrabold text-blue-900">£{keithShare.toFixed(0)}</p>
+                        <p className="text-xs text-blue-500 mt-2 font-medium">({(keithProportion * 100).toFixed(1)}% of shared total)</p>
                     </div>
-                    <div className="p-4 bg-purple-100 rounded-lg text-center">
-                        <div className="flex justify-center items-center text-purple-800"><Home className="mr-2" /> <h4 className="text-lg font-semibold">Bills Pot Total</h4></div>
-                        <p className="text-2xl font-bold text-purple-900">£{billsPotTotal.toFixed(0)}</p>
-                        <p className="text-xs text-purple-700 mt-1">&nbsp;</p>
+                    <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl text-center border border-purple-200/50 hover:shadow-md transition-shadow">
+                        <div className="flex justify-center items-center text-purple-600 mb-2"><Home className="mr-2 h-5 w-5" /> <h4 className="text-sm font-semibold uppercase tracking-wide">Bills Pot Total</h4></div>
+                        <p className="text-3xl font-extrabold text-purple-900">£{billsPotTotal.toFixed(0)}</p>
+                        <p className="text-xs text-purple-500 mt-2 font-medium">&nbsp;</p>
                     </div>
-                    <div className="p-4 bg-pink-100 rounded-lg text-center">
-                        <div className="flex justify-center items-center text-pink-800"><User className="mr-2" /> <h4 className="text-lg font-semibold">Tild's Share</h4></div>
-                        <p className="text-2xl font-bold text-pink-900">£{tildShare.toFixed(0)}</p>
-                        <p className="text-xs text-pink-700 mt-1">({(tildProportion * 100).toFixed(1)}% of shared total)</p>
+                    <div className="p-5 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl text-center border border-pink-200/50 hover:shadow-md transition-shadow">
+                        <div className="flex justify-center items-center text-pink-600 mb-2"><User className="mr-2 h-5 w-5" /> <h4 className="text-sm font-semibold uppercase tracking-wide">Tild's Share</h4></div>
+                        <p className="text-3xl font-extrabold text-pink-900">£{tildShare.toFixed(0)}</p>
+                        <p className="text-xs text-pink-500 mt-2 font-medium">({(tildProportion * 100).toFixed(1)}% of shared total)</p>
                     </div>
                 </div>
             </div>
 
-            <div className="border-t pt-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Remaining Balances</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-4 bg-blue-50 rounded-lg flex flex-col">
-                        <h4 className="text-lg font-semibold text-blue-800 text-center mb-3">Keith</h4>
-                        <div className="space-y-2 text-sm flex-grow">
-                            <div className="flex justify-between items-center"><span className="flex items-center text-green-700"><TrendingUp className="mr-2 h-4 w-4" />Income</span> <span>+ £{keithIncome.toFixed(2)}</span></div>
-                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Personal Expenses</span> <span>- £{keithDirectExpenses.toFixed(2)}</span></div>
-                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Share of Expenses</span> <span>- £{keithShare.toFixed(2)}</span></div>
-                        </div>
-                        <div className="border-t mt-3 pt-3 flex justify-between items-center">
-                            <span className="flex items-center font-bold text-blue-900"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
-                            <span className={`font-bold text-lg ${keithRemaining >= 0 ? 'text-blue-900' : 'text-red-700'}`}>£{keithRemaining.toFixed(2)}</span>
-                        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="p-5 bg-white rounded-xl shadow-md border border-gray-100 flex flex-col hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-center mb-4">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2"><User className="h-4 w-4 text-blue-600" /></div>
+                        <h4 className="text-lg font-bold text-blue-800">Keith</h4>
                     </div>
-                    <div className="p-4 bg-pink-50 rounded-lg flex flex-col">
-                        <h4 className="text-lg font-semibold text-pink-800 text-center mb-3">Tild</h4>
-                        <div className="space-y-2 text-sm flex-grow">
-                            <div className="flex justify-between items-center"><span className="flex items-center text-green-700"><TrendingUp className="mr-2 h-4 w-4" />Income</span> <span>+ £{tildIncome.toFixed(2)}</span></div>
-                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Personal Expenses</span> <span>- £{tildDirectExpenses.toFixed(2)}</span></div>
-                            <div className="flex justify-between items-center"><span className="flex items-center text-red-700"><TrendingDown className="mr-2 h-4 w-4" />Share of Expenses</span> <span>- £{tildShare.toFixed(2)}</span></div>
-                        </div>
-                        <div className="border-t mt-3 pt-3 flex justify-between items-center">
-                            <span className="flex items-center font-bold text-pink-900"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
-                            <span className={`font-bold text-lg ${tildRemaining >= 0 ? 'text-pink-900' : 'text-red-700'}`}>£{tildRemaining.toFixed(2)}</span>
-                        </div>
+                    <div className="space-y-3 text-sm flex-grow">
+                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{keithIncome.toFixed(2)}</span></div>
+                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{keithDirectExpenses.toFixed(2)}</span></div>
+                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Share of Expenses</span> <span className="font-semibold text-red-500">- £{keithShare.toFixed(2)}</span></div>
+                    </div>
+                    <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${keithRemaining >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
+                        <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
+                        <span className={`font-extrabold text-xl ${keithRemaining >= 0 ? 'text-blue-700' : 'text-red-600'}`}>£{keithRemaining.toFixed(2)}</span>
+                    </div>
+                </div>
+                <div className="p-5 bg-white rounded-xl shadow-md border border-gray-100 flex flex-col hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-center mb-4">
+                        <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center mr-2"><User className="h-4 w-4 text-pink-600" /></div>
+                        <h4 className="text-lg font-bold text-pink-800">Tild</h4>
+                    </div>
+                    <div className="space-y-3 text-sm flex-grow">
+                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{tildIncome.toFixed(2)}</span></div>
+                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{tildDirectExpenses.toFixed(2)}</span></div>
+                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Share of Expenses</span> <span className="font-semibold text-red-500">- £{tildShare.toFixed(2)}</span></div>
+                    </div>
+                    <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${tildRemaining >= 0 ? 'bg-pink-50' : 'bg-red-50'}`}>
+                        <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
+                        <span className={`font-extrabold text-xl ${tildRemaining >= 0 ? 'text-pink-700' : 'text-red-600'}`}>£{tildRemaining.toFixed(2)}</span>
                     </div>
                 </div>
             </div>
@@ -356,39 +359,40 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, 
                 title="Delete Item"
                 message={`Are you sure you want to delete '${item.item_name}'? This action cannot be undone.`}
             />
-            <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow mb-3">
-                <div className="flex flex-wrap items-center justify-between">
-                    <div className="w-full sm:w-auto flex-grow mb-2 sm:mb-0">
-                        <div className="flex items-center">
-                            <span className="font-bold text-lg text-gray-800">{item.item_name}</span>
-                            {item.is_one_off && <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full">One-off</span>}
-                            {item.effective_from_month_name !== formatDate(currentDate, 'MonthYYYY') && !isSynthetic &&
-                                <span className="ml-2 text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-1 rounded-full" title={`Value effective from ${item.effective_from_month_name}`}>Inherited</span>}
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 mb-3 group">
+                <div className="flex items-center justify-between">
+                    <div className="flex-grow min-w-0">
+                        <div className="flex items-center flex-wrap gap-2">
+                            <span className="font-bold text-base text-gray-800 truncate">{item.item_name}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>
+                                {item.bills_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Bills Pot</span>}
+                                {item.is_one_off && <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">One-off</span>}
+                                {item.effective_from_month_name !== formatDate(currentDate, 'MonthYYYY') && !isSynthetic &&
+                                    <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-500 rounded-full" title={`Value effective from ${item.effective_from_month_name}`}>Inherited</span>}
+                            </div>
                         </div>
-
+                        {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-400 mt-1">Weekly on {DAY_CHOICES[item.weekly_payment_day] || 'unknown day'}{item.occurrences !== undefined && item.occurrences !== null ? ` · ${item.occurrences} occurrences` : ''}</p>}
                     </div>
-                    <div className="flex items-center space-x-2 sm:space-x-4">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>
-                        {item.bills_pot && <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Bills Pot</span>}
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                        <span className={`text-lg font-bold px-3 py-1 rounded-lg ${
+                            item.item_type === 'income'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-red-50 text-red-600 border border-red-200'
+                        }`}>
+                            £{(parseFloat(item.effective_value) || 0).toFixed(2)}
+                        </span>
+                        {!isSynthetic && !isEditingDisabled && (
+                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => onEditCategory(item.budget_item_id)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"><Edit2 className="h-4 w-4" /></button>
+                                <button onClick={() => setShowDeleteConfirm(true)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                            </div>
+                        )}
+                        {!isSynthetic && isEditingDisabled && (
+                            <span className="text-xs text-gray-400 px-2 py-1 bg-gray-50 rounded-md border border-gray-200">Locked</span>
+                        )}
                     </div>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                    <div className={`text-xl font-semibold p-2 rounded-md ${item.item_type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                        £{(parseFloat(item.effective_value) || 0).toFixed(2)}
-                    </div>
-                    {!isSynthetic && !isEditingDisabled && (
-                        <div className="flex items-center">
-                            <button onClick={() => onEditCategory(item.budget_item_id)} className="p-2 text-gray-500 hover:text-indigo-600"><Edit2 className="h-5 w-5" /></button>
-                            <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-gray-500 hover:text-red-600"><Trash2 className="h-5 w-5" /></button>
-                        </div>
-                    )}
-                    {!isSynthetic && isEditingDisabled && (
-                        <div className="flex items-center">
-                            <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded">Past month - editing locked</span>
-                        </div>
-                    )}
-                </div>
-                {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-500 mt-1">Calculated weekly on {DAY_CHOICES[item.weekly_payment_day] || 'unknown day'}{item.occurrences !== undefined && item.occurrences !== null ? ` (${item.occurrences} occurrences)` : ''}</p>}
             </div>
         </>
     );
@@ -461,8 +465,8 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
     }
 
     return (
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
-            <h3 className="text-2xl font-bold mb-4 text-gray-800">{title}</h3>
+        <div className="bg-white p-4 md:p-6 rounded-xl shadow-md border border-gray-100 mb-6">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">{title}</h3>
             <div className="space-y-4">
                 {itemType === 'expense' ? (
                     processedItems.map(([owner, ownerItems]) => {
@@ -846,8 +850,8 @@ const App = () => {
 
     if (!user) {
         return (
-            <div className="bg-indigo-600 min-h-screen flex items-center justify-center p-4">
-                <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
+            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 min-h-screen flex items-center justify-center p-4">
+                <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
                     <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <Wallet className="w-10 h-10 text-indigo-600" />
                     </div>
@@ -868,7 +872,7 @@ const App = () => {
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
-            <header className="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-40">
+            <header className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white p-4 shadow-lg sticky top-0 z-40">
                 <div className="container mx-auto flex justify-between items-center max-w-5xl">
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center">
                         <Wallet className="mr-3 h-8 w-8" /> Budgeter
@@ -890,9 +894,9 @@ const App = () => {
                             <button
                                 onClick={handleOpenNewCategoryModal}
                                 disabled={isEditingDisabled}
-                                className={`w-full h-full flex items-center justify-center space-x-2 font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 ${isEditingDisabled
-                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                className={`w-full h-full flex items-center justify-center space-x-2 font-bold py-3 px-6 rounded-xl shadow-lg transition-all duration-300 ${isEditingDisabled
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl active:scale-[0.98]'
                                     }`}
                             >
                                 <PlusCircle /><span>{isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}</span>
