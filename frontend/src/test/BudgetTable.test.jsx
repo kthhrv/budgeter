@@ -31,8 +31,8 @@ const defaultProps = {
 describe('BudgetTable', () => {
     it('renders the title', () => {
         const items = [makeItem()];
-        render(<BudgetTable title="Shared Expenses" itemType="expense" items={items} {...defaultProps} />);
-        expect(screen.getByText('Shared Expenses')).toBeInTheDocument();
+        render(<BudgetTable title="Joint Expenses" itemType="expense" items={items} {...defaultProps} />);
+        expect(screen.getByText('Joint Expenses')).toBeInTheDocument();
     });
 
     it('shows empty state when no items of type exist', () => {

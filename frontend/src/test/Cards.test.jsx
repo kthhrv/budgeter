@@ -14,7 +14,7 @@ describe('SharedCard', () => {
 
     it('renders all line items', () => {
         render(<SharedCard {...defaultProps} />);
-        expect(screen.getByText('Shared')).toBeInTheDocument();
+        expect(screen.getByText('Joint')).toBeInTheDocument();
         expect(screen.getByText('Income')).toBeInTheDocument();
         expect(screen.getByText('Joint Account')).toBeInTheDocument();
         expect(screen.getByText('Expenses')).toBeInTheDocument();
@@ -73,7 +73,7 @@ describe('PersonCard', () => {
         render(<PersonCard {...defaultProps} />);
         expect(screen.getByText('Income')).toBeInTheDocument();
         expect(screen.getByText('Personal Expenses')).toBeInTheDocument();
-        expect(screen.getByText('Shared Expenses')).toBeInTheDocument();
+        expect(screen.getByText('Joint Expenses')).toBeInTheDocument();
         expect(screen.getByText('Remaining')).toBeInTheDocument();
     });
 

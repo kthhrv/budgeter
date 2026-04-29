@@ -21,8 +21,8 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
             <div className="xl:hidden space-y-6">
                 <div className="space-y-4">
                     <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
-                    <BudgetTable title="Shared Income" itemType="income" ownerFilter="shared" {...tableProps} />
-                    <BudgetTable title="Shared Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
+                    <BudgetTable title="Joint Income" itemType="income" ownerFilter="shared" {...tableProps} />
+                    <BudgetTable title="Joint Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
                 </div>
                 <div className="space-y-4">
                     <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
@@ -45,8 +45,8 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
                 </div>
                 <div className="grid grid-cols-3 gap-6">
                     <div className="space-y-4">
-                        <BudgetTable title="Shared Income" itemType="income" ownerFilter="shared" {...tableProps} />
-                        <BudgetTable title="Shared Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
+                        <BudgetTable title="Joint Income" itemType="income" ownerFilter="shared" {...tableProps} />
+                        <BudgetTable title="Joint Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
                     </div>
                     <div className="space-y-4">
                         <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
