@@ -71,4 +71,9 @@ export default defineConfig({
       '192.168.0.165',
     ],
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 })
