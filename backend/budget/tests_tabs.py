@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from .models import TabItem, TabRepayment
+from .models import TabItem, TabRepayment, Month, BudgetItem, BudgetItemVersion
 import datetime
 import json
 
@@ -128,3 +128,105 @@ class TabsAPITestCase(TestCase):
             'description': 'X', 'paid_by': 'tild', 'total_cost': 100, 'amount_owed': 50, 'date_added': '2025-01-01'
         })
         self.assertEqual(resp.status_code, 401)
+
+
+class AutoRepaymentTestCase(TestCase):
+    """Tests for budget items flagged as is_tab_repayment appearing as auto-repayments."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client.login(username='testuser', password='password')
+        self.jan = Month.objects.create(
+            month_id='2026-01', month_name='January 2026',
+            start_date=datetime.date(2026, 1, 1), end_date=datetime.date(2026, 1, 31)
+        )
+        self.feb = Month.objects.create(
+            month_id='2026-02', month_name='February 2026',
+            start_date=datetime.date(2026, 2, 1), end_date=datetime.date(2026, 2, 28)
+        )
+
+    def test_auto_repayment_appears_in_tabs(self):
+        bi = BudgetItem.objects.create(
+            item_name='Tild Repayment', item_type='expense', owner='tild', is_tab_repayment=True
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=bi, month=self.jan, effective_from_month=self.jan, value=100, is_one_off=False
+        )
+        resp = self.client.get('/api/tabs/')
+        data = resp.json()
+        auto = [r for r in data['repayments'] if r['is_auto']]
+        self.assertEqual(len(auto), 2)  # Jan + Feb (rolls over)
+        self.assertEqual(auto[0]['amount'], 100)
+        self.assertEqual(auto[0]['paid_by'], 'tild')
+        self.assertIn('Tild Repayment', auto[0]['note'])
+
+    def test_auto_repayment_affects_net_balance(self):
+        # Tild paid for dinner, Keith owes 200
+        TabItem.objects.create(description='Dinner', paid_by='tild', total_cost=400, amount_owed=200, date_added=datetime.date(2026, 1, 1))
+        # Keith has an auto-repayment of 100 per month (2 months = 200)
+        bi = BudgetItem.objects.create(
+            item_name='Keith Repayment', item_type='expense', owner='keith', is_tab_repayment=True
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=bi, month=self.jan, effective_from_month=self.jan, value=100, is_one_off=False
+        )
+        resp = self.client.get('/api/tabs/')
+        data = resp.json()
+        # Keith repaid 200 total via auto, owes 200 → net = 0
+        self.assertAlmostEqual(data['net_balance'], 0, places=2)
+        self.assertEqual(data['net_description'], 'All settled up!')
+
+    def test_auto_repayment_not_deletable(self):
+        """Auto-repayment IDs start with 'auto-' and should not match any TabRepayment UUID."""
+        bi = BudgetItem.objects.create(
+            item_name='Repayment', item_type='expense', owner='keith', is_tab_repayment=True
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=bi, month=self.jan, effective_from_month=self.jan, value=50, is_one_off=False
+        )
+        resp = self.client.get('/api/tabs/')
+        auto_id = resp.json()['repayments'][0]['id']
+        self.assertTrue(auto_id.startswith('auto-'))
+        # Trying to delete it should 404 (not a real TabRepayment)
+        resp = self.client.delete(f'/api/tabs/repayments/{auto_id}/')
+        self.assertIn(resp.status_code, [404, 422])
+
+    def test_non_tab_repayment_items_excluded(self):
+        bi = BudgetItem.objects.create(
+            item_name='Rent', item_type='expense', owner='shared', is_tab_repayment=False
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=bi, month=self.jan, effective_from_month=self.jan, value=800, is_one_off=False
+        )
+        resp = self.client.get('/api/tabs/')
+        auto = [r for r in resp.json()['repayments'] if r['is_auto']]
+        self.assertEqual(len(auto), 0)
+
+    def test_auto_repayment_respects_last_payment_month(self):
+        bi = BudgetItem.objects.create(
+            item_name='One-time Repayment', item_type='expense', owner='keith',
+            is_tab_repayment=True, last_payment_month=self.jan
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=bi, month=self.jan, effective_from_month=self.jan, value=150, is_one_off=False
+        )
+        resp = self.client.get('/api/tabs/')
+        auto = [r for r in resp.json()['repayments'] if r['is_auto']]
+        # Only January, not February (last_payment_month = Jan)
+        self.assertEqual(len(auto), 1)
+        self.assertIn('January 2026', auto[0]['note'])
+
+    def test_auto_repayment_sorted_by_date_descending(self):
+        bi = BudgetItem.objects.create(
+            item_name='Monthly', item_type='expense', owner='tild', is_tab_repayment=True
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=bi, month=self.jan, effective_from_month=self.jan, value=50, is_one_off=False
+        )
+        resp = self.client.get('/api/tabs/')
+        auto = [r for r in resp.json()['repayments'] if r['is_auto']]
+        self.assertEqual(len(auto), 2)
+        # Feb before Jan (descending)
+        self.assertIn('February', auto[0]['note'])
+        self.assertIn('January', auto[1]['note'])

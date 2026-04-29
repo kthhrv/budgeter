@@ -54,9 +54,9 @@ describe('BudgetItemRow', () => {
         expect(screen.getByText('One-off')).toBeInTheDocument();
     });
 
-    it('shows Inherited badge when effective_from_month differs from current', () => {
+    it('does not show Inherited badge (removed)', () => {
         render(<BudgetItemRow {...defaultProps} item={makeItem({ effective_from_month_name: 'December 2025' })} />);
-        expect(screen.getByText('Inherited')).toBeInTheDocument();
+        expect(screen.queryByText('Inherited')).not.toBeInTheDocument();
     });
 
     it('does not show Inherited badge when month matches', () => {

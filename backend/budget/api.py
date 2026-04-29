@@ -36,6 +36,7 @@ class BudgetItemSchema(Schema):
     owner: str
     bills_pot: bool
     groceries_pot: bool
+    is_tab_repayment: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -50,6 +51,7 @@ class BudgetItemInputSchema(Schema):
     owner: str
     bills_pot: bool
     groceries_pot: bool
+    is_tab_repayment: bool = False
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -62,6 +64,7 @@ class BudgetItemEditSchema(Schema):
     owner: Optional[str] = None
     bills_pot: Optional[bool] = None
     groceries_pot: Optional[bool] = None
+    is_tab_repayment: Optional[bool] = None
     calculation_type: Optional[str] = None
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -73,6 +76,7 @@ class BudgetItemVersionSchema(Schema):
     owner: str
     bills_pot: bool
     groceries_pot: bool
+    is_tab_repayment: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     value: float
@@ -153,7 +157,7 @@ def list_budget_items_for_month(request, month_id: str):
             
             budget_items_data.append(BudgetItemVersionSchema(
                 budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-                owner=budget_item.owner, bills_pot=budget_item.bills_pot, groceries_pot=budget_item.groceries_pot,
+                owner=budget_item.owner, bills_pot=budget_item.bills_pot, groceries_pot=budget_item.groceries_pot, is_tab_repayment=budget_item.is_tab_repayment,
                 calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
                 value=float(effective_version.value),
                 effective_value=calculated_value, effective_from_month_name=effective_version.effective_from_month.month_name,
@@ -187,7 +191,7 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         calculated_value = float(budget_item_version.value) * occurrences
     return BudgetItemVersionSchema(
         budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-        owner=budget_item.owner, bills_pot=budget_item.bills_pot, groceries_pot=budget_item.groceries_pot,
+        owner=budget_item.owner, bills_pot=budget_item.bills_pot, groceries_pot=budget_item.groceries_pot, is_tab_repayment=budget_item.is_tab_repayment,
         calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
         value=float(budget_item_version.value),
         effective_value=calculated_value, effective_from_month_name=budget_item_version.effective_from_month.month_name,
@@ -305,15 +309,12 @@ class TabItemInputSchema(Schema):
     date_added: str
 
 class TabRepaymentSchema(Schema):
-    id: uuid.UUID
+    id: str
     amount: float
     paid_by: str
     date: str
     note: str
-
-    @staticmethod
-    def resolve_date(obj):
-        return obj.date.isoformat()
+    is_auto: bool = False
 
 class TabRepaymentInputSchema(Schema):
     amount: float
@@ -337,12 +338,53 @@ class TabSummarySchema(Schema):
 @api.get("/tabs/", response=TabSummarySchema)
 def get_tabs(request):
     items = TabItem.objects.all()
-    repayments = TabRepayment.objects.all()
+    manual_repayments = TabRepayment.objects.all()
+
+    # Build repayment list: manual + auto from budget items flagged is_tab_repayment
+    repayments_list = []
+    for r in manual_repayments:
+        repayments_list.append({
+            'id': str(r.id), 'amount': float(r.amount), 'paid_by': r.paid_by,
+            'date': r.date.isoformat(), 'note': r.note, 'is_auto': False,
+        })
+
+    # Auto-repayments: for each budget item with is_tab_repayment, compute effective value per month
+    auto_items = BudgetItem.objects.filter(is_tab_repayment=True)
+    all_months = Month.objects.all().order_by('start_date')
+    for bi in auto_items:
+        for month_obj in all_months:
+            if bi.last_payment_month and month_obj.start_date > bi.last_payment_month.end_date:
+                continue
+            # Same rollover logic as list_budget_items_for_month
+            effective_version = None
+            try:
+                effective_version = BudgetItemVersion.objects.get(budget_item=bi, month=month_obj)
+            except BudgetItemVersion.DoesNotExist:
+                effective_version = BudgetItemVersion.objects.filter(
+                    budget_item=bi,
+                    effective_from_month__start_date__lte=month_obj.start_date,
+                    is_one_off=False
+                ).order_by('-effective_from_month__start_date').first()
+            if not effective_version:
+                continue
+            calc_value = float(effective_version.value)
+            if bi.calculation_type == 'weekly_count' and bi.weekly_payment_day:
+                calc_value *= calculate_weekly_occurrences(
+                    month_obj.start_date.year, month_obj.start_date.month, bi.weekly_payment_day
+                )
+            repayments_list.append({
+                'id': f'auto-{bi.budget_item_id}-{month_obj.month_id}',
+                'amount': calc_value,
+                'paid_by': bi.owner,
+                'date': month_obj.start_date.isoformat(),
+                'note': f'{bi.item_name} ({month_obj.month_name})',
+                'is_auto': True,
+            })
 
     total_owed_to_keith = sum(float(i.amount_owed) for i in items if i.paid_by == 'keith')
     total_owed_to_tild = sum(float(i.amount_owed) for i in items if i.paid_by == 'tild')
-    total_repaid_by_keith = sum(float(r.amount) for r in repayments if r.paid_by == 'keith')
-    total_repaid_by_tild = sum(float(r.amount) for r in repayments if r.paid_by == 'tild')
+    total_repaid_by_keith = sum(r['amount'] for r in repayments_list if r['paid_by'] == 'keith')
+    total_repaid_by_tild = sum(r['amount'] for r in repayments_list if r['paid_by'] == 'tild')
 
     # Positive = Keith owes Tild, Negative = Tild owes Keith
     net_balance = (total_owed_to_tild - total_repaid_by_keith) - (total_owed_to_keith - total_repaid_by_tild)
@@ -354,9 +396,12 @@ def get_tabs(request):
     else:
         net_description = 'All settled up!'
 
+    # Sort repayments by date
+    repayments_list.sort(key=lambda r: r['date'], reverse=True)
+
     return {
         "items": list(items),
-        "repayments": list(repayments),
+        "repayments": repayments_list,
         "total_owed_to_keith": total_owed_to_keith,
         "total_owed_to_tild": total_owed_to_tild,
         "total_repaid_by_keith": total_repaid_by_keith,
@@ -383,12 +428,13 @@ def delete_tab_item(request, item_id: uuid.UUID):
 
 @api.post("/tabs/repayments/", response=TabRepaymentSchema)
 def create_tab_repayment(request, payload: TabRepaymentInputSchema):
-    return TabRepayment.objects.create(
+    r = TabRepayment.objects.create(
         amount=payload.amount,
         paid_by=payload.paid_by,
         date=datetime.date.fromisoformat(payload.date),
         note=payload.note,
     )
+    return {'id': str(r.id), 'amount': float(r.amount), 'paid_by': r.paid_by, 'date': r.date.isoformat(), 'note': r.note, 'is_auto': False}
 
 @api.delete("/tabs/repayments/{repayment_id}/", response={204: None})
 def delete_tab_repayment(request, repayment_id: uuid.UUID):

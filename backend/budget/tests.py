@@ -127,6 +127,8 @@ class BudgetAPITestCase(TestCase):
             "item_type": "expense",
             "owner": "shared",
             "bills_pot": False,
+            "groceries_pot": False,
+            "is_tab_repayment": False,
             "calculation_type": "fixed",
             "value": 150.00,
             "is_one_off": False

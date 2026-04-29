@@ -32,6 +32,7 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, 
                                 {!hideOwnerBadge && <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>}
                                 {item.bills_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Bills Pot</span>}
                                 {item.groceries_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">Groceries Pot</span>}
+                                {item.is_tab_repayment && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Tab Repayment</span>}
                                 {item.is_one_off && <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">One-off</span>}
                             </div>
                         </div>

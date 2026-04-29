@@ -266,12 +266,13 @@ const TabsPage = ({ showToast }) => {
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold text-sm text-emerald-700">£{parseFloat(r.amount).toFixed(2)}</span>
                                         <span className={`px-1.5 py-0.5 text-xs font-semibold rounded-full ${r.paid_by === 'keith' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'}`}>{r.paid_by}</span>
+                                        {r.is_auto && <span className="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Auto</span>}
                                     </div>
                                     <p className="text-xs text-gray-400 mt-0.5">{r.date}{r.note ? ` · ${r.note}` : ''}</p>
                                 </div>
-                                <button onClick={() => handleDeleteRepayment(r.id)} className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                                {!r.is_auto && <button onClick={() => handleDeleteRepayment(r.id)} className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                                     <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                                </button>}
                             </div>
                         ))}
                     </div>

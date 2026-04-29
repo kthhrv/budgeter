@@ -5,7 +5,7 @@ import { formatDate, DAY_CHOICES } from '../utils/helpers';
 const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
     const isNew = !item?.budget_item_id;
     const [formData, setFormData] = useState({
-        item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false, groceries_pot: false,
+        item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false, groceries_pot: false, is_tab_repayment: false,
         calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
         last_payment_month_id: ''
     });
@@ -14,7 +14,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
         if (isOpen) {
             if (isNew) {
                 setFormData({
-                    item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false, groceries_pot: false,
+                    item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false, groceries_pot: false, is_tab_repayment: false,
                     calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
                     last_payment_month_id: ''
                 });
@@ -25,6 +25,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
                     owner: item.owner || 'shared',
                     bills_pot: item.bills_pot || false,
                     groceries_pot: item.groceries_pot || false,
+                    is_tab_repayment: item.is_tab_repayment || false,
                     calculation_type: item.calculation_type || 'fixed',
                     weekly_payment_day: item.weekly_payment_day || '',
                     last_payment_month_id: item.last_payment_month_id || '',
@@ -146,6 +147,14 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
                                 <div className="relative">
                                     <input id="groceries_pot" type="checkbox" name="groceries_pot" checked={formData.groceries_pot} onChange={handleChange} className="sr-only peer" />
                                     <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-green-500 transition-colors"></div>
+                                    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
+                                </div>
+                            </label>
+                            <label htmlFor="is_tab_repayment" className="flex items-center justify-between cursor-pointer group">
+                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Tab Repayment</span>
+                                <div className="relative">
+                                    <input id="is_tab_repayment" type="checkbox" name="is_tab_repayment" checked={formData.is_tab_repayment} onChange={handleChange} className="sr-only peer" />
+                                    <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
                                     <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
                                 </div>
                             </label>

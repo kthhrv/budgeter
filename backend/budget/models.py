@@ -86,6 +86,10 @@ class BudgetItem(models.Model):
         default=False,
         help_text="If true, this item is considered part of the 'groceries pot'."
     )
+    is_tab_repayment = models.BooleanField(
+        default=False,
+        help_text="If true, each month's value is automatically added as a tab repayment."
+    )
     calculation_type = models.CharField(
         max_length=20,
         choices=CALCULATION_TYPE_CHOICES,

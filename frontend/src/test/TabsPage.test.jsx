@@ -10,7 +10,7 @@ const mockData = {
         { id: '3', description: 'Frame TV', paid_by: 'keith', total_cost: 700, amount_owed: 350, date_added: '2025-08-01' },
     ],
     repayments: [
-        { id: 'r1', amount: 200, paid_by: 'keith', date: '2025-07-01', note: 'Bank transfer' },
+        { id: 'r1', amount: 200, paid_by: 'keith', date: '2025-07-01', note: 'Bank transfer', is_auto: false },
     ],
     total_owed_to_keith: 350,
     total_owed_to_tild: 600,
@@ -152,5 +152,54 @@ describe('TabsPage', () => {
             expect(screen.getByText('A').className).toContain('line-through');
             expect(screen.getByText('B').className).toContain('line-through');
         });
+    });
+
+    it('shows Auto badge on auto-repayments', async () => {
+        apiService.getTabs.mockResolvedValue({
+            ...mockData,
+            repayments: [
+                { id: 'auto-abc-2026-01', amount: 100, paid_by: 'keith', date: '2026-01-01', note: 'Keith Repayment (January 2026)', is_auto: true },
+                { id: 'r1', amount: 200, paid_by: 'keith', date: '2025-07-01', note: 'Bank transfer', is_auto: false },
+            ],
+        });
+        render(<TabsPage showToast={showToast} />);
+        await waitFor(() => {
+            expect(screen.getByText('Auto')).toBeInTheDocument();
+        });
+    });
+
+    it('hides delete button on auto-repayments', async () => {
+        apiService.getTabs.mockResolvedValue({
+            ...mockData,
+            repayments: [
+                { id: 'auto-abc-2026-01', amount: 75, paid_by: 'keith', date: '2026-01-01', note: 'Auto payment', is_auto: true },
+            ],
+        });
+        render(<TabsPage showToast={showToast} />);
+        await waitFor(() => {
+            expect(screen.getByText('£75.00')).toBeInTheDocument();
+        });
+        // The auto-repayment row should have no delete button
+        const autoRow = screen.getByText('£75.00').closest('.group');
+        expect(autoRow.querySelector('button')).toBeFalsy();
+    });
+
+    it('shows delete button on manual repayments only', async () => {
+        apiService.getTabs.mockResolvedValue({
+            ...mockData,
+            repayments: [
+                { id: 'auto-abc-2026-01', amount: 75, paid_by: 'keith', date: '2026-01-01', note: 'Auto', is_auto: true },
+                { id: 'r1', amount: 200, paid_by: 'keith', date: '2025-07-01', note: 'Manual', is_auto: false },
+            ],
+        });
+        render(<TabsPage showToast={showToast} />);
+        await waitFor(() => {
+            expect(screen.getByText('£200.00')).toBeInTheDocument();
+        });
+        // The manual repayment row should have a delete button, but the auto one should not
+        const manualRow = screen.getByText('£200.00').closest('.group');
+        expect(manualRow.querySelector('button')).toBeTruthy();
+        const autoRow = screen.getByText('£75.00').closest('.group');
+        expect(autoRow.querySelector('button')).toBeFalsy();
     });
 });

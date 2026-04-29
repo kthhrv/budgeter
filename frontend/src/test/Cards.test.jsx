@@ -6,6 +6,7 @@ import { SharedCard, PersonCard } from '../components/OwnerTotals';
 describe('SharedCard', () => {
     const defaultProps = {
         billsPotTotal: 500,
+        groceriesPotTotal: 200,
         sharedIncome: 100,
         sharedExpenses: 2000,
         totalContributions: 1800,
@@ -18,6 +19,7 @@ describe('SharedCard', () => {
         expect(screen.getByText('Contributions')).toBeInTheDocument();
         expect(screen.getByText('Expenses')).toBeInTheDocument();
         expect(screen.getByText('Bills Pot')).toBeInTheDocument();
+        expect(screen.getByText('Groceries Pot')).toBeInTheDocument();
         expect(screen.getByText('Remaining')).toBeInTheDocument();
     });
 
