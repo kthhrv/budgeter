@@ -16,7 +16,7 @@ describe('SharedCard', () => {
         render(<SharedCard {...defaultProps} />);
         expect(screen.getByText('Shared')).toBeInTheDocument();
         expect(screen.getByText('Income')).toBeInTheDocument();
-        expect(screen.getByText('Contributions')).toBeInTheDocument();
+        expect(screen.getByText('Joint Account')).toBeInTheDocument();
         expect(screen.getByText('Expenses')).toBeInTheDocument();
         expect(screen.getByText('Bills Pot')).toBeInTheDocument();
         expect(screen.getByText('Groceries Pot')).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe('SharedCard', () => {
         expect(screen.getByText('£500.00')).toBeInTheDocument();
     });
 
-    it('calculates remaining as income + contributions - expenses', () => {
+    it('calculates remaining as income + joint account - expenses', () => {
         render(<SharedCard {...defaultProps} />);
         // 100 + 1800 - 2000 = -100
         expect(screen.getByText('£-100.00')).toBeInTheDocument();

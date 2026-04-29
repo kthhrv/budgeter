@@ -66,7 +66,7 @@ export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sha
             </div>
             <div className="space-y-3 text-sm grow">
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{sharedIncome.toFixed(2)}</span></div>
-                <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Contributions</span> <span className="font-semibold text-emerald-600">+ £{totalContributions.toFixed(2)}</span></div>
+                <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Joint Account</span> <span className="font-semibold text-emerald-600">+ £{totalContributions.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Expenses</span> <span className="font-semibold text-red-500">- £{sharedExpenses.toFixed(2)}</span></div>
                 <div className="ml-6 space-y-1.5 text-xs text-gray-500">
                     <div className="flex justify-between items-center"><span>Bills Pot</span> <span className="font-medium">£{billsPotTotal.toFixed(2)}</span></div>
