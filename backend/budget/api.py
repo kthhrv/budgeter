@@ -9,7 +9,7 @@ import datetime
 import uuid
 import calendar
 
-from .models import Month, BudgetItem, BudgetItemVersion
+from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment
 from django.middleware.csrf import get_token
 
 api = NinjaAPI(auth=django_auth)
@@ -282,3 +282,116 @@ def edit_budget_item(request, budget_item_id: uuid.UUID, payload: BudgetItemEdit
     budget_item.save()
     return budget_item
 
+
+# --- Tab Schemas ---
+
+class TabItemSchema(Schema):
+    id: uuid.UUID
+    description: str
+    paid_by: str
+    total_cost: float
+    amount_owed: float
+    date_added: str
+
+    @staticmethod
+    def resolve_date_added(obj):
+        return obj.date_added.isoformat()
+
+class TabItemInputSchema(Schema):
+    description: str
+    paid_by: str
+    total_cost: float
+    amount_owed: float
+    date_added: str
+
+class TabRepaymentSchema(Schema):
+    id: uuid.UUID
+    amount: float
+    paid_by: str
+    date: str
+    note: str
+
+    @staticmethod
+    def resolve_date(obj):
+        return obj.date.isoformat()
+
+class TabRepaymentInputSchema(Schema):
+    amount: float
+    paid_by: str
+    date: str
+    note: str = ''
+
+class TabSummarySchema(Schema):
+    items: List[TabItemSchema]
+    repayments: List[TabRepaymentSchema]
+    total_owed_to_keith: float
+    total_owed_to_tild: float
+    total_repaid_by_keith: float
+    total_repaid_by_tild: float
+    net_balance: float
+    net_description: str
+
+
+# --- Tab Endpoints ---
+
+@api.get("/tabs/", response=TabSummarySchema)
+def get_tabs(request):
+    items = TabItem.objects.all()
+    repayments = TabRepayment.objects.all()
+
+    total_owed_to_keith = sum(float(i.amount_owed) for i in items if i.paid_by == 'keith')
+    total_owed_to_tild = sum(float(i.amount_owed) for i in items if i.paid_by == 'tild')
+    total_repaid_by_keith = sum(float(r.amount) for r in repayments if r.paid_by == 'keith')
+    total_repaid_by_tild = sum(float(r.amount) for r in repayments if r.paid_by == 'tild')
+
+    # Positive = Keith owes Tild, Negative = Tild owes Keith
+    net_balance = (total_owed_to_tild - total_repaid_by_keith) - (total_owed_to_keith - total_repaid_by_tild)
+
+    if net_balance > 0:
+        net_description = f'Keith owes Tild £{abs(net_balance):.2f}'
+    elif net_balance < 0:
+        net_description = f'Tild owes Keith £{abs(net_balance):.2f}'
+    else:
+        net_description = 'All settled up!'
+
+    return {
+        "items": list(items),
+        "repayments": list(repayments),
+        "total_owed_to_keith": total_owed_to_keith,
+        "total_owed_to_tild": total_owed_to_tild,
+        "total_repaid_by_keith": total_repaid_by_keith,
+        "total_repaid_by_tild": total_repaid_by_tild,
+        "net_balance": net_balance,
+        "net_description": net_description,
+    }
+
+@api.post("/tabs/items/", response=TabItemSchema)
+def create_tab_item(request, payload: TabItemInputSchema):
+    return TabItem.objects.create(
+        description=payload.description,
+        paid_by=payload.paid_by,
+        total_cost=payload.total_cost,
+        amount_owed=payload.amount_owed,
+        date_added=datetime.date.fromisoformat(payload.date_added),
+    )
+
+@api.delete("/tabs/items/{item_id}/", response={204: None})
+def delete_tab_item(request, item_id: uuid.UUID):
+    item = get_object_or_404(TabItem, id=item_id)
+    item.delete()
+    return 204, None
+
+@api.post("/tabs/repayments/", response=TabRepaymentSchema)
+def create_tab_repayment(request, payload: TabRepaymentInputSchema):
+    return TabRepayment.objects.create(
+        amount=payload.amount,
+        paid_by=payload.paid_by,
+        date=datetime.date.fromisoformat(payload.date),
+        note=payload.note,
+    )
+
+@api.delete("/tabs/repayments/{repayment_id}/", response={204: None})
+def delete_tab_repayment(request, repayment_id: uuid.UUID):
+    repayment = get_object_or_404(TabRepayment, id=repayment_id)
+    repayment.delete()
+    return 204, None

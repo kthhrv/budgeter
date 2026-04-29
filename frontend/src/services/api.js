@@ -90,6 +90,49 @@ const apiService = {
             throw new Error('Failed to delete budget item');
         }
         return response;
+    },
+    async getTabs() {
+        const response = await fetch(`${API_BASE_URL}/tabs/`, { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch tabs');
+        return await response.json();
+    },
+    async createTabItem(payload) {
+        const response = await fetch(`${API_BASE_URL}/tabs/items/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload),
+            credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to create tab item');
+        return await response.json();
+    },
+    async deleteTabItem(itemId) {
+        const response = await fetch(`${API_BASE_URL}/tabs/items/${itemId}/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to delete tab item');
+        return response;
+    },
+    async createTabRepayment(payload) {
+        const response = await fetch(`${API_BASE_URL}/tabs/repayments/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload),
+            credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to create tab repayment');
+        return await response.json();
+    },
+    async deleteTabRepayment(repaymentId) {
+        const response = await fetch(`${API_BASE_URL}/tabs/repayments/${repaymentId}/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to delete tab repayment');
+        return response;
     }
 };
 

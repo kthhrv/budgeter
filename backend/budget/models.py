@@ -177,3 +177,53 @@ class BudgetItemVersion(models.Model):
                 f"for {self.month.month_name} (Effective from: {self.effective_from_month.month_name})"
                 f"{' (One-off)' if self.is_one_off else ''}")
 
+
+class TabItem(models.Model):
+    """
+    Something one person paid for that the other person owes a share of.
+    """
+    PAID_BY_CHOICES = [
+        ('keith', 'Keith'),
+        ('tild', 'Tild'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    description = models.CharField(max_length=200, help_text="What was purchased.")
+    paid_by = models.CharField(max_length=50, choices=PAID_BY_CHOICES, help_text="Who paid for it.")
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total cost of the item.")
+    amount_owed = models.DecimalField(max_digits=10, decimal_places=2, help_text="How much the other person owes (defaults to 50% but can be overridden).")
+    date_added = models.DateField(help_text="When the expense occurred.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Tab Item"
+        verbose_name_plural = "Tab Items"
+        ordering = ['-date_added']
+
+    def __str__(self):
+        return f"{self.description} - £{self.total_cost} (paid by {self.paid_by})"
+
+
+class TabRepayment(models.Model):
+    """
+    A repayment towards the running tab balance.
+    """
+    PAID_BY_CHOICES = [
+        ('keith', 'Keith'),
+        ('tild', 'Tild'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Amount repaid.")
+    paid_by = models.CharField(max_length=50, choices=PAID_BY_CHOICES, help_text="Who made the repayment.")
+    date = models.DateField(help_text="When the repayment was made.")
+    note = models.CharField(max_length=200, blank=True, default='', help_text="Optional note.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Tab Repayment"
+        verbose_name_plural = "Tab Repayments"
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"£{self.amount} by {self.paid_by} on {self.date}"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, XCircle, Wallet } from 'lucide-react';
+import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
 import apiService from './services/api';
 import Toast from './components/Toast';
@@ -9,6 +9,7 @@ import MonthSelector from './components/MonthSelector';
 import { useBudgetTotals, SharedCard, PersonCard } from './components/OwnerTotals';
 import BudgetTable from './components/BudgetTable';
 import ItemCategoryModal from './components/ItemCategoryModal';
+import TabsPage from './components/TabsPage';
 
 const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
     const totals = useBudgetTotals(items);
@@ -73,6 +74,7 @@ const App = () => {
     const [editingCategory, setEditingCategory] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [toast, setToast] = useState({ message: '', type: 'success', key: 0 });
+    const [activePage, setActivePage] = useState('budget');
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -284,6 +286,14 @@ const App = () => {
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center">
                         <Wallet className="mr-3 h-8 w-8" /> Budgeter
                     </h1>
+                    <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
+                        <button onClick={() => setActivePage('budget')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activePage === 'budget' ? 'bg-white text-indigo-700' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
+                            <LayoutDashboard className="h-4 w-4" /> Budget
+                        </button>
+                        <button onClick={() => setActivePage('tabs')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activePage === 'tabs' ? 'bg-white text-indigo-700' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
+                            <ArrowRightLeft className="h-4 w-4" /> Tabs
+                        </button>
+                    </div>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
                         <button onClick={handleLogout} className="p-2 hover:bg-indigo-500 rounded-full transition-colors" title="Logout">
@@ -294,40 +304,46 @@ const App = () => {
             </header>
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
-                <div className="flex items-center justify-between mb-6">
-                    <div className="w-24"></div>
-                    <MonthSelector currentDate={currentDate} isLoading={isLoading} />
-                    <div className="flex items-center gap-2">
-                        <SearchComponent
-                            searchTerm={searchTerm}
-                            onSearchChange={setSearchTerm}
-                            onClearSearch={() => setSearchTerm('')}
-                        />
-                        <button
-                            onClick={handleOpenNewCategoryModal}
-                            disabled={isEditingDisabled}
-                            title={isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}
-                            className={`flex-shrink-0 p-2 rounded-lg transition-all duration-300 ${isEditingDisabled
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98]'
-                                }`}
-                        >
-                            <PlusCircle className="h-5 w-5" />
-                        </button>
-                    </div>
-                </div>
-                {isLoading && budgetItems.length === 0 ? (
-                    <LoadingSkeleton />
+                {activePage === 'budget' ? (
+                    <>
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="w-24"></div>
+                            <MonthSelector currentDate={currentDate} isLoading={isLoading} />
+                            <div className="flex items-center gap-2">
+                                <SearchComponent
+                                    searchTerm={searchTerm}
+                                    onSearchChange={setSearchTerm}
+                                    onClearSearch={() => setSearchTerm('')}
+                                />
+                                <button
+                                    onClick={handleOpenNewCategoryModal}
+                                    disabled={isEditingDisabled}
+                                    title={isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}
+                                    className={`flex-shrink-0 p-2 rounded-lg transition-all duration-300 ${isEditingDisabled
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98]'
+                                        }`}
+                                >
+                                    <PlusCircle className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+                        {isLoading && budgetItems.length === 0 ? (
+                            <LoadingSkeleton />
+                        ) : (
+                            <BudgetDashboard
+                                items={processedBudgetItems}
+                                onUpdate={handleUpdateItemValue}
+                                onDelete={handleDeleteItem}
+                                onEditCategory={handleOpenEditCategoryModal}
+                                searchTerm={searchTerm}
+                                currentDate={currentDate}
+                                isEditingDisabled={isEditingDisabled}
+                            />
+                        )}
+                    </>
                 ) : (
-                    <BudgetDashboard
-                        items={processedBudgetItems}
-                        onUpdate={handleUpdateItemValue}
-                        onDelete={handleDeleteItem}
-                        onEditCategory={handleOpenEditCategoryModal}
-                        searchTerm={searchTerm}
-                        currentDate={currentDate}
-                        isEditingDisabled={isEditingDisabled}
-                    />
+                    <TabsPage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 )}
             </main>
             <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} item={editingCategory} allMonths={allMonths} />
