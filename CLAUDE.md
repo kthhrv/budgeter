@@ -93,6 +93,5 @@ Google OAuth with a hardcoded email whitelist in `adapters.py`. In local dev, au
 ### Environment Variables (managed by envars.yml + Openbao vault)
 - `APP_ENV` — environment name (demo/prod/local/test), set via docker-compose .env
 - `DJANGO_SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADDON_DOMAIN`
-- `MONZO_ACCESS_TOKEN`, `MONZO_ACCOUNT_ID`
 - `HA_ACCESS_TOKEN`, `HA_API_URL`, `HA_NOTIFY_ENTITY`
 - `DEBUG` — defaults to false; true for local/test
