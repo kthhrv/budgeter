@@ -37,18 +37,22 @@ export const useBudgetTotals = (items) => {
             .filter(item => item.bills_pot)
             .reduce((sum, item) => sum + (parseFloat(item.effective_value) || 0), 0);
 
+        const groceriesPotTotal = items
+            .filter(item => item.groceries_pot)
+            .reduce((sum, item) => sum + (parseFloat(item.effective_value) || 0), 0);
+
         const sharedIncome = incomes.filter(i => i.owner === 'shared').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
 
         return {
             keithShare, tildShare, keithProportion, tildProportion,
             keithRemaining, tildRemaining, keithIncome, tildIncome,
             keithDirectExpenses, tildDirectExpenses,
-            billsPotTotal, sharedTotal, sharedIncome
+            billsPotTotal, groceriesPotTotal, sharedTotal, sharedIncome
         };
     }, [items]);
 };
 
-export const SharedCard = ({ billsPotTotal, sharedIncome, sharedExpenses, totalContributions }) => {
+export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sharedExpenses, totalContributions }) => {
     const remaining = sharedIncome + totalContributions - sharedExpenses;
     return (
         <div className="p-5 bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow flex flex-col h-full">
@@ -60,7 +64,10 @@ export const SharedCard = ({ billsPotTotal, sharedIncome, sharedExpenses, totalC
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{sharedIncome.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Contributions</span> <span className="font-semibold text-emerald-600">+ £{totalContributions.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Expenses</span> <span className="font-semibold text-red-500">- £{sharedExpenses.toFixed(2)}</span></div>
-                <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><Home className="mr-2 h-4 w-4 text-purple-500" />Bills Pot</span> <span className="font-semibold text-purple-700">£{billsPotTotal.toFixed(2)}</span></div>
+                <div className="ml-6 space-y-1.5 text-xs text-gray-500">
+                    <div className="flex justify-between items-center"><span>Bills Pot</span> <span className="font-medium">£{billsPotTotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between items-center"><span>Groceries Pot</span> <span className="font-medium">£{groceriesPotTotal.toFixed(2)}</span></div>
+                </div>
             </div>
             <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? 'bg-purple-50' : 'bg-red-50'}`}>
                 <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>

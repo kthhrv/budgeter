@@ -39,13 +39,13 @@ const MonthSelector = ({ currentDate, isLoading }) => {
     }, [currentDate]);
 
     return (
-        <div ref={containerRef} className="flex items-center justify-between p-4 bg-white shadow-md rounded-xl border border-gray-100 h-full select-none">
-            <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={isLoading}>
-                <ChevronLeft className="h-6 w-6" />
+        <div ref={containerRef} className="flex items-center gap-2 select-none">
+            <button onClick={() => changeMonth(-1)} className="p-1.5 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={isLoading}>
+                <ChevronLeft className="h-5 w-5 text-gray-600" />
             </button>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800">{formatDate(currentDate, 'MonthYYYY')}</h2>
-            <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={isLoading}>
-                <ChevronRight className="h-6 w-6" />
+            <h2 className="text-lg font-bold text-gray-800 min-w-[140px] text-center">{formatDate(currentDate, 'MonthYYYY')}</h2>
+            <button onClick={() => changeMonth(1)} className="p-1.5 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={isLoading}>
+                <ChevronRight className="h-5 w-5 text-gray-600" />
             </button>
         </div>
     );

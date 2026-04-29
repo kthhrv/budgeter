@@ -19,7 +19,7 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
             {/* Mobile: interleaved card + tables per owner */}
             <div className="xl:hidden space-y-6">
                 <div className="space-y-4">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
                     <BudgetTable title="Shared Income" itemType="income" ownerFilter="shared" {...tableProps} />
                     <BudgetTable title="Shared Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
                 </div>
@@ -38,7 +38,7 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
             {/* Desktop: aligned 3-column grid */}
             <div className="hidden xl:block space-y-6">
                 <div className="grid grid-cols-3 gap-6 items-stretch">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
                     <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} />
                     <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} />
                 </div>
@@ -294,27 +294,27 @@ const App = () => {
             </header>
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
-                <div className="space-y-4 mb-6">
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <MonthSelector currentDate={currentDate} isLoading={isLoading} />
-                        <div className="flex md:justify-end">
-                            <button
-                                onClick={handleOpenNewCategoryModal}
-                                disabled={isEditingDisabled}
-                                className={`w-full h-full flex items-center justify-center space-x-2 font-bold py-3 px-6 rounded-xl shadow-lg transition-all duration-300 ${isEditingDisabled
-                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl active:scale-[0.98]'
-                                    }`}
-                            >
-                                <PlusCircle /><span>{isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}</span>
-                            </button>
-                        </div>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="w-24"></div>
+                    <MonthSelector currentDate={currentDate} isLoading={isLoading} />
+                    <div className="flex items-center gap-2">
+                        <SearchComponent
+                            searchTerm={searchTerm}
+                            onSearchChange={setSearchTerm}
+                            onClearSearch={() => setSearchTerm('')}
+                        />
+                        <button
+                            onClick={handleOpenNewCategoryModal}
+                            disabled={isEditingDisabled}
+                            title={isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}
+                            className={`flex-shrink-0 p-2 rounded-lg transition-all duration-300 ${isEditingDisabled
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98]'
+                                }`}
+                        >
+                            <PlusCircle className="h-5 w-5" />
+                        </button>
                     </div>
-                    <SearchComponent
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                        onClearSearch={() => setSearchTerm('')}
-                    />
                 </div>
                 {isLoading && budgetItems.length === 0 ? (
                     <LoadingSkeleton />

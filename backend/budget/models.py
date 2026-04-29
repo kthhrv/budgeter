@@ -82,6 +82,10 @@ class BudgetItem(models.Model):
         default=False,
         help_text="If true, this item is considered part of the 'bills pot'."
     )
+    groceries_pot = models.BooleanField(
+        default=False,
+        help_text="If true, this item is considered part of the 'groceries pot'."
+    )
     calculation_type = models.CharField(
         max_length=20,
         choices=CALCULATION_TYPE_CHOICES,

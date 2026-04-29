@@ -35,6 +35,7 @@ class BudgetItemSchema(Schema):
     item_type: str
     owner: str
     bills_pot: bool
+    groceries_pot: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -48,6 +49,7 @@ class BudgetItemInputSchema(Schema):
     item_type: str
     owner: str
     bills_pot: bool
+    groceries_pot: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -59,6 +61,7 @@ class BudgetItemEditSchema(Schema):
     item_type: Optional[str] = None
     owner: Optional[str] = None
     bills_pot: Optional[bool] = None
+    groceries_pot: Optional[bool] = None
     calculation_type: Optional[str] = None
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -69,6 +72,7 @@ class BudgetItemVersionSchema(Schema):
     item_type: str
     owner: str
     bills_pot: bool
+    groceries_pot: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     value: float
@@ -149,7 +153,7 @@ def list_budget_items_for_month(request, month_id: str):
             
             budget_items_data.append(BudgetItemVersionSchema(
                 budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-                owner=budget_item.owner, bills_pot=budget_item.bills_pot,
+                owner=budget_item.owner, bills_pot=budget_item.bills_pot, groceries_pot=budget_item.groceries_pot,
                 calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
                 value=float(effective_version.value),
                 effective_value=calculated_value, effective_from_month_name=effective_version.effective_from_month.month_name,
@@ -183,7 +187,7 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         calculated_value = float(budget_item_version.value) * occurrences
     return BudgetItemVersionSchema(
         budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-        owner=budget_item.owner, bills_pot=budget_item.bills_pot,
+        owner=budget_item.owner, bills_pot=budget_item.bills_pot, groceries_pot=budget_item.groceries_pot,
         calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
         value=float(budget_item_version.value),
         effective_value=calculated_value, effective_from_month_name=budget_item_version.effective_from_month.month_name,

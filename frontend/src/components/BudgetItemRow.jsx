@@ -31,9 +31,8 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, 
                             <div className="flex items-center gap-1.5 flex-wrap">
                                 {!hideOwnerBadge && <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>}
                                 {item.bills_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Bills Pot</span>}
+                                {item.groceries_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">Groceries Pot</span>}
                                 {item.is_one_off && <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">One-off</span>}
-                                {item.effective_from_month_name !== formatDate(currentDate, 'MonthYYYY') && !isSynthetic &&
-                                    <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-500 rounded-full" title={`Value effective from ${item.effective_from_month_name}`}>Inherited</span>}
                             </div>
                         </div>
                         {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-400 mt-1">Weekly on {DAY_CHOICES[item.weekly_payment_day] || 'unknown day'}{item.occurrences !== undefined && item.occurrences !== null ? ` · ${item.occurrences} occurrences` : ''}</p>}
