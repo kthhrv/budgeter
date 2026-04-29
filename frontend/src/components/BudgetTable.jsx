@@ -2,11 +2,17 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronDown, Inbox, SearchX } from 'lucide-react';
 import BudgetItemRow from './BudgetItemRow';
 
-const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, searchTerm = '', currentDate, isEditingDisabled = false }) => {
+const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, ownerFilter, searchTerm = '', currentDate, isEditingDisabled = false }) => {
+    const [collapsed, setCollapsed] = useState(false);
     const [collapsedGroups, setCollapsedGroups] = useState({});
+    const useFlat = itemType === 'income' || ownerFilter;
 
     const processedItems = useMemo(() => {
         let filtered = items.filter(i => i.item_type === itemType);
+
+        if (ownerFilter) {
+            filtered = filtered.filter(i => i.owner === ownerFilter);
+        }
 
         if (searchTerm.trim()) {
             const searchLower = searchTerm.toLowerCase();
@@ -16,7 +22,7 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
             );
         }
 
-        if (itemType === 'income') {
+        if (useFlat) {
             return [...filtered].sort((a, b) => (parseFloat(b.effective_value) || 0) - (parseFloat(a.effective_value) || 0));
         }
 
@@ -35,25 +41,25 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
             if (ib !== -1) return 1;
             return a.localeCompare(b);
         });
-    }, [items, itemType, searchTerm]);
+    }, [items, itemType, ownerFilter, searchTerm, useFlat]);
 
     useEffect(() => {
-        if (itemType === 'expense') {
+        if (!useFlat) {
             const initialState = {};
             processedItems.forEach(([owner]) => {
                 initialState[owner] = false;
             });
             setCollapsedGroups(initialState);
         }
-    }, [items, itemType, processedItems, searchTerm]);
+    }, [items, itemType, processedItems, searchTerm, useFlat]);
 
     const toggleGroup = (owner) => {
         setCollapsedGroups(prev => ({ ...prev, [owner]: !prev[owner] }));
     };
 
-    const allTypeItems = items.filter(i => i.item_type === itemType);
+    const allTypeItems = items.filter(i => i.item_type === itemType && (!ownerFilter || i.owner === ownerFilter));
     const hasItemsOfType = allTypeItems.length > 0;
-    const hasFilteredResults = itemType === 'income' ? processedItems.length > 0 : processedItems.some(([, items]) => items.length > 0);
+    const hasFilteredResults = useFlat ? processedItems.length > 0 : processedItems.some(([, items]) => items.length > 0);
 
     if (!hasItemsOfType) {
         return (
@@ -83,9 +89,13 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
 
     return (
         <div className="bg-white p-4 md:p-6 rounded-xl shadow-md border border-gray-100 mb-6">
-            <h3 className="text-xl font-bold mb-4 text-gray-800">{title}</h3>
-            <div className="space-y-4">
-                {itemType === 'expense' ? (
+            <button onClick={() => setCollapsed(c => !c)} className="w-full flex justify-between items-center mb-2 group">
+                <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+                <ChevronDown className={`h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-transform duration-300 ${collapsed ? '' : 'rotate-180'}`} />
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${collapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
+                <div className="space-y-4 pt-2">
+                {!useFlat ? (
                     processedItems.map(([owner, ownerItems]) => {
                         const isCollapsed = collapsedGroups[owner];
                         return (
@@ -106,8 +116,9 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
                         )
                     })
                 ) : (
-                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />)
+                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} currentDate={currentDate} isEditingDisabled={isEditingDisabled} hideOwnerBadge={!!ownerFilter} />)
                 )}
+                </div>
             </div>
         </div>
     );

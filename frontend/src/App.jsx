@@ -6,9 +6,60 @@ import Toast from './components/Toast';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import SearchComponent from './components/SearchComponent';
 import MonthSelector from './components/MonthSelector';
-import OwnerTotals from './components/OwnerTotals';
+import { useBudgetTotals, SharedCard, PersonCard } from './components/OwnerTotals';
 import BudgetTable from './components/BudgetTable';
 import ItemCategoryModal from './components/ItemCategoryModal';
+
+const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
+    const totals = useBudgetTotals(items);
+    const tableProps = { items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled };
+
+    return (
+        <div className="animate-fadeIn">
+            {/* Mobile: interleaved card + tables per owner */}
+            <div className="xl:hidden space-y-6">
+                <div className="space-y-4">
+                    <SharedCard billsPotTotal={totals.billsPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <BudgetTable title="Shared Income" itemType="income" ownerFilter="shared" {...tableProps} />
+                    <BudgetTable title="Shared Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
+                </div>
+                <div className="space-y-4">
+                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} />
+                    <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
+                    <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
+                </div>
+                <div className="space-y-4">
+                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} />
+                    <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
+                    <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
+                </div>
+            </div>
+
+            {/* Desktop: aligned 3-column grid */}
+            <div className="hidden xl:block space-y-6">
+                <div className="grid grid-cols-3 gap-6 items-stretch">
+                    <SharedCard billsPotTotal={totals.billsPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} />
+                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} />
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                    <div className="space-y-4">
+                        <BudgetTable title="Shared Income" itemType="income" ownerFilter="shared" {...tableProps} />
+                        <BudgetTable title="Shared Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
+                    </div>
+                    <div className="space-y-4">
+                        <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
+                        <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
+                    </div>
+                    <div className="space-y-4">
+                        <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
+                        <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const App = () => {
     const [user, setUser] = useState(null);
@@ -229,7 +280,7 @@ const App = () => {
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
             <header className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white p-4 shadow-lg sticky top-0 z-40">
-                <div className="container mx-auto flex justify-between items-center max-w-5xl">
+                <div className="container mx-auto flex justify-between items-center max-w-7xl">
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center">
                         <Wallet className="mr-3 h-8 w-8" /> Budgeter
                     </h1>
@@ -241,7 +292,7 @@ const App = () => {
                     </div>
                 </div>
             </header>
-            <main className="container mx-auto p-4 max-w-5xl">
+            <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
                 <div className="space-y-4 mb-6">
                     <div className="grid md:grid-cols-2 gap-4">
@@ -268,13 +319,15 @@ const App = () => {
                 {isLoading && budgetItems.length === 0 ? (
                     <LoadingSkeleton />
                 ) : (
-                    <div className="animate-fadeIn">
-                        <OwnerTotals items={processedBudgetItems} />
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />
-                            <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />
-                        </div>
-                    </div>
+                    <BudgetDashboard
+                        items={processedBudgetItems}
+                        onUpdate={handleUpdateItemValue}
+                        onDelete={handleDeleteItem}
+                        onEditCategory={handleOpenEditCategoryModal}
+                        searchTerm={searchTerm}
+                        currentDate={currentDate}
+                        isEditingDisabled={isEditingDisabled}
+                    />
                 )}
             </main>
             <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} item={editingCategory} allMonths={allMonths} />

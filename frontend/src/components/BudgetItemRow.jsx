@@ -3,7 +3,7 @@ import { Edit2, Trash2 } from 'lucide-react';
 import { formatDate, DAY_CHOICES } from '../utils/helpers';
 import ConfirmationModal from './ConfirmationModal';
 
-const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, isEditingDisabled = false }) => {
+const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, isEditingDisabled = false, hideOwnerBadge = false }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isSynthetic = String(item.budget_item_id).includes('-repay-income');
 
@@ -25,11 +25,11 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, 
             />
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 mb-3 group">
                 <div className="flex items-center justify-between">
-                    <div className="flex-grow min-w-0">
+                    <div className="grow min-w-0">
                         <div className="flex items-center flex-wrap gap-2">
                             <span className="font-bold text-base text-gray-800 truncate">{item.item_name}</span>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>
+                                {!hideOwnerBadge && <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>}
                                 {item.bills_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Bills Pot</span>}
                                 {item.is_one_off && <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">One-off</span>}
                                 {item.effective_from_month_name !== formatDate(currentDate, 'MonthYYYY') && !isSynthetic &&
