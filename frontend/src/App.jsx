@@ -1,663 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Edit2, PlusCircle, Save, XCircle, MoreVertical, Users, User, DollarSign, TrendingUp, TrendingDown, Wallet, Trash2, AlertTriangle, Home, ChevronDown, Search, X } from 'lucide-react';
-
-// --- Configuration ---
-const API_BASE_URL = `${window.location.origin}/api`;
-
-// --- Helper Functions ---
-const formatDate = (date, format = 'YYYY-MM') => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    if (format === 'YYYY-MM') {
-        return `${year}-${month}`;
-    }
-    if (format === 'MonthYYYY') {
-        return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-    }
-    return date.toISOString().split('T')[0];
-};
-
-const getCookie = (name) => {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-};
-
-const isMonthInPast = (date) => {
-    const currentDate = new Date();
-    const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const targetMonthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-    return targetMonthStart < currentMonthStart;
-};
-
-// --- API Service ---
-const apiService = {
-    async getCurrentUser() {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
-        if (!response.ok) return null;
-        return await response.json();
-    },
-    async createOrGetMonth(date) {
-        const monthId = formatDate(date, 'YYYY-MM');
-        const payload = { month: monthId };
-        const response = await fetch(`${API_BASE_URL}/months/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(payload),
-            credentials: 'include'
-        });
-        if (!response.ok) throw new Error('Failed to create or get month');
-        return await response.json();
-    },
-    async getBudgetItemsForMonth(monthId) {
-        const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch budget items');
-        return await response.json();
-    },
-    async getAllBudgetItemCategories() {
-        const response = await fetch(`${API_BASE_URL}/budgetitems/`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch budget item categories');
-        return await response.json();
-    },
-    async getAllMonths() {
-        const response = await fetch(`${API_BASE_URL}/months/`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch months');
-        return await response.json();
-    },
-    async updateBudgetItemValue(monthId, budgetItemId, payload) {
-        const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/${budgetItemId}/value/`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(payload),
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to update item value');
-        }
-        return await response.json();
-    },
-    async createBudgetItemCategory(monthId, payload) {
-        const response = await fetch(`${API_BASE_URL}/months/${monthId}/budgetitems/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(payload),
-            credentials: 'include'
-        });
-        if (!response.ok) throw new Error('Failed to create budget item');
-        return await response.json();
-    },
-    async updateBudgetItemCategory(budgetItemId, payload) {
-        const response = await fetch(`${API_BASE_URL}/budgetitems/${budgetItemId}/`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(payload),
-            credentials: 'include'
-        });
-        if (!response.ok) throw new Error('Failed to update budget item category');
-        return await response.json();
-    },
-    async deleteBudgetItemForMonth(monthId, budgetItemId) {
-        const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/${budgetItemId}/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            throw new Error('Failed to delete budget item');
-        }
-        return response;
-    }
-};
-
-// --- Components ---
-
-const Toast = ({ message, type, onDismiss }) => {
-    if (!message) return null;
-    const baseClasses = "fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white transition-opacity duration-300 z-50";
-    const typeClasses = { success: "bg-green-500", error: "bg-red-500" };
-    return (
-        <div className={`${baseClasses} ${typeClasses[type]}`}>
-            <span>{message}</span>
-            <button onClick={onDismiss} className="ml-4 font-bold">X</button>
-        </div>
-    );
-};
-
-const LoadingSpinner = () => (
-    <div className="flex justify-center items-center p-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-    </div>
-);
-
-const SearchComponent = ({ searchTerm, onSearchChange, onClearSearch }) => {
-    return (
-        <div className="relative flex items-center bg-white rounded-xl shadow-md border border-gray-100 p-2">
-            <Search className="h-5 w-5 text-gray-400 ml-2" />
-            <input
-                type="text"
-                placeholder="Search items by name, description, or owner..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="flex-1 px-3 py-2 text-gray-700 bg-transparent border-none outline-none placeholder-gray-400"
-            />
-            {searchTerm && (
-                <button
-                    onClick={onClearSearch}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Clear search"
-                >
-                    <X className="h-4 w-4" />
-                </button>
-            )}
-        </div>
-    );
-};
-
-const DAY_CHOICES = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' };
-
-const MonthSelector = ({ currentDate, isLoading }) => {
-    const changeMonth = (offset) => {
-        const newDate = new Date(currentDate);
-        newDate.setMonth(currentDate.getMonth() + offset);
-        window.location.hash = formatDate(newDate, 'YYYY-MM');
-    };
-
-    return (
-        <div className="flex items-center justify-between p-4 bg-white shadow-md rounded-xl border border-gray-100 h-full">
-            <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={isLoading}>
-                <ChevronLeft className="h-6 w-6" />
-            </button>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800">{formatDate(currentDate, 'MonthYYYY')}</h2>
-            <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={isLoading}>
-                <ChevronRight className="h-6 w-6" />
-            </button>
-        </div>
-    );
-};
-
-const OwnerTotals = ({ items }) => {
-    const {
-        keithShare, tildShare, keithProportion, tildProportion,
-        keithRemaining, tildRemaining, keithIncome, tildIncome, keithDirectExpenses, tildDirectExpenses,
-        billsPotTotal
-    } = useMemo(() => {
-        const incomes = items.filter(item => item.item_type === 'income');
-        const expenses = items.filter(item => item.item_type === 'expense');
-
-        const keithSalary = incomes
-            .filter(i => i.owner === 'keith' && i.item_name.toLowerCase() === 'salary')
-            .reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        const tildSalary = incomes
-            .filter(i => i.owner === 'tild' && i.item_name.toLowerCase() === 'salary')
-            .reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-
-        const totalSalaryIncome = keithSalary + tildSalary;
-        let kProp = 0.5, tProp = 0.5;
-        if (totalSalaryIncome > 0) {
-            kProp = keithSalary / totalSalaryIncome;
-            tProp = tildSalary / totalSalaryIncome;
-        }
-
-        const shared = expenses.filter(i => i.owner === 'shared').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        const kShare = shared * kProp;
-        const tShare = shared * tProp;
-
-        const kDirect = expenses.filter(i => i.owner === 'keith').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        const tDirect = expenses.filter(i => i.owner === 'tild').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-
-        const kTotalIncome = incomes.filter(i => i.owner === 'keith').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        const tTotalIncome = incomes.filter(i => i.owner === 'tild').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-
-        const kRemaining = kTotalIncome - kDirect - kShare;
-        const tRemaining = tTotalIncome - tDirect - tShare;
-
-        const billsTotal = items
-            .filter(item => item.bills_pot)
-            .reduce((sum, item) => sum + (parseFloat(item.effective_value) || 0), 0);
-
-        return {
-            keithShare: kShare, tildShare: tShare,
-            keithProportion: kProp, tildProportion: tProp,
-            keithRemaining: kRemaining, tildRemaining: tRemaining,
-            keithIncome: kTotalIncome, tildIncome: tTotalIncome,
-            keithDirectExpenses: kDirect, tildDirectExpenses: tDirect,
-            billsPotTotal: billsTotal
-        };
-    }, [items]);
-
-    return (
-        <div className="my-4 space-y-6">
-            <div className="p-6 bg-white rounded-xl shadow-md border border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-500 uppercase tracking-wider mb-5 text-center">Shared Expense Breakdown</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl text-center border border-blue-200/50 hover:shadow-md transition-shadow">
-                        <div className="flex justify-center items-center text-blue-600 mb-2"><User className="mr-2 h-5 w-5" /> <h4 className="text-sm font-semibold uppercase tracking-wide">Keith's Share</h4></div>
-                        <p className="text-3xl font-extrabold text-blue-900">£{keithShare.toFixed(0)}</p>
-                        <p className="text-xs text-blue-500 mt-2 font-medium">({(keithProportion * 100).toFixed(1)}% of shared total)</p>
-                    </div>
-                    <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl text-center border border-purple-200/50 hover:shadow-md transition-shadow">
-                        <div className="flex justify-center items-center text-purple-600 mb-2"><Home className="mr-2 h-5 w-5" /> <h4 className="text-sm font-semibold uppercase tracking-wide">Bills Pot Total</h4></div>
-                        <p className="text-3xl font-extrabold text-purple-900">£{billsPotTotal.toFixed(0)}</p>
-                        <p className="text-xs text-purple-500 mt-2 font-medium">&nbsp;</p>
-                    </div>
-                    <div className="p-5 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl text-center border border-pink-200/50 hover:shadow-md transition-shadow">
-                        <div className="flex justify-center items-center text-pink-600 mb-2"><User className="mr-2 h-5 w-5" /> <h4 className="text-sm font-semibold uppercase tracking-wide">Tild's Share</h4></div>
-                        <p className="text-3xl font-extrabold text-pink-900">£{tildShare.toFixed(0)}</p>
-                        <p className="text-xs text-pink-500 mt-2 font-medium">({(tildProportion * 100).toFixed(1)}% of shared total)</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="p-5 bg-white rounded-xl shadow-md border border-gray-100 flex flex-col hover:shadow-lg transition-shadow">
-                    <div className="flex items-center justify-center mb-4">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2"><User className="h-4 w-4 text-blue-600" /></div>
-                        <h4 className="text-lg font-bold text-blue-800">Keith</h4>
-                    </div>
-                    <div className="space-y-3 text-sm flex-grow">
-                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{keithIncome.toFixed(2)}</span></div>
-                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{keithDirectExpenses.toFixed(2)}</span></div>
-                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Share of Expenses</span> <span className="font-semibold text-red-500">- £{keithShare.toFixed(2)}</span></div>
-                    </div>
-                    <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${keithRemaining >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
-                        <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
-                        <span className={`font-extrabold text-xl ${keithRemaining >= 0 ? 'text-blue-700' : 'text-red-600'}`}>£{keithRemaining.toFixed(2)}</span>
-                    </div>
-                </div>
-                <div className="p-5 bg-white rounded-xl shadow-md border border-gray-100 flex flex-col hover:shadow-lg transition-shadow">
-                    <div className="flex items-center justify-center mb-4">
-                        <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center mr-2"><User className="h-4 w-4 text-pink-600" /></div>
-                        <h4 className="text-lg font-bold text-pink-800">Tild</h4>
-                    </div>
-                    <div className="space-y-3 text-sm flex-grow">
-                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{tildIncome.toFixed(2)}</span></div>
-                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{tildDirectExpenses.toFixed(2)}</span></div>
-                        <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Share of Expenses</span> <span className="font-semibold text-red-500">- £{tildShare.toFixed(2)}</span></div>
-                    </div>
-                    <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${tildRemaining >= 0 ? 'bg-pink-50' : 'bg-red-50'}`}>
-                        <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
-                        <span className={`font-extrabold text-xl ${tildRemaining >= 0 ? 'text-pink-700' : 'text-red-600'}`}>£{tildRemaining.toFixed(2)}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-                <div className="p-6">
-                    <div className="flex items-start">
-                        <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                            <AlertTriangle className="h-6 w-6 text-red-600" aria-hidden="true" />
-                        </div>
-                        <div className="ml-4 text-left">
-                            <h3 className="text-lg leading-6 font-medium text-gray-900">{title}</h3>
-                            <div className="mt-2">
-                                <p className="text-sm text-gray-500">{message}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="button" onClick={onConfirm} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm">
-                        Confirm
-                    </button>
-                    <button type="button" onClick={onClose} className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, isEditingDisabled = false }) => {
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const isSynthetic = String(item.budget_item_id).includes('-repay-income');
-
-    const handleDeleteConfirm = () => {
-        onDelete(item.budget_item_id);
-        setShowDeleteConfirm(false);
-    }
-
-    const ownerColors = { shared: 'bg-indigo-100 text-indigo-800', keith: 'bg-blue-100 text-blue-800', tild: 'bg-pink-100 text-pink-800' };
-
-    return (
-        <>
-            <ConfirmationModal
-                isOpen={showDeleteConfirm}
-                onClose={() => setShowDeleteConfirm(false)}
-                onConfirm={handleDeleteConfirm}
-                title="Delete Item"
-                message={`Are you sure you want to delete '${item.item_name}'? This action cannot be undone.`}
-            />
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 mb-3 group">
-                <div className="flex items-center justify-between">
-                    <div className="flex-grow min-w-0">
-                        <div className="flex items-center flex-wrap gap-2">
-                            <span className="font-bold text-base text-gray-800 truncate">{item.item_name}</span>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${ownerColors[item.owner.toLowerCase()] || 'bg-gray-100 text-gray-800'}`}>{item.owner}</span>
-                                {item.bills_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Bills Pot</span>}
-                                {item.is_one_off && <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">One-off</span>}
-                                {item.effective_from_month_name !== formatDate(currentDate, 'MonthYYYY') && !isSynthetic &&
-                                    <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-500 rounded-full" title={`Value effective from ${item.effective_from_month_name}`}>Inherited</span>}
-                            </div>
-                        </div>
-                        {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-400 mt-1">Weekly on {DAY_CHOICES[item.weekly_payment_day] || 'unknown day'}{item.occurrences !== undefined && item.occurrences !== null ? ` · ${item.occurrences} occurrences` : ''}</p>}
-                    </div>
-                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                        <span className={`text-lg font-bold px-3 py-1 rounded-lg ${
-                            item.item_type === 'income'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-red-50 text-red-600 border border-red-200'
-                        }`}>
-                            £{(parseFloat(item.effective_value) || 0).toFixed(2)}
-                        </span>
-                        {!isSynthetic && !isEditingDisabled && (
-                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => onEditCategory(item.budget_item_id)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"><Edit2 className="h-4 w-4" /></button>
-                                <button onClick={() => setShowDeleteConfirm(true)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"><Trash2 className="h-4 w-4" /></button>
-                            </div>
-                        )}
-                        {!isSynthetic && isEditingDisabled && (
-                            <span className="text-xs text-gray-400 px-2 py-1 bg-gray-50 rounded-md border border-gray-200">Locked</span>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </>
-    );
-};
-
-const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemType, searchTerm = '', currentDate, isEditingDisabled = false }) => {
-    const [collapsedGroups, setCollapsedGroups] = useState({});
-
-    const processedItems = useMemo(() => {
-        let filtered = items.filter(i => i.item_type === itemType);
-
-        // Apply search filter if search term exists
-        if (searchTerm.trim()) {
-            const searchLower = searchTerm.toLowerCase();
-            filtered = filtered.filter(item =>
-                item.item_name.toLowerCase().includes(searchLower) ||
-
-                item.owner.toLowerCase().includes(searchLower)
-            );
-        }
-
-        // For income, just return a flat, sorted list.
-        if (itemType === 'income') {
-            return [...filtered].sort((a, b) => (parseFloat(b.effective_value) || 0) - (parseFloat(a.effective_value) || 0));
-        }
-
-        // For expenses, group and sort.
-        const grouped = filtered.reduce((acc, item) => {
-            const owner = item.owner || 'Unknown';
-            if (!acc[owner]) acc[owner] = [];
-            acc[owner].push(item);
-            return acc;
-        }, {});
-        Object.values(grouped).forEach(arr => arr.sort((a, b) => (parseFloat(b.effective_value) || 0) - (parseFloat(a.effective_value) || 0)));
-        const ownerOrder = ['shared', 'keith', 'tild'];
-        return Object.entries(grouped).sort(([a], [b]) => {
-            const ia = ownerOrder.indexOf(a), ib = ownerOrder.indexOf(b);
-            if (ia !== -1 && ib !== -1) return ia - ib;
-            if (ia !== -1) return -1;
-            if (ib !== -1) return 1;
-            return a.localeCompare(b);
-        });
-    }, [items, itemType, searchTerm]);
-
-    useEffect(() => {
-        if (itemType === 'expense') {
-            const initialState = {};
-            processedItems.forEach(([owner]) => {
-                // Always expand groups by default for easier testing
-                initialState[owner] = false;
-            });
-            setCollapsedGroups(initialState);
-        }
-    }, [items, itemType, processedItems, searchTerm]); // Re-calculate when items or search term change
-
-    const toggleGroup = (owner) => {
-        setCollapsedGroups(prev => ({ ...prev, [owner]: !prev[owner] }));
-    };
-
-    const allTypeItems = items.filter(i => i.item_type === itemType);
-    const hasItemsOfType = allTypeItems.length > 0;
-    const hasFilteredResults = itemType === 'income' ? processedItems.length > 0 : processedItems.some(([, items]) => items.length > 0);
-
-    if (!hasItemsOfType) {
-        return <div className="bg-white p-6 rounded-lg shadow-md mb-6"><h3 className="text-xl font-bold mb-2 text-gray-700">{title}</h3><p className="text-gray-500">No {itemType} items for this month.</p></div>;
-    }
-
-    if (!hasFilteredResults && searchTerm.trim()) {
-        return <div className="bg-white p-6 rounded-lg shadow-md mb-6"><h3 className="text-xl font-bold mb-2 text-gray-700">{title}</h3><p className="text-gray-500">No {itemType} items match your search.</p></div>;
-    }
-
-    return (
-        <div className="bg-white p-4 md:p-6 rounded-xl shadow-md border border-gray-100 mb-6">
-            <h3 className="text-xl font-bold mb-4 text-gray-800">{title}</h3>
-            <div className="space-y-4">
-                {itemType === 'expense' ? (
-                    processedItems.map(([owner, ownerItems]) => {
-                        const isCollapsed = collapsedGroups[owner];
-                        return (
-                            <div key={owner} className="border-b border-gray-200 last:border-b-0 pb-2 mb-2">
-                                <button
-                                    onClick={() => toggleGroup(owner)}
-                                    className="w-full flex justify-between items-center text-left p-2 rounded-md hover:bg-gray-100 transition-colors"
-                                >
-                                    <h4 className="text-lg font-semibold text-gray-700 capitalize">{owner}</h4>
-                                    <ChevronDown className={`h-6 w-6 text-gray-500 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`} />
-                                </button>
-                                {!isCollapsed && (
-                                    <div className="pl-4 pt-2 mt-2 border-l-2 border-indigo-200">
-                                        {ownerItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />)}
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })
-                ) : (
-                    processedItems.map(item => <BudgetItemRow key={item.budget_item_id} item={item} onUpdate={onUpdate} onDelete={onDelete} onEditCategory={onEditCategory} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />)
-                )}
-            </div>
-        </div>
-    );
-};
-
-const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
-    const isNew = !item?.budget_item_id;
-    const [formData, setFormData] = useState({
-        item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false,
-        calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
-        last_payment_month_id: ''
-    });
-
-    useEffect(() => {
-        if (isOpen) {
-            if (isNew) {
-                setFormData({
-                    item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false,
-                    calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
-                    last_payment_month_id: ''
-                });
-            } else {
-                setFormData({
-                    item_name: item.item_name || '',
-                    item_type: item.item_type || 'expense',
-                    owner: item.owner || 'shared',
-                    bills_pot: item.bills_pot || false,
-                    calculation_type: item.calculation_type || 'fixed',
-                    weekly_payment_day: item.weekly_payment_day || '',
-                    last_payment_month_id: item.last_payment_month_id || '',
-                    value: item.value || '', // Populate value
-                    is_one_off: item.is_one_off || false // Populate is_one_off
-                });
-            }
-        }
-    }, [item, isOpen, isNew]);
-
-    if (!isOpen) return null;
-
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const payload = { ...formData };
-        if (isNew) {
-            payload.value = parseFloat(payload.value) || 0;
-        }
-        if (payload.calculation_type !== 'weekly_count') {
-            payload.weekly_payment_day = null;
-        } else {
-            payload.weekly_payment_day = parseInt(payload.weekly_payment_day, 10);
-        }
-        onSave(isNew ? payload : item.budget_item_id, payload);
-    };
-
-    const OWNER_CHOICES = ['shared', 'keith', 'tild'];
-    const CALCULATION_TYPE_CHOICES = { 'fixed': 'Fixed Monthly', 'weekly_count': 'Weekly Count' };
-
-    return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-100 animate-in" onClick={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 rounded-t-2xl">
-                    <h2 className="text-xl font-bold text-white">{isNew ? "Create New Budget Item" : "Edit Budget Item"}</h2>
-                    <p className="text-indigo-200 text-sm mt-1">{isNew ? "Add a new item to your budget" : "Update the details below"}</p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    {/* Item Name */}
-                    <div>
-                        <label htmlFor="item_name" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Item Name</label>
-                        <input type="text" name="item_name" value={formData.item_name} onChange={handleChange} placeholder="e.g. Netflix, Groceries..." className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 placeholder-gray-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all" required />
-                    </div>
-
-                    {/* Type & Owner */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label htmlFor="item_type" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Type</label>
-                            <select name="item_type" value={formData.item_type} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all"><option value="expense">Expense</option><option value="income">Income</option></select>
-                        </div>
-                        <div>
-                            <label htmlFor="owner" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Owner</label>
-                            <select name="owner" value={formData.owner} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all">{OWNER_CHOICES.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}</select>
-                        </div>
-                    </div>
-
-                    {/* Calculation & Payment Day */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label htmlFor="calculation_type" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Calculation</label>
-                            <select name="calculation_type" value={formData.calculation_type} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all">{Object.entries(CALCULATION_TYPE_CHOICES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-                        </div>
-                        {formData.calculation_type === 'weekly_count' && (
-                            <div>
-                                <label htmlFor="weekly_payment_day" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Payment Day</label>
-                                <select name="weekly_payment_day" value={formData.weekly_payment_day} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all" required><option value="">Select a day...</option>{Object.entries(DAY_CHOICES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Last Payment Month */}
-                    <div>
-                        <label htmlFor="last_payment_month_id" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Expiry Month</label>
-                        <div className="flex gap-2 items-center">
-                            <input type="month" name="last_payment_month_id" value={formData.last_payment_month_id} onChange={handleChange} min={formatDate(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1), 'YYYY-MM')} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all" />
-                            {formData.last_payment_month_id && (
-                                <button type="button" onClick={() => setFormData(prev => ({ ...prev, last_payment_month_id: '' }))} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0" title="Clear expiry">
-                                    <X className="h-5 w-5" />
-                                </button>
-                            )}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">{formData.last_payment_month_id ? `Expires after ${new Date(formData.last_payment_month_id + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}` : 'No expiration — runs indefinitely'}</p>
-                    </div>
-
-                    {/* Value Section */}
-                    <div className="p-4 bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-xl border border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Value & Options</h3>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">£</span>
-                            <input type="number" name="value" step="0.01" value={formData.value} onChange={handleChange} placeholder="0.00" className="block w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-3 text-lg font-semibold text-gray-800 placeholder-gray-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" required />
-                        </div>
-
-                        {/* Toggle Switches */}
-                        <div className="mt-4 space-y-3">
-                            <label htmlFor="is_one_off_new" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">One-off for this month</span>
-                                <div className="relative">
-                                    <input id="is_one_off_new" type="checkbox" name="is_one_off" checked={formData.is_one_off} onChange={handleChange} className="sr-only peer" />
-                                    <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
-                                    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
-                                </div>
-                            </label>
-                            <label htmlFor="bills_pot" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Part of Bills Pot</span>
-                                <div className="relative">
-                                    <input id="bills_pot" type="checkbox" name="bills_pot" checked={formData.bills_pot} onChange={handleChange} className="sr-only peer" />
-                                    <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-purple-500 transition-colors"></div>
-                                    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="flex-1 py-3 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.98]">Cancel</button>
-                        <button type="submit" className="flex-1 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all active:scale-[0.98]">{isNew ? 'Create Item' : 'Save Changes'}</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-// --- Main App Component ---
-const getInitialDate = () => {
-    const hash = window.location.hash;
-    const match = hash.match(/^#(\d{4}-\d{2})$/);
-    if (match && match[1]) {
-        const [year, month] = match[1].split('-').map(Number);
-        if (month >= 1 && month <= 12) return new Date(year, month - 1, 1);
-    }
-    return new Date();
-};
+import { PlusCircle, XCircle, Wallet } from 'lucide-react';
+import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
+import apiService from './services/api';
+import Toast from './components/Toast';
+import LoadingSkeleton from './components/LoadingSkeleton';
+import SearchComponent from './components/SearchComponent';
+import MonthSelector from './components/MonthSelector';
+import OwnerTotals from './components/OwnerTotals';
+import BudgetTable from './components/BudgetTable';
+import ItemCategoryModal from './components/ItemCategoryModal';
 
 const App = () => {
     const [user, setUser] = useState(null);
@@ -690,13 +41,11 @@ const App = () => {
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type, key: new Date().getTime() });
-        setTimeout(() => setToast({ ...toast, message: '' }), 3000);
     };
 
     const fetchData = useCallback(async (date) => {
         setIsLoading(true);
         try {
-            // Ensure the month exists before fetching its items
             await apiService.createOrGetMonth(date);
 
             const [items, categories, months] = await Promise.all([
@@ -743,11 +92,9 @@ const App = () => {
     }, [budgetItems]);
 
     useEffect(() => {
-        // This effect syncs the date state with the URL hash
         const syncDateFromHash = () => {
             const newDate = getInitialDate();
             setCurrentDate(current => {
-                // Only update state if the date is actually different
                 if (!current || current.getTime() !== newDate.getTime()) {
                     return newDate;
                 }
@@ -756,19 +103,16 @@ const App = () => {
         };
 
         window.addEventListener('hashchange', syncDateFromHash);
-        syncDateFromHash(); // Sync on initial load
+        syncDateFromHash();
 
         return () => window.removeEventListener('hashchange', syncDateFromHash);
-    }, []); // Empty dependency array ensures this runs only once to set up the listener
+    }, []);
 
     useEffect(() => {
-        // Only fetch data if we are NOT currently checking auth and we HAVE a valid user
         if (!isAuthLoading && user) {
             fetchData(currentDate);
         }
     }, [currentDate, fetchData, isAuthLoading, user]);
-
-    const handleDateChange = (newDate) => setCurrentDate(newDate);
 
     const handleUpdateItemValue = async (budgetItemId, payload) => {
         try {
@@ -800,10 +144,8 @@ const App = () => {
     };
 
     const handleOpenEditCategoryModal = (budgetItemId) => {
-        // Find the item in budgetItems first to get the current month's value
         let itemToEdit = budgetItems.find(i => i.budget_item_id === budgetItemId);
         if (!itemToEdit) {
-            // Fallback to basic category info if not in this month list (unlikely given UI)
             itemToEdit = allBudgetCategories.find(c => c.budget_item_id === budgetItemId);
         }
         if (itemToEdit) {
@@ -822,16 +164,12 @@ const App = () => {
                 await apiService.createBudgetItemCategory(monthId, fullPayload);
                 showToast('New item created successfully!');
             } else {
-                // Split payload into Category update and Value update
                 const categoryPayload = { ...fullPayload };
-                // Remove value-specific fields from category update
                 delete categoryPayload.value;
                 delete categoryPayload.is_one_off;
 
-                // 1. Update Category Info
                 await apiService.updateBudgetItemCategory(idOrPayload, categoryPayload);
 
-                // 2. Update Value Info for current month
                 const valuePayload = {
                     value: parseFloat(fullPayload.value) || 0,
                     is_one_off: fullPayload.is_one_off
@@ -850,14 +188,6 @@ const App = () => {
         }
     };
 
-    const handleSearchChange = (newSearchTerm) => {
-        setSearchTerm(newSearchTerm);
-    };
-
-    const handleClearSearch = () => {
-        setSearchTerm('');
-    };
-
     const handleGoogleLogin = () => {
         window.location.href = `${window.location.origin}/accounts/google/login/`;
     };
@@ -869,7 +199,7 @@ const App = () => {
     if (isAuthLoading) {
         return (
             <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-                <LoadingSpinner />
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
         );
     }
@@ -877,7 +207,7 @@ const App = () => {
     if (!user) {
         return (
             <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 min-h-screen flex items-center justify-center p-4">
-                <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
+                <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md text-center animate-slideUp">
                     <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <Wallet className="w-10 h-10 text-indigo-600" />
                     </div>
@@ -931,20 +261,20 @@ const App = () => {
                     </div>
                     <SearchComponent
                         searchTerm={searchTerm}
-                        onSearchChange={handleSearchChange}
-                        onClearSearch={handleClearSearch}
+                        onSearchChange={setSearchTerm}
+                        onClearSearch={() => setSearchTerm('')}
                     />
                 </div>
                 {isLoading && budgetItems.length === 0 ? (
-                    <LoadingSpinner />
+                    <LoadingSkeleton />
                 ) : (
-                    <>
+                    <div className="animate-fadeIn">
                         <OwnerTotals items={processedBudgetItems} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <BudgetTable title="Income" itemType="income" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />
                             <BudgetTable title="Expenses" itemType="expense" items={processedBudgetItems} onUpdate={handleUpdateItemValue} onDelete={handleDeleteItem} onEditCategory={handleOpenEditCategoryModal} searchTerm={searchTerm} currentDate={currentDate} isEditingDisabled={isEditingDisabled} />
                         </div>
-                    </>
+                    </div>
                 )}
             </main>
             <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} item={editingCategory} allMonths={allMonths} />
