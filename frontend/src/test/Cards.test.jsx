@@ -108,12 +108,20 @@ describe('PersonCard', () => {
 
     it('shows tab repayment nested under income and expenses', () => {
         render(<PersonCard {...defaultProps} repaymentOut={100} repaymentIn={75} />);
-        expect(screen.getByText('Tab Repayment Out')).toBeInTheDocument();
-        expect(screen.getByText('Tab Repayment In')).toBeInTheDocument();
         // Income includes repaymentIn: 3000 + 75
         expect(screen.getByText('+ £3075.00')).toBeInTheDocument();
         // Personal Expenses includes repaymentOut: 500 + 100
         expect(screen.getByText('- £600.00')).toBeInTheDocument();
+        // Subtotals are indented (ml-6) and appear after their parent
+        const repIn = screen.getByText('Tab Repayment In');
+        expect(repIn.closest('div.ml-6')).toBeTruthy();
+        const repOut = screen.getByText('Tab Repayment Out');
+        expect(repOut.closest('div.ml-6')).toBeTruthy();
+        // Repayment In appears after Income, Repayment Out appears after Personal Expenses
+        const allText = document.body.textContent;
+        expect(allText.indexOf('Income')).toBeLessThan(allText.indexOf('Tab Repayment In'));
+        expect(allText.indexOf('Personal Expenses')).toBeLessThan(allText.indexOf('Tab Repayment Out'));
+        expect(allText.indexOf('Tab Repayment In')).toBeLessThan(allText.indexOf('Personal Expenses'));
     });
 
     it('hides tab repayment lines when both zero', () => {
