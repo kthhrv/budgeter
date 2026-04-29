@@ -73,7 +73,7 @@ export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sha
                     <div className="flex justify-between items-center"><span>Groceries Pot</span> <span className="font-medium">£{groceriesPotTotal.toFixed(2)}</span></div>
                 </div>
             </div>
-            <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? 'bg-purple-50' : 'bg-red-50'}`}>
+            <div className={`mt-4 pt-4 flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? 'bg-purple-50' : 'bg-red-50'}`}>
                 <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
                 <span className={`font-extrabold text-xl ${remaining >= 0 ? 'text-purple-700' : 'text-red-600'}`}>£{remaining.toFixed(2)}</span>
             </div>
@@ -102,7 +102,7 @@ export const PersonCard = ({ name, color, income, directExpenses, share, sharedT
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Joint Expenses</span> <span className="font-semibold text-red-500">- £{share.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-400 text-xs"><span className="mr-6">&nbsp;</span>{(proportion * 100).toFixed(1)}% of £{sharedTotal.toFixed(0)}</span></div>
             </div>
-            <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? c.okBg : 'bg-red-50'}`}>
+            <div className={`mt-4 pt-4 flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? c.okBg : 'bg-red-50'}`}>
                 <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
                 <span className={`font-extrabold text-xl ${remaining >= 0 ? c.ok : 'text-red-600'}`}>£{remaining.toFixed(2)}</span>
             </div>
