@@ -106,12 +106,14 @@ describe('PersonCard', () => {
         expect(remaining).toHaveClass('text-red-600');
     });
 
-    it('shows tab repayment lines when present', () => {
+    it('shows tab repayment nested under income and expenses', () => {
         render(<PersonCard {...defaultProps} repaymentOut={100} repaymentIn={75} />);
         expect(screen.getByText('Tab Repayment Out')).toBeInTheDocument();
-        expect(screen.getByText('- £100.00')).toBeInTheDocument();
         expect(screen.getByText('Tab Repayment In')).toBeInTheDocument();
-        expect(screen.getByText('+ £75.00')).toBeInTheDocument();
+        // Income includes repaymentIn: 3000 + 75
+        expect(screen.getByText('+ £3075.00')).toBeInTheDocument();
+        // Personal Expenses includes repaymentOut: 500 + 100
+        expect(screen.getByText('- £600.00')).toBeInTheDocument();
     });
 
     it('hides tab repayment lines when both zero', () => {

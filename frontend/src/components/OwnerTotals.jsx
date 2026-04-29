@@ -95,14 +95,12 @@ export const PersonCard = ({ name, color, income, directExpenses, share, sharedT
                 <h4 className={`text-lg font-bold ${c.title}`}>{name}</h4>
             </div>
             <div className="space-y-3 text-sm grow">
-                <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{income.toFixed(2)}</span></div>
-                <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{directExpenses.toFixed(2)}</span></div>
+                <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Income</span> <span className="font-semibold text-emerald-600">+ £{(income + repaymentIn).toFixed(2)}</span></div>
+                {repaymentIn > 0 && <div className="ml-6 flex justify-between items-center text-xs text-gray-500"><span>Tab Repayment In</span> <span className="font-medium">£{repaymentIn.toFixed(2)}</span></div>}
+                <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{(directExpenses + repaymentOut).toFixed(2)}</span></div>
+                {repaymentOut > 0 && <div className="ml-6 flex justify-between items-center text-xs text-gray-500"><span>Tab Repayment Out</span> <span className="font-medium">£{repaymentOut.toFixed(2)}</span></div>}
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Shared Expenses</span> <span className="font-semibold text-red-500">- £{share.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-400 text-xs"><span className="mr-6">&nbsp;</span>{(proportion * 100).toFixed(1)}% of £{sharedTotal.toFixed(0)}</span></div>
-                {(repaymentOut > 0 || repaymentIn > 0) && <>
-                    <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Tab Repayment Out</span> <span className="font-semibold text-red-500">- £{repaymentOut.toFixed(2)}</span></div>
-                    <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Tab Repayment In</span> <span className="font-semibold text-emerald-600">+ £{repaymentIn.toFixed(2)}</span></div>
-                </>}
             </div>
             <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? c.okBg : 'bg-red-50'}`}>
                 <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>
