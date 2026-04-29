@@ -39,10 +39,10 @@ const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, 
                         {item.calculation_type === 'weekly_count' && <p className="text-xs text-gray-400 mt-1">Weekly on {DAY_CHOICES[item.weekly_payment_day] || 'unknown day'}{item.occurrences !== undefined && item.occurrences !== null ? ` · ${item.occurrences} occurrences` : ''}</p>}
                     </div>
                     <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                        <span className={`text-lg font-bold px-3 py-1 rounded-lg ${
+                        <span className={`text-lg font-bold ${
                             item.item_type === 'income'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-red-50 text-red-600 border border-red-200'
+                                ? 'text-emerald-700'
+                                : 'text-red-600'
                         }`}>
                             £{(parseFloat(item.effective_value) || 0).toFixed(2)}
                         </span>
