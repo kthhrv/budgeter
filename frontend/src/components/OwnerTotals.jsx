@@ -24,14 +24,17 @@ export const useBudgetTotals = (items) => {
         const keithShare = sharedTotal * keithProportion;
         const tildShare = sharedTotal * tildProportion;
 
-        const keithDirectExpenses = expenses.filter(i => i.owner === 'keith').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        const tildDirectExpenses = expenses.filter(i => i.owner === 'tild').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const keithDirectExpenses = expenses.filter(i => i.owner === 'keith' && !i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const tildDirectExpenses = expenses.filter(i => i.owner === 'tild' && !i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+
+        const keithTabRepayment = expenses.filter(i => i.owner === 'keith' && i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const tildTabRepayment = expenses.filter(i => i.owner === 'tild' && i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
 
         const keithIncome = incomes.filter(i => i.owner === 'keith').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
         const tildIncome = incomes.filter(i => i.owner === 'tild').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
 
-        const keithRemaining = keithIncome - keithDirectExpenses - keithShare;
-        const tildRemaining = tildIncome - tildDirectExpenses - tildShare;
+        const keithRemaining = keithIncome - keithDirectExpenses - keithShare - keithTabRepayment + tildTabRepayment;
+        const tildRemaining = tildIncome - tildDirectExpenses - tildShare - tildTabRepayment + keithTabRepayment;
 
         const billsPotTotal = items
             .filter(item => item.bills_pot)
@@ -47,6 +50,7 @@ export const useBudgetTotals = (items) => {
             keithShare, tildShare, keithProportion, tildProportion,
             keithRemaining, tildRemaining, keithIncome, tildIncome,
             keithDirectExpenses, tildDirectExpenses,
+            keithTabRepayment, tildTabRepayment,
             billsPotTotal, groceriesPotTotal, sharedTotal, sharedIncome
         };
     }, [items]);
@@ -77,7 +81,7 @@ export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sha
     );
 };
 
-export const PersonCard = ({ name, color, income, directExpenses, share, sharedTotal, proportion, remaining }) => {
+export const PersonCard = ({ name, color, income, directExpenses, share, sharedTotal, proportion, remaining, repaymentIn = 0, repaymentOut = 0 }) => {
     const styles = {
         blue: { bg: 'bg-blue-100', icon: 'text-blue-600', title: 'text-blue-800', ok: 'text-blue-700', okBg: 'bg-blue-50' },
         pink: { bg: 'bg-pink-100', icon: 'text-pink-600', title: 'text-pink-800', ok: 'text-pink-700', okBg: 'bg-pink-50' },
@@ -95,6 +99,10 @@ export const PersonCard = ({ name, color, income, directExpenses, share, sharedT
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{directExpenses.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Shared Expenses</span> <span className="font-semibold text-red-500">- £{share.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-400 text-xs"><span className="mr-6">&nbsp;</span>{(proportion * 100).toFixed(1)}% of £{sharedTotal.toFixed(0)}</span></div>
+                {(repaymentOut > 0 || repaymentIn > 0) && <>
+                    <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Tab Repayment Out</span> <span className="font-semibold text-red-500">- £{repaymentOut.toFixed(2)}</span></div>
+                    <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />Tab Repayment In</span> <span className="font-semibold text-emerald-600">+ £{repaymentIn.toFixed(2)}</span></div>
+                </>}
             </div>
             <div className={`mt-4 pt-4 border-t flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? c.okBg : 'bg-red-50'}`}>
                 <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>

@@ -105,4 +105,18 @@ describe('PersonCard', () => {
         const remaining = screen.getByText('£-200.00');
         expect(remaining).toHaveClass('text-red-600');
     });
+
+    it('shows tab repayment lines when present', () => {
+        render(<PersonCard {...defaultProps} repaymentOut={100} repaymentIn={75} />);
+        expect(screen.getByText('Tab Repayment Out')).toBeInTheDocument();
+        expect(screen.getByText('- £100.00')).toBeInTheDocument();
+        expect(screen.getByText('Tab Repayment In')).toBeInTheDocument();
+        expect(screen.getByText('+ £75.00')).toBeInTheDocument();
+    });
+
+    it('hides tab repayment lines when both zero', () => {
+        render(<PersonCard {...defaultProps} repaymentOut={0} repaymentIn={0} />);
+        expect(screen.queryByText('Tab Repayment Out')).not.toBeInTheDocument();
+        expect(screen.queryByText('Tab Repayment In')).not.toBeInTheDocument();
+    });
 });

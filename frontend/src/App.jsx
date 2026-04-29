@@ -25,12 +25,12 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
                     <BudgetTable title="Shared Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
                 </div>
                 <div className="space-y-4">
-                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} />
+                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
                     <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
                     <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
                 </div>
                 <div className="space-y-4">
-                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} />
+                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
                     <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
                     <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
                 </div>
@@ -40,8 +40,8 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
             <div className="hidden xl:block space-y-6">
                 <div className="grid grid-cols-3 gap-6 items-stretch">
                     <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
-                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} />
-                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} />
+                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
+                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
                 </div>
                 <div className="grid grid-cols-3 gap-6">
                     <div className="space-y-4">

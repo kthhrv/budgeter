@@ -112,4 +112,23 @@ describe('useBudgetTotals', () => {
 
         expect(result.current.keithIncome).toBeCloseTo(1500.50);
     });
+
+    it('separates tab repayments from direct expenses', () => {
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '2000' }),
+            makeItem({ item_type: 'expense', owner: 'keith', effective_value: '300' }),
+            makeItem({ item_type: 'expense', owner: 'keith', effective_value: '100', is_tab_repayment: true }),
+            makeItem({ item_type: 'expense', owner: 'tild', effective_value: '50', is_tab_repayment: true }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        expect(result.current.keithDirectExpenses).toBe(300);
+        expect(result.current.keithTabRepayment).toBe(100);
+        expect(result.current.tildTabRepayment).toBe(50);
+        // Keith remaining: 2000 - 300 - 0 (shared) - 100 (out) + 50 (in)
+        expect(result.current.keithRemaining).toBe(1650);
+        // Tild remaining: 2000 - 0 - 0 (shared) - 50 (out) + 100 (in)
+        expect(result.current.tildRemaining).toBe(2050);
+    });
 });
