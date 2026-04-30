@@ -21,3 +21,6 @@ db.sqlite3
 
 # System files
 .DS_Store
+
+# Local spreadsheets
+*.xlsx

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useBudgetTotals } from '../components/OwnerTotals';
+import { useBudgetTotals } from '../hooks/useBudgetTotals';
 
 const makeItem = (overrides) => ({
     budget_item_id: crypto.randomUUID(),

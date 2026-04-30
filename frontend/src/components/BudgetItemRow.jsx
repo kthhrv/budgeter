@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
-import { formatDate, DAY_CHOICES } from '../utils/helpers';
+import { DAY_CHOICES } from '../utils/helpers';
 import ConfirmationModal from './ConfirmationModal';
 
-const BudgetItemRow = ({ item, onUpdate, onEditCategory, onDelete, currentDate, isEditingDisabled = false, hideOwnerBadge = false }) => {
+const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = false, hideOwnerBadge = false }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isSynthetic = String(item.budget_item_id).includes('-repay-income');
 

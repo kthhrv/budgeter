@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { formatDate, DAY_CHOICES } from '../utils/helpers';
 
-const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
+const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
     const isNew = !item?.budget_item_id;
     const [formData, setFormData] = useState({
         item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false, groceries_pot: false, is_tab_repayment: false,

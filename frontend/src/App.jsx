@@ -6,7 +6,8 @@ import Toast from './components/Toast';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import SearchComponent from './components/SearchComponent';
 import MonthSelector from './components/MonthSelector';
-import { useBudgetTotals, SharedCard, PersonCard } from './components/OwnerTotals';
+import { useBudgetTotals } from './hooks/useBudgetTotals';
+import { SharedCard, PersonCard } from './components/OwnerTotals';
 import BudgetTable from './components/BudgetTable';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
@@ -68,7 +69,6 @@ const App = () => {
     const [currentDate, setCurrentDate] = useState(getInitialDate());
     const [budgetItems, setBudgetItems] = useState([]);
     const [allBudgetCategories, setAllBudgetCategories] = useState([]);
-    const [allMonths, setAllMonths] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
@@ -101,14 +101,12 @@ const App = () => {
         try {
             await apiService.createOrGetMonth(date);
 
-            const [items, categories, months] = await Promise.all([
+            const [items, categories] = await Promise.all([
                 apiService.getBudgetItemsForMonth(formatDate(date, 'YYYY-MM')),
                 apiService.getAllBudgetItemCategories(),
-                apiService.getAllMonths()
             ]);
             setBudgetItems(items);
             setAllBudgetCategories(categories);
-            setAllMonths(months);
         } catch (error) {
             console.error(error);
             showToast(error.message, 'error');
@@ -346,7 +344,7 @@ const App = () => {
                     <TabsPage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 )}
             </main>
-            <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} item={editingCategory} allMonths={allMonths} />
+            <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} item={editingCategory} />
         </div>
     );
 }

@@ -15,6 +15,7 @@ const TabsPage = ({ showToast }) => {
             const result = await apiService.getTabs();
             setData(result);
         } catch (err) {
+            console.error('Failed to load tabs', err);
             showToast('Failed to load tabs', 'error');
         } finally {
             setIsLoading(false);

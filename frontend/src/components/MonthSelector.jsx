@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDate } from '../utils/helpers';
 
@@ -6,11 +6,11 @@ const MonthSelector = ({ currentDate, isLoading }) => {
     const touchStartX = useRef(null);
     const containerRef = useRef(null);
 
-    const changeMonth = (offset) => {
+    const changeMonth = useCallback((offset) => {
         const newDate = new Date(currentDate);
         newDate.setMonth(currentDate.getMonth() + offset);
         window.location.hash = formatDate(newDate, 'YYYY-MM');
-    };
+    }, [currentDate]);
 
     useEffect(() => {
         const el = containerRef.current;
@@ -36,7 +36,7 @@ const MonthSelector = ({ currentDate, isLoading }) => {
             el.removeEventListener('touchstart', handleTouchStart);
             el.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [currentDate]);
+    }, [changeMonth]);
 
     return (
         <div ref={containerRef} className="flex items-center gap-2 select-none">
