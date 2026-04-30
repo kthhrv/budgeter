@@ -40,7 +40,13 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+        setFormData(prev => {
+            const next = { ...prev, [name]: type === 'checkbox' ? checked : value };
+            if (name === 'is_tab_repayment' && checked && prev.owner === 'shared') {
+                next.owner = 'keith';
+            }
+            return next;
+        });
     };
 
     const handleSubmit = (e) => {
@@ -57,7 +63,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, allMonths }) => {
         onSave(isNew ? payload : item.budget_item_id, payload);
     };
 
-    const OWNER_CHOICES = ['shared', 'keith', 'tild'];
+    const OWNER_CHOICES = formData.is_tab_repayment ? ['keith', 'tild'] : ['shared', 'keith', 'tild'];
     const CALCULATION_TYPE_CHOICES = { 'fixed': 'Fixed Monthly', 'weekly_count': 'Weekly Count' };
 
     return (
