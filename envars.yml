@@ -25,6 +25,8 @@ environment_variables:
       vault:v1:8ChLJLmgkeQPFMuqpSFxOY2fhShgRCudfC1yY9cvOaFUtZ/I4jdcDBsDGQ0ZRl+s56+aEOkxhUGpHbuN
     local: !secret |-
       vault:v1:PBDStFg1pKI07UrBaoGcYjHjfYpxiaZOnLF+nMpJ2fXoplK912TmpaY81lU7CO2omasPzBQGRoLDJo17
+    prod: !secret |-
+      vault:v1:Ph8z9zUwmpCveZtm7iXF6LYZCpbPbqO1iLzC+sx/zxHfnu/KmP41V78EOIpWfERHS5st5w9Ut6mkKwJCcjDI8cGBOSKO2a964HEBnCgpPhfSafWzNNZkr4PRXsfPn0s=
     test: django-insecure-test-key
 
   GOOGLE_CLIENT_ID:
