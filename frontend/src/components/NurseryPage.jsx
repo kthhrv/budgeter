@@ -542,13 +542,19 @@ const NurseryPage = ({ onSettingsChange }) => {
                         const gaspardInvoiced = calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0);
                         const tfcMult = effTaxFree ? 0.80 : 1.00;
                         return (
-                            <div className="space-y-1">
-                                <div className="flex justify-between items-baseline">
-                                    <span className="text-amber-50 text-sm">Ellis</span>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-baseline gap-3">
+                                    <div className="min-w-0">
+                                        <div className="text-amber-50 text-sm">Ellis</div>
+                                        <div className="text-amber-50/80 text-xs num truncate" title="TFC reference">1100116981235</div>
+                                    </div>
                                     <span className="text-2xl font-bold num">{money(ellisInvoiced * tfcMult)}</span>
                                 </div>
-                                <div className="flex justify-between items-baseline">
-                                    <span className="text-amber-50 text-sm">Gaspard</span>
+                                <div className="flex justify-between items-baseline gap-3">
+                                    <div className="min-w-0">
+                                        <div className="text-amber-50 text-sm">Gaspard</div>
+                                        <div className="text-amber-50/80 text-xs num truncate" title="TFC reference">1100067930356</div>
+                                    </div>
                                     <span className="text-2xl font-bold num">{money(gaspardInvoiced * tfcMult)}</span>
                                 </div>
                             </div>
