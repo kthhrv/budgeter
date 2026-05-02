@@ -70,21 +70,42 @@ function Toggle({ checked, onChange, label }) {
     );
 }
 
-function OverrideToggle({ hasOverride, monthLabel }) {
-    if (!hasOverride) return null;
-    return (
-        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium text-xs">
-            Custom for {monthLabel}
-        </span>
-    );
-}
-
-function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule, hasMonthOverride, monthLabel }) {
+function ChildCard({
+    title, accent, child, childKey, onUpdateChild, onSetSchedule, monthLabel,
+    currentDate, monthAdhocs, addAdHoc, removeAdHoc,
+}) {
     const update = (patch) => onUpdateChild(patch);
     const setDay = (i, v) => {
         const s = [...child.schedule]; s[i] = v;
         onSetSchedule(s);
     };
+
+    const year = currentDate.getFullYear();
+    const monthIdx = currentDate.getMonth();
+    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+    const today = new Date();
+    const initialAdhocDate = (year === today.getFullYear() && monthIdx === today.getMonth())
+        ? ymd(year, monthIdx, today.getDate())
+        : ymd(year, monthIdx, 1);
+
+    const [adhocForm, setAdhocForm] = useState({ date: initialAdhocDate, type: 'fullDay' });
+    useEffect(() => {
+        setAdhocForm(prev => ({ ...prev, date: initialAdhocDate }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [year, monthIdx]);
+
+    const childAdhocs = monthAdhocs.filter(a => a.child === childKey);
+
+    const handleAdd = () => {
+        addAdHoc({
+            id: Date.now() + Math.random(),
+            child: childKey,
+            date: adhocForm.date,
+            type: adhocForm.type,
+            ageBracket: child.ageBracket,
+        });
+    };
+
     return (
         <div className={`bg-white rounded-xl p-5 shadow-md border border-gray-100 border-t-4 ${accent}`}>
             <div className="flex items-baseline justify-between mb-3">
@@ -92,32 +113,18 @@ function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule, hasMont
                 <span className="text-xs text-gray-400">Busy Bees Tunbridge Wells</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
-                <label className="text-sm">
-                    <span className="block text-gray-500 mb-1">Age bracket</span>
-                    <select value={child.ageBracket} onChange={e => update({ ageBracket: e.target.value })}
-                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white">
-                        <option value="0-2">0–2 Year Olds</option>
-                        <option value="2-3">2–3 Year Olds</option>
-                        <option value="3-5">3–5 Year Olds</option>
-                    </select>
-                </label>
-                <label className="text-sm">
-                    <span className="block text-gray-500 mb-1">Funded hours</span>
-                    <select value={child.scheme} onChange={e => update({ scheme: e.target.value })}
-                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white">
-                        <option value="30hr">30 hours stretched (22.8/wk)</option>
-                        <option value="15hr">15 hours stretched (11.4/wk)</option>
-                        <option value="none">No funding</option>
-                    </select>
-                </label>
-            </div>
+            <label className="text-sm block mb-4">
+                <span className="block text-gray-500 mb-1">Age bracket</span>
+                <select value={child.ageBracket} onChange={e => update({ ageBracket: e.target.value })}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white">
+                    <option value="0-2">0–2 Year Olds</option>
+                    <option value="2-3">2–3 Year Olds</option>
+                    <option value="3-5">3–5 Year Olds</option>
+                </select>
+            </label>
 
             <div className="space-y-2 mb-3">
-                <div className="flex items-baseline justify-between">
-                    <div className="text-sm font-medium text-gray-600">Attendance</div>
-                    <OverrideToggle hasOverride={hasMonthOverride} monthLabel={monthLabel} />
-                </div>
+                <div className="text-sm font-medium text-gray-600">Attendance</div>
                 {DAYS.map((d, i) => (
                     <div key={d} className="flex items-center gap-2">
                         <div className="w-24 text-sm text-gray-600">{d}</div>
@@ -130,10 +137,60 @@ function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule, hasMont
             </div>
 
             {child.showSibling && (
-                <Toggle checked={child.siblingDiscount}
-                        onChange={v => update({ siblingDiscount: v })}
-                        label="Apply 10% sibling discount" />
+                <div className="mb-3">
+                    <Toggle checked={child.siblingDiscount}
+                            onChange={v => update({ siblingDiscount: v })}
+                            label="Apply 10% sibling discount" />
+                </div>
             )}
+
+            <div className="border-t border-gray-100 pt-3 mt-3">
+                <div className="text-sm font-medium text-gray-600 mb-2">Ad-hoc days in {monthLabel}</div>
+                {childAdhocs.length > 0 && (
+                    <ul className="text-xs space-y-1 mb-2">
+                        {childAdhocs.slice().sort((a, b) => a.date.localeCompare(b.date)).map(a => {
+                            const cost = STANDARD_RATES[a.ageBracket][a.type === 'fullDay' ? 'fullDay' : 'morning'];
+                            const sessionLabel = a.type === 'fullDay' ? 'Full Day' : a.type === 'morning' ? 'Morning' : 'Afternoon';
+                            return (
+                                <li key={a.id}
+                                    className="flex items-center justify-between rounded-lg px-2 py-1.5 bg-amber-50">
+                                    <span className="flex-1">
+                                        <span className="font-medium">{a.date}</span>
+                                        <span className="text-gray-500"> · {sessionLabel}</span>
+                                    </span>
+                                    <span className="num font-medium mr-2">{money(cost)}</span>
+                                    <button type="button" onClick={() => removeAdHoc(a.id)}
+                                            className="text-rose-500 hover:text-rose-700 text-base leading-none">×</button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+                <div className="flex items-end gap-2">
+                    <label className="text-xs flex-1">
+                        <span className="block text-gray-500 mb-1">Date</span>
+                        <input type="date" value={adhocForm.date}
+                            min={ymd(year, monthIdx, 1)}
+                            max={ymd(year, monthIdx, daysInMonth)}
+                            onChange={e => setAdhocForm(f => ({ ...f, date: e.target.value }))}
+                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm" />
+                    </label>
+                    <label className="text-xs flex-1">
+                        <span className="block text-gray-500 mb-1">Session</span>
+                        <select value={adhocForm.type}
+                            onChange={e => setAdhocForm(f => ({ ...f, type: e.target.value }))}
+                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm">
+                            <option value="fullDay">Full Day</option>
+                            <option value="morning">Morning</option>
+                            <option value="afternoon">Afternoon</option>
+                        </select>
+                    </label>
+                    <button type="button" onClick={handleAdd}
+                        className="text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg px-3 py-2 active:scale-[0.98] transition-all">
+                        + Add
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
@@ -144,13 +201,10 @@ const MIL_OPTIONS = [
     { value: 100, label: 'Full day' },
 ];
 
-function MilPanel({ mil, setMil, hasMonthOverride, monthLabel }) {
+function MilPanel({ mil, setMil }) {
     return (
         <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
-            <div className="flex items-baseline justify-between mb-1">
-                <h2 className="text-lg font-semibold text-gray-800">Mother-in-law contribution</h2>
-                <OverrideToggle hasOverride={hasMonthOverride} monthLabel={monthLabel} />
-            </div>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">Mother-in-law contribution</h2>
             <div className="grid grid-cols-5 gap-2 mt-3">
                 {DAYS.map((d, i) => (
                     <label key={d} className="text-center">
@@ -165,89 +219,6 @@ function MilPanel({ mil, setMil, hasMonthOverride, monthLabel }) {
                     </label>
                 ))}
             </div>
-        </div>
-    );
-}
-
-function AdHocPanel({ addAdHoc, removeAdHoc, monthAdhocs, monthLabel }) {
-    const today = new Date();
-    const defaultDate = ymd(today.getFullYear(), today.getMonth(), today.getDate());
-    const [form, setForm] = useState({
-        date: defaultDate,
-        child: 'ellis',
-        type: 'fullDay',
-        ageBracket: '2-3',
-    });
-    const upd = (patch) => setForm({ ...form, ...patch });
-
-    return (
-        <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">Ad-hoc days</h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-                <label className="text-xs col-span-2">
-                    <span className="block text-gray-500 mb-1">Date</span>
-                    <input type="date" value={form.date} onChange={e => upd({ date: e.target.value })}
-                           className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm" />
-                </label>
-                <label className="text-xs">
-                    <span className="block text-gray-500 mb-1">Child</span>
-                    <select value={form.child} onChange={e => upd({ child: e.target.value })}
-                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm">
-                        <option value="ellis">Ellis</option>
-                        <option value="gaspard">Gaspard</option>
-                    </select>
-                </label>
-                <label className="text-xs">
-                    <span className="block text-gray-500 mb-1">Age</span>
-                    <select value={form.ageBracket} onChange={e => upd({ ageBracket: e.target.value })}
-                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm">
-                        <option value="0-2">0–2</option>
-                        <option value="2-3">2–3</option>
-                        <option value="3-5">3–5</option>
-                    </select>
-                </label>
-                <label className="text-xs">
-                    <span className="block text-gray-500 mb-1">Session</span>
-                    <select value={form.type} onChange={e => upd({ type: e.target.value })}
-                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm">
-                        <option value="fullDay">Full Day</option>
-                        <option value="morning">Morning</option>
-                        <option value="afternoon">Afternoon</option>
-                    </select>
-                </label>
-            </div>
-            <button
-                onClick={() => addAdHoc({ ...form, id: Date.now() + Math.random() })}
-                className="w-full text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg px-3 py-2 mb-3 active:scale-[0.98] transition-all">
-                + Add ad-hoc day
-            </button>
-
-            {monthAdhocs.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">No ad-hoc days for {monthLabel}.</p>
-            ) : (
-                <div>
-                    <div className="text-xs font-medium text-gray-600 mb-1">
-                        Ad-hoc days in {monthLabel} ({monthAdhocs.length})
-                    </div>
-                    <ul className="text-xs space-y-1 max-h-40 overflow-y-auto">
-                        {monthAdhocs.slice().sort((a, b) => a.date.localeCompare(b.date)).map(a => {
-                            const cost = STANDARD_RATES[a.ageBracket][a.type === 'fullDay' ? 'fullDay' : 'morning'];
-                            return (
-                                <li key={a.id}
-                                    className="flex items-center justify-between rounded-lg px-2 py-1.5 bg-amber-50">
-                                    <span className="flex-1">
-                                        <span className="font-medium">{a.date}</span>
-                                        <span className="text-gray-500"> · {a.child === 'ellis' ? 'Ellis' : 'Gaspard'} · {a.type === 'fullDay' ? 'Full Day' : a.type === 'morning' ? 'Morning' : 'Afternoon'} · {a.ageBracket}</span>
-                                    </span>
-                                    <span className="num font-medium mr-2">{money(cost)}</span>
-                                    <button onClick={() => removeAdHoc(a.id)}
-                                            className="text-rose-500 hover:text-rose-700 text-base leading-none">×</button>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </div>
-            )}
         </div>
     );
 }
@@ -293,14 +264,6 @@ const NurseryPage = () => {
 
     // Currently displayed month, as YYYY-MM
     const monthKey = useMemo(() => formatDate(currentDate, 'YYYY-MM'), [currentDate]);
-
-    // "Has override" = the *currently displayed* month has its own entry for that section.
-    // (Reset only clears the current month's entry, not any earlier ones.)
-    const overridesAtMonth   = monthOverrides[monthKey] || {};
-    const ellisHasOverride   = !!overridesAtMonth.ellis;
-    const gaspardHasOverride = !!overridesAtMonth.gaspard;
-    const milHasOverride     = !!overridesAtMonth.mil;
-    const billingHasOverride = !!overridesAtMonth.billing;
 
     // Latest override at or before the displayed month — edits propagate forward.
     const effEllisOverride   = findEffectiveOverride(monthOverrides, monthKey, 'ellis');
@@ -605,35 +568,33 @@ const NurseryPage = () => {
 
             <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <ChildCard
-                    title="Ellis" accent="border-t-amber-400"
+                    title="Ellis" accent="border-t-amber-400" childKey="ellis"
                     child={{ ...ellis, schedule: effEllisSchedule }}
                     onUpdateChild={(patch) => setEllis(prev => ({ ...prev, ...patch }))}
                     onSetSchedule={setEllisSchedule}
-                    hasMonthOverride={ellisHasOverride}
                     monthLabel={calc.monthLabel}
+                    currentDate={currentDate}
+                    monthAdhocs={calc.monthAdhocs}
+                    addAdHoc={addAdHoc}
+                    removeAdHoc={removeAdHoc}
                 />
                 <ChildCard
-                    title="Gaspard" accent="border-t-sky-400"
+                    title="Gaspard" accent="border-t-sky-400" childKey="gaspard"
                     child={{ ...gaspard, schedule: effGaspardSchedule }}
                     onUpdateChild={(patch) => setGaspard(prev => ({ ...prev, ...patch }))}
                     onSetSchedule={setGaspardSchedule}
-                    hasMonthOverride={gaspardHasOverride}
                     monthLabel={calc.monthLabel}
+                    currentDate={currentDate}
+                    monthAdhocs={calc.monthAdhocs}
+                    addAdHoc={addAdHoc}
+                    removeAdHoc={removeAdHoc}
                 />
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-4">
-                <MilPanel
-                    mil={effMil}
-                    setMil={setMilEffective}
-                    hasMonthOverride={milHasOverride}
-                    monthLabel={calc.monthLabel}
-                />
+                <MilPanel mil={effMil} setMil={setMilEffective} />
                 <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
-                    <div className="flex items-baseline justify-between mb-3">
-                        <h2 className="text-lg font-semibold text-gray-800">Billing model & discounts</h2>
-                        <OverrideToggle hasOverride={billingHasOverride} monthLabel={calc.monthLabel} />
-                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800 mb-3">Billing model & discounts</h2>
                     <div className="space-y-2">
                         <Toggle checked={effFullWeekModel} onChange={setFullWeekModelEffective}
                                 label="Full Week model (£356/wk → £7.12/hr on non-funded hours)" />
@@ -643,14 +604,6 @@ const NurseryPage = () => {
                                 label="Show detailed monthly breakdown" />
                     </div>
                 </div>
-            </div>
-
-            <div className="grid md:grid-cols-1 gap-4 mb-4">
-                <AdHocPanel
-                    addAdHoc={addAdHoc}
-                    removeAdHoc={removeAdHoc}
-                    monthAdhocs={calc.monthAdhocs}
-                    monthLabel={calc.monthLabel} />
             </div>
 
             {showBreakdown && (

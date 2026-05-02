@@ -87,6 +87,7 @@ const App = () => {
     const [toast, setToast] = useState({ message: '', type: 'success', key: 0 });
     const [activePage, setActivePage] = useState('budget');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [nurserySettings, setNurserySettings] = useState(null);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -127,9 +128,31 @@ const App = () => {
         }
     }, []);
 
+    const nurseryAutoTFC = useMemo(() => {
+        if (!nurserySettings) return null;
+        return computeMonthSummary(nurserySettings, currentDate).totalTFC;
+    }, [nurserySettings, currentDate]);
+
     const processedBudgetItems = useMemo(() => {
+        const currentMonthName = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+
+        // For each is_nursery_linked item, replace its effective_value with the
+        // auto-computed nursery Transfer-to-TFC for the displayed month — UNLESS
+        // there's a one-off override pinned to this month, in which case the user's
+        // explicit value wins.
+        const itemsWithNurserySub = budgetItems.map(item => {
+            if (item.is_nursery_linked && nurseryAutoTFC !== null) {
+                const overriddenForMonth = item.is_one_off === true
+                    && item.effective_from_month_name === currentMonthName;
+                if (!overriddenForMonth) {
+                    return { ...item, effective_value: nurseryAutoTFC };
+                }
+            }
+            return item;
+        });
+
         const additionalIncomes = [];
-        for (const item of budgetItems) {
+        for (const item of itemsWithNurserySub) {
             const nameLower = item.item_name.toLowerCase().trim();
             if (item.item_type === 'expense') {
                 if (nameLower === 'tild repay') {
@@ -151,8 +174,8 @@ const App = () => {
                 }
             }
         }
-        return [...budgetItems, ...additionalIncomes];
-    }, [budgetItems]);
+        return [...itemsWithNurserySub, ...additionalIncomes];
+    }, [budgetItems, nurseryAutoTFC, currentDate]);
 
     useEffect(() => {
         const syncDateFromHash = () => {
@@ -176,6 +199,14 @@ const App = () => {
             fetchData(currentDate);
         }
     }, [currentDate, fetchData, isAuthLoading, user]);
+
+    useEffect(() => {
+        if (!isAuthLoading && user) {
+            apiService.getNurserySettings()
+                .then(setNurserySettings)
+                .catch(err => console.error('Failed to load nursery settings', err));
+        }
+    }, [isAuthLoading, user]);
 
     const handleUpdateItemValue = async (budgetItemId, payload) => {
         try {
@@ -214,25 +245,6 @@ const App = () => {
         if (itemToEdit) {
             setEditingCategory(itemToEdit);
             setIsCategoryModalOpen(true);
-        }
-    };
-
-    const handleSyncFromNursery = async (budgetItemId) => {
-        try {
-            const settings = await apiService.getNurserySettings();
-            const summary = computeMonthSummary(settings, currentDate);
-            const monthId = formatDate(currentDate, 'YYYY-MM');
-            await apiService.updateBudgetItemValue(monthId, budgetItemId, {
-                value: parseFloat(summary.totalTFC.toFixed(2)),
-                is_one_off: false,
-            });
-            showToast(`Synced from Nursery: £${summary.totalTFC.toFixed(2)}`);
-            fetchData(currentDate);
-        } catch (error) {
-            console.error(error);
-            showToast(error.message || 'Failed to sync from Nursery', 'error');
-        } finally {
-            setIsCategoryModalOpen(false);
         }
     };
 
@@ -399,7 +411,7 @@ const App = () => {
                     <TabsPage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 )}
             </main>
-            <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} onSyncFromNursery={handleSyncFromNursery} item={editingCategory} />
+            <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} item={editingCategory} />
         </div>
     );
 }

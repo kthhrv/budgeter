@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatDate, DAY_CHOICES } from '../utils/helpers';
 
-const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onSyncFromNursery }) => {
+const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
     const isNew = !item?.budget_item_id;
     const [formData, setFormData] = useState({
         item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, is_nursery_linked: false,
@@ -157,7 +157,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onSyncFromNursery })
                         {/* Toggle Switches */}
                         <div className="mt-4 space-y-3">
                             <label htmlFor="is_one_off_new" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">One-off for this month</span>
+                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{formData.is_nursery_linked ? 'Override Nursery sync for this month' : 'One-off for this month'}</span>
                                 <div className="relative">
                                     <input id="is_one_off_new" type="checkbox" name="is_one_off" checked={formData.is_one_off} onChange={handleChange} className="sr-only peer" />
                                     <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
@@ -213,15 +213,6 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onSyncFromNursery })
                                         <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
                                     </div>
                                 </label>
-                            )}
-                            {!isNew && formData.is_nursery_linked && onSyncFromNursery && (
-                                <button
-                                    type="button"
-                                    onClick={() => onSyncFromNursery(item.budget_item_id)}
-                                    className="w-full text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2 active:scale-[0.98] transition-all"
-                                >
-                                    Sync now from Nursery (current month)
-                                </button>
                             )}
                         </div>
                     </div>
