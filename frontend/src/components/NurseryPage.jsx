@@ -169,7 +169,7 @@ function MilPanel({ mil, setMil, hasMonthOverride, monthLabel }) {
     );
 }
 
-function AdHocPanel({ adhoc, addAdHoc, removeAdHoc, monthAdhocs, monthLabel }) {
+function AdHocPanel({ addAdHoc, removeAdHoc, monthAdhocs, monthLabel }) {
     const today = new Date();
     const defaultDate = ymd(today.getFullYear(), today.getMonth(), today.getDate());
     const [form, setForm] = useState({
@@ -222,21 +222,19 @@ function AdHocPanel({ adhoc, addAdHoc, removeAdHoc, monthAdhocs, monthLabel }) {
                 + Add ad-hoc day
             </button>
 
-            {adhoc.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">No ad-hoc days added.</p>
+            {monthAdhocs.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No ad-hoc days for {monthLabel}.</p>
             ) : (
                 <div>
                     <div className="text-xs font-medium text-gray-600 mb-1">
-                        All ad-hoc days ({adhoc.length}){monthAdhocs.length !== adhoc.length &&
-                            <span className="text-gray-400 font-normal"> · {monthAdhocs.length} in {monthLabel}</span>}
+                        Ad-hoc days in {monthLabel} ({monthAdhocs.length})
                     </div>
                     <ul className="text-xs space-y-1 max-h-40 overflow-y-auto">
-                        {adhoc.slice().sort((a, b) => a.date.localeCompare(b.date)).map(a => {
+                        {monthAdhocs.slice().sort((a, b) => a.date.localeCompare(b.date)).map(a => {
                             const cost = STANDARD_RATES[a.ageBracket][a.type === 'fullDay' ? 'fullDay' : 'morning'];
-                            const inMonth = monthAdhocs.some(m => m.id === a.id);
                             return (
                                 <li key={a.id}
-                                    className={`flex items-center justify-between rounded-lg px-2 py-1.5 ${inMonth ? 'bg-amber-50' : 'bg-gray-50'}`}>
+                                    className="flex items-center justify-between rounded-lg px-2 py-1.5 bg-amber-50">
                                     <span className="flex-1">
                                         <span className="font-medium">{a.date}</span>
                                         <span className="text-gray-500"> · {a.child === 'ellis' ? 'Ellis' : 'Gaspard'} · {a.type === 'fullDay' ? 'Full Day' : a.type === 'morning' ? 'Morning' : 'Afternoon'} · {a.ageBracket}</span>
@@ -649,7 +647,6 @@ const NurseryPage = () => {
 
             <div className="grid md:grid-cols-1 gap-4 mb-4">
                 <AdHocPanel
-                    adhoc={adhoc}
                     addAdHoc={addAdHoc}
                     removeAdHoc={removeAdHoc}
                     monthAdhocs={calc.monthAdhocs}
