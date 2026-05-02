@@ -62,6 +62,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                 next.expense_pot = '';
                 next.is_tab_repayment = false;
                 next.is_extra = false;
+                next.is_nursery_linked = false;
             }
             if (name === 'expense_pot' && value !== '') {
                 next.is_extra = false;

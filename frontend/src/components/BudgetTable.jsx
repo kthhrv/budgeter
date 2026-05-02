@@ -44,14 +44,20 @@ const BudgetTable = ({ items, onUpdate, onDelete, onEditCategory, title, itemTyp
     }, [items, itemType, ownerFilter, searchTerm, useFlat]);
 
     useEffect(() => {
-        if (!useFlat) {
-            const initialState = {};
+        if (useFlat) return;
+        // Only seed new owners — preserve any user-toggled collapse state for owners we already know.
+        setCollapsedGroups(prev => {
+            const next = { ...prev };
+            let changed = false;
             processedItems.forEach(([owner]) => {
-                initialState[owner] = false;
+                if (!(owner in next)) {
+                    next[owner] = false;
+                    changed = true;
+                }
             });
-            setCollapsedGroups(initialState);
-        }
-    }, [items, itemType, processedItems, searchTerm, useFlat]);
+            return changed ? next : prev;
+        });
+    }, [processedItems, useFlat]);
 
     const toggleGroup = (owner) => {
         setCollapsedGroups(prev => ({ ...prev, [owner]: !prev[owner] }));

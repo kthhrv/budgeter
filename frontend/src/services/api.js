@@ -26,16 +26,6 @@ const apiService = {
         if (!response.ok) throw new Error('Failed to fetch budget items');
         return await response.json();
     },
-    async getAllBudgetItemCategories() {
-        const response = await fetch(`${API_BASE_URL}/budgetitems/`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch budget item categories');
-        return await response.json();
-    },
-    async getAllMonths() {
-        const response = await fetch(`${API_BASE_URL}/months/`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch months');
-        return await response.json();
-    },
     async updateBudgetItemValue(monthId, budgetItemId, payload) {
         const response = await fetch(`${API_BASE_URL}/months/${monthId}/items/${budgetItemId}/value/`, {
             method: 'PUT',

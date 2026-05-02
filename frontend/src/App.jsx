@@ -79,7 +79,6 @@ const App = () => {
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(getInitialDate());
     const [budgetItems, setBudgetItems] = useState([]);
-    const [allBudgetCategories, setAllBudgetCategories] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
@@ -114,12 +113,8 @@ const App = () => {
         try {
             await apiService.createOrGetMonth(date);
 
-            const [items, categories] = await Promise.all([
-                apiService.getBudgetItemsForMonth(formatDate(date, 'YYYY-MM')),
-                apiService.getAllBudgetItemCategories(),
-            ]);
+            const items = await apiService.getBudgetItemsForMonth(formatDate(date, 'YYYY-MM'));
             setBudgetItems(items);
-            setAllBudgetCategories(categories);
         } catch (error) {
             console.error(error);
             showToast(error.message, 'error');
@@ -147,7 +142,6 @@ const App = () => {
                         budget_item_id: `${item.budget_item_id}-repay-income`,
                         item_type: 'income',
                         owner: 'tild',
-                        description: `Repayment from ${item.owner}`,
                     });
                 } else if (nameLower === 'keith repay') {
                     additionalIncomes.push({
@@ -155,7 +149,6 @@ const App = () => {
                         budget_item_id: `${item.budget_item_id}-repay-income`,
                         item_type: 'income',
                         owner: 'keith',
-                        description: `Repayment from ${item.owner}`,
                     });
                 }
             }
@@ -224,10 +217,7 @@ const App = () => {
     };
 
     const handleOpenEditCategoryModal = (budgetItemId) => {
-        let itemToEdit = budgetItems.find(i => i.budget_item_id === budgetItemId);
-        if (!itemToEdit) {
-            itemToEdit = allBudgetCategories.find(c => c.budget_item_id === budgetItemId);
-        }
+        const itemToEdit = budgetItems.find(i => i.budget_item_id === budgetItemId);
         if (itemToEdit) {
             setEditingCategory(itemToEdit);
             setIsCategoryModalOpen(true);

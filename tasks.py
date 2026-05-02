@@ -11,6 +11,8 @@ Usage:
     inv status               Show running containers
 """
 
+import io
+
 from invoke import task
 
 REGISTRY = "192.168.0.191:5000"
@@ -83,15 +85,16 @@ def deploy(c, env=DEFAULT_ENV):
     # Ensure remote dir exists
     c.run(f'ssh {remote} "mkdir -p {prod_dir}"')
 
-    # Write .env for compose variable substitution
+    # Write .env for compose variable substitution. Pipe through stdin so we
+    # don't have to worry about quoting / shell-`echo -e` flag portability.
     compose_vars = ENV_COMPOSE_VARS.get(env, {})
     env_lines = [
         f"APP_ENV={env}",
         f"IMAGE_TAG={sha}",
     ]
     env_lines += [f"{k}={v}" for k, v in compose_vars.items()]
-    env_content = "\\n".join(env_lines)
-    c.run(f'ssh {remote} "echo -e \'{env_content}\' > {prod_dir}/.env"')
+    env_content = "\n".join(env_lines) + "\n"
+    c.run(f"ssh {remote} 'cat > {prod_dir}/.env'", in_stream=io.StringIO(env_content))
 
     # Sync compose file
     print(f"Syncing compose.yml to {remote}:{prod_dir}")

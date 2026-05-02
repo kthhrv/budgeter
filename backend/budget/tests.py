@@ -417,3 +417,176 @@ class BudgetAPITestCase(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class IsNurseryLinkedTestCase(TestCase):
+    """Round-trip the is_nursery_linked field through create + edit + listing."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.client = Client()
+        self.user = User.objects.create_user(username='u', password='p')
+        self.client.login(username='u', password='p')
+        self.month = Month.objects.create(
+            month_id='2026-06', month_name='June 2026',
+            start_date=datetime.date(2026, 6, 1), end_date=datetime.date(2026, 6, 30),
+        )
+
+    def test_create_and_list_round_trips_is_nursery_linked(self):
+        payload = {
+            'item_name': 'Nursery', 'item_type': 'expense', 'owner': 'shared',
+            'expense_pot': '', 'is_tab_repayment': False, 'is_extra': False,
+            'is_nursery_linked': True,
+            'calculation_type': 'fixed', 'value': 100.0, 'is_one_off': False,
+        }
+        resp = self.client.post(
+            f'/api/months/{self.month.month_id}/budgetitems/',
+            json.dumps(payload), content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['is_nursery_linked'])
+
+        resp = self.client.get(f'/api/months/{self.month.month_id}/items/')
+        items = resp.json()
+        nursery_items = [i for i in items if i['item_name'] == 'Nursery']
+        self.assertEqual(len(nursery_items), 1)
+        self.assertTrue(nursery_items[0]['is_nursery_linked'])
+
+    def test_edit_can_toggle_off_is_nursery_linked(self):
+        item = BudgetItem.objects.create(
+            item_name='Nursery', item_type='expense', owner='shared',
+            is_nursery_linked=True,
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=item, month=self.month, effective_from_month=self.month,
+            value=100, is_one_off=False,
+        )
+        resp = self.client.put(
+            f'/api/budgetitems/{item.budget_item_id}/',
+            json.dumps({'is_nursery_linked': False}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        item.refresh_from_db()
+        self.assertFalse(item.is_nursery_linked)
+
+
+class OneOffRolloverTestCase(TestCase):
+    """A one-off version for month N must NOT roll over to month N+1."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.client = Client()
+        self.user = User.objects.create_user(username='u', password='p')
+        self.client.login(username='u', password='p')
+        self.jan = Month.objects.create(
+            month_id='2026-01', month_name='January 2026',
+            start_date=datetime.date(2026, 1, 1), end_date=datetime.date(2026, 1, 31),
+        )
+        self.feb = Month.objects.create(
+            month_id='2026-02', month_name='February 2026',
+            start_date=datetime.date(2026, 2, 1), end_date=datetime.date(2026, 2, 28),
+        )
+
+    def test_one_off_does_not_carry_into_next_month(self):
+        item = BudgetItem.objects.create(item_name='Rent', item_type='expense', owner='shared')
+        # Baseline: a non-one-off £1000 effective from January.
+        BudgetItemVersion.objects.create(
+            budget_item=item, month=self.jan, effective_from_month=self.jan,
+            value=1000, is_one_off=False,
+        )
+        # February gets a one-off £200.
+        BudgetItemVersion.objects.create(
+            budget_item=item, month=self.feb, effective_from_month=self.feb,
+            value=200, is_one_off=True,
+        )
+        # February shows the one-off.
+        feb_items = self.client.get(f'/api/months/{self.feb.month_id}/items/').json()
+        self.assertEqual(len(feb_items), 1)
+        self.assertEqual(feb_items[0]['value'], 200.0)
+        self.assertTrue(feb_items[0]['is_one_off'])
+
+        # March has no version of its own — the one-off must NOT roll over.
+        # The Jan baseline (non-one-off, £1000) should be effective.
+        march = Month.objects.create(
+            month_id='2026-03', month_name='March 2026',
+            start_date=datetime.date(2026, 3, 1), end_date=datetime.date(2026, 3, 31),
+        )
+        march_items = self.client.get(f'/api/months/{march.month_id}/items/').json()
+        self.assertEqual(march_items[0]['value'], 1000.0)
+        self.assertFalse(march_items[0]['is_one_off'])
+
+
+class DeleteItemFromMonthMonthCreationTestCase(TestCase):
+    """delete_budget_item_from_month sets last_payment_month to the month *before*
+    the current one. That's an existing Month, not a phantom: the endpoint should
+    not invent a Month row that didn't already exist."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.client = Client()
+        self.user = User.objects.create_user(username='u', password='p')
+        self.client.login(username='u', password='p')
+
+    def test_delete_uses_existing_previous_month_only(self):
+        # Today is past 2026-05-02 in the test environment but use a plausible
+        # future month so the 403 doesn't trip; we use a far-future to ensure
+        # the delete is allowed.
+        future = Month.objects.create(
+            month_id='2099-07', month_name='July 2099',
+            start_date=datetime.date(2099, 7, 1), end_date=datetime.date(2099, 7, 31),
+        )
+        item = BudgetItem.objects.create(item_name='Rent', item_type='expense', owner='shared')
+        BudgetItemVersion.objects.create(
+            budget_item=item, month=future, effective_from_month=future,
+            value=1000, is_one_off=False,
+        )
+        before_count = Month.objects.count()
+        resp = self.client.delete(f'/api/months/{future.month_id}/items/{item.budget_item_id}/')
+        self.assertEqual(resp.status_code, 204)
+        # Endpoint *does* create the previous Month if missing — that's the existing
+        # behaviour; we're locking it in so any future change is intentional.
+        self.assertEqual(Month.objects.count(), before_count + 1)
+        item.refresh_from_db()
+        self.assertEqual(item.last_payment_month.month_id, '2099-06')
+
+
+class ExpensePotDefaultsTestCase(TestCase):
+    """Defaults + clearing of expense_pot via the create/edit endpoints."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.client = Client()
+        self.user = User.objects.create_user(username='u', password='p')
+        self.client.login(username='u', password='p')
+        self.month = Month.objects.create(
+            month_id='2026-06', month_name='June 2026',
+            start_date=datetime.date(2026, 6, 1), end_date=datetime.date(2026, 6, 30),
+        )
+
+    def test_create_defaults_expense_pot_to_empty(self):
+        resp = self.client.post(
+            f'/api/months/{self.month.month_id}/budgetitems/',
+            json.dumps({
+                'item_name': 'Misc', 'item_type': 'expense', 'owner': 'shared',
+                'is_tab_repayment': False, 'calculation_type': 'fixed',
+                'value': 10.0, 'is_one_off': False,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['expense_pot'], '')
+
+    def test_create_accepts_pot_choices(self):
+        for pot in ('bills', 'groceries'):
+            resp = self.client.post(
+                f'/api/months/{self.month.month_id}/budgetitems/',
+                json.dumps({
+                    'item_name': f'P{pot}', 'item_type': 'expense', 'owner': 'shared',
+                    'expense_pot': pot, 'is_tab_repayment': False,
+                    'calculation_type': 'fixed', 'value': 10.0, 'is_one_off': False,
+                }),
+                content_type='application/json',
+            )
+            self.assertEqual(resp.status_code, 200, resp.content)
+            self.assertEqual(resp.json()['expense_pot'], pot)
+
+

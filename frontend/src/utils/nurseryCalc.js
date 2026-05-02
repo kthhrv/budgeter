@@ -152,12 +152,24 @@ export function effectiveForMonth(settings, monthKey) {
 
 // ------------------------- Headline computation -------------------------
 
-// Compute the per-child invoiced totals (post sibling discount) and the
-// "Transfer to TFC" total (post tax-free factor) for a given month.
-// `date` is any Date in the month of interest.
+// Compute the full month breakdown for the nursery calculator: per-weekday
+// rows, ad-hoc rows, totals, and the headline TFC figures. Used by both the
+// Nursery tab (for the breakdown table + headline cards) and the Budget tab
+// (for the auto-sync via `totalTFC`).
+//
+// Returns:
+//   { year, monthIdx, monthLabel, daysInMonth, weekdayCounts,
+//     ellis: {...effective}, gaspard: {...effective},
+//     monthlyDaily: per-weekday breakdown,
+//     monthAdhocs:  per-ad-hoc rows,
+//     monthly:      { gross, milGross, mil, parentBeforeTF, tfSaving, parentOOP },
+//     ellisInvoiced, gaspardInvoiced, totalInvoiced,
+//     ellisTFC, gaspardTFC, totalTFC,
+//     effective: full effective settings for the month }
 export function computeMonthSummary(settings, date) {
     const year = date.getFullYear();
     const monthIdx = date.getMonth();
+    const monthLabel = date.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
     const monthKey = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
     const eff = effectiveForMonth(settings, monthKey);
 
@@ -183,40 +195,85 @@ export function computeMonthSummary(settings, date) {
     const gaspardStretched = weeklyStretched(eff.gaspardSchedule, eff.gaspard.ageBracket, eff.gaspard.scheme, eff.fullWeekModel);
     const gaspardStandard  = weeklyStandard (eff.gaspardSchedule, eff.gaspard.ageBracket);
 
-    const eSib = eff.ellis.siblingDiscount   ? 0.90 : 1.00;
-    const gSib = eff.gaspard.siblingDiscount ? 0.90 : 1.00;
+    const eSib   = eff.ellis.siblingDiscount   ? 0.90 : 1.00;
+    const gSib   = eff.gaspard.siblingDiscount ? 0.90 : 1.00;
+    const tfMult = eff.taxFree ? 0.80 : 1.00;
 
-    let ellisInvoiced = 0;
-    let gaspardInvoiced = 0;
-    for (let i = 0; i < 5; i++) {
+    const monthlyDaily = [0, 1, 2, 3, 4].map(i => {
         const nFunded   = weekdayCounts.funded[i];
         const nStandard = weekdayCounts.standard[i];
         const nBankHols = weekdayCounts.bankHols[i];
         const nFundNorm = Math.max(0, nFunded - nBankHols);
-        const eMonthlyGross = nFundNorm * ellisStretched.daily[i] + nBankHols * ellisStretched.dailyNoFC[i] + nStandard * ellisStandard.daily[i];
-        const gMonthlyGross = nFundNorm * gaspardStretched.daily[i] + nBankHols * gaspardStretched.dailyNoFC[i] + nStandard * gaspardStandard.daily[i];
-        ellisInvoiced   += eMonthlyGross * eSib;
-        gaspardInvoiced += gMonthlyGross * gSib;
-    }
+        const occurrences = nFunded + nStandard;
 
-    // Ad-hoc days that fall in this month.
-    for (const a of (settings.adhoc || [])) {
-        if (!a.date) continue;
+        const eMonthlyGross = nFundNorm * ellisStretched.daily[i]   + nBankHols * ellisStretched.dailyNoFC[i]   + nStandard * ellisStandard.daily[i];
+        const gMonthlyGross = nFundNorm * gaspardStretched.daily[i] + nBankHols * gaspardStretched.dailyNoFC[i] + nStandard * gaspardStandard.daily[i];
+        const eMonthlyNet = eMonthlyGross * eSib;
+        const gMonthlyNet = gMonthlyGross * gSib;
+        const combined    = eMonthlyNet + gMonthlyNet;
+        const milGrossPay = combined * (eff.mil[i] / 100);
+        const milPay      = milGrossPay * tfMult;
+        const parentPay   = (combined - milGrossPay) * tfMult;
+        return {
+            eFundedType: eff.ellisSchedule[i],
+            gFundedType: eff.gaspardSchedule[i],
+            eFundedHrs: ellisStretched.allocated[i],
+            gFundedHrs: gaspardStretched.allocated[i],
+            nFunded, nStandard, nBankHols, nFundNorm, occurrences,
+            eMonthlyGross, eMonthlyNet,
+            gMonthlyGross, gMonthlyNet,
+            combined, milGrossPay, milPay, parentPay,
+        };
+    });
+
+    const monthAdhocs = (settings.adhoc || []).filter(a => {
+        if (!a.date) return false;
         const [yy, mm] = a.date.split('-').map(Number);
-        if (yy !== year || (mm - 1) !== monthIdx) continue;
+        return yy === year && (mm - 1) === monthIdx;
+    }).map(a => {
         const rates = STANDARD_RATES[a.ageBracket];
         const cost = a.type === 'fullDay' ? rates.fullDay : rates.morning;
-        if (a.child === 'ellis')   ellisInvoiced   += cost * eSib;
-        if (a.child === 'gaspard') gaspardInvoiced += cost * gSib;
-    }
+        const eGross = a.child === 'ellis'   ? cost : 0;
+        const gGross = a.child === 'gaspard' ? cost : 0;
+        const eNet = eGross * eSib;
+        const gNet = gGross * gSib;
+        const combined = eNet + gNet;
+        const [yy, mm, dd] = a.date.split('-').map(Number);
+        const dow = new Date(yy, mm - 1, dd).getDay();
+        const wd = (dow >= 1 && dow <= 5) ? dow - 1 : -1;
+        const milPct = wd >= 0 ? eff.mil[wd] : 0;
+        const milGrossPay = combined * (milPct / 100);
+        const milPay = milGrossPay * tfMult;
+        const parentPay = (combined - milGrossPay) * tfMult;
+        return { ...a, wd, milPct, cost, eGross, gGross, eNet, gNet, combined, milGrossPay, milPay, parentPay };
+    });
 
-    const totalInvoiced = ellisInvoiced + gaspardInvoiced;
-    const tfcMult = eff.taxFree ? 0.80 : 1.00;
+    const sumDaily = (key) => monthlyDaily.reduce((s, m) => s + m[key], 0);
+    const sumAdhoc = (key) => monthAdhocs.reduce((s, a) => s + a[key], 0);
+
+    const ellisInvoiced   = sumDaily('eMonthlyNet') + sumAdhoc('eNet');
+    const gaspardInvoiced = sumDaily('gMonthlyNet') + sumAdhoc('gNet');
+    const totalInvoiced   = ellisInvoiced + gaspardInvoiced;
+    const gross           = sumDaily('combined')    + sumAdhoc('combined');
+    const milGross        = sumDaily('milGrossPay') + sumAdhoc('milGrossPay');
+    const milTotal        = sumDaily('milPay')      + sumAdhoc('milPay');
+    const parentOOP       = sumDaily('parentPay')   + sumAdhoc('parentPay');
+    const tfSaving        = eff.taxFree ? gross * 0.20 : 0;
+
     return {
+        year, monthIdx, monthLabel, daysInMonth, weekdayCounts,
+        effective: eff,
+        monthlyDaily, monthAdhocs,
+        monthly: {
+            gross, milGross,
+            mil: milTotal,
+            parentBeforeTF: gross - milGross,
+            tfSaving, parentOOP,
+        },
         ellisInvoiced, gaspardInvoiced, totalInvoiced,
-        ellisTFC:   ellisInvoiced   * tfcMult,
-        gaspardTFC: gaspardInvoiced * tfcMult,
-        totalTFC:   totalInvoiced   * tfcMult,
+        ellisTFC:   ellisInvoiced   * tfMult,
+        gaspardTFC: gaspardInvoiced * tfMult,
+        totalTFC:   totalInvoiced   * tfMult,
     };
 }
 

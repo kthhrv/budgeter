@@ -3,6 +3,7 @@ Django settings for budgeter project.
 """
 
 import os
+import sys
 from pathlib import Path
 
 
@@ -14,16 +15,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-q^0c7)&sg4b7clno3*5w3tqs2)dg^kqdcpme!h%pa=sd56v*#0')
-
 DEBUG = os.environ.get('DEBUG', 'false').lower() in ('true', '1', 'yes')
 
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+_running_tests = 'test' in sys.argv or 'pytest' in sys.argv[0]
+if not SECRET_KEY:
+    if DEBUG or _running_tests:
+        SECRET_KEY = 'django-insecure-q^0c7)&sg4b7clno3*5w3tqs2)dg^kqdcpme!h%pa=sd56v*#0'
+    else:
+        raise RuntimeError("DJANGO_SECRET_KEY must be set when DEBUG=False")
+
 _domain = os.environ.get('ADDON_DOMAIN', '')
-ALLOWED_HOSTS = [_domain] if _domain else ['*']
 if DEBUG:
     ALLOWED_HOSTS = ['*']
-
-CORS_ALLOW_ALL_ORIGINS = True
+elif _domain:
+    ALLOWED_HOSTS = [_domain]
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
 
@@ -141,19 +149,27 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True # For development with --host
+# CORS: explicit allowlist rather than '*' so credentials-bearing requests aren't sent
+# to attacker-controlled origins.
 CORS_ALLOW_CREDENTIALS = True
-
-CSRF_TRUSTED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8000",
 ]
 if _domain and _domain != "localhost":
-    CSRF_TRUSTED_ORIGINS.append(f"https://{_domain}")
+    CORS_ALLOWED_ORIGINS.append(f"https://{_domain}")
+
+CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Force secure cookies + HSTS in production. Browser only sends these cookies over HTTPS,
+# matching the prod nginx-proxy-manager → app TLS termination.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Allauth settings
 AUTHENTICATION_BACKENDS = [

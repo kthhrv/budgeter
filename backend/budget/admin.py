@@ -1,7 +1,7 @@
 # admin.py for a Django Budget Management Application
 
 from django.contrib import admin
-from .models import Month, BudgetItem, BudgetItemVersion
+from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings
 
 class BudgetItemVersionInline(admin.TabularInline):
     """
@@ -65,6 +65,24 @@ class BudgetItemVersionAdmin(admin.ModelAdmin):
         'month__month_name'
     )
     readonly_fields = ('budget_item_version_id', 'created_at',)
-    # raw_id_fields = ('budget_item', 'month', 'effective_from_month',)
 
 
+@admin.register(TabItem)
+class TabItemAdmin(admin.ModelAdmin):
+    list_display = ('description', 'paid_by', 'total_cost', 'amount_owed', 'date_added')
+    list_filter = ('paid_by', 'date_added')
+    search_fields = ('description',)
+    readonly_fields = ('id', 'created_at')
+
+
+@admin.register(TabRepayment)
+class TabRepaymentAdmin(admin.ModelAdmin):
+    list_display = ('amount', 'paid_by', 'date', 'note')
+    list_filter = ('paid_by', 'date')
+    readonly_fields = ('id', 'created_at')
+
+
+@admin.register(NurserySettings)
+class NurserySettingsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'updated_at')
+    readonly_fields = ('updated_at',)

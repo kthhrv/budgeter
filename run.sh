@@ -17,6 +17,7 @@ echo "Collecting static files..."
 echo "Starting Gunicorn..."
 gunicorn budgeter.wsgi:application \
     --workers 2 \
+    --timeout 60 \
     --bind unix:/tmp/gunicorn.sock \
     --access-logfile - &
 

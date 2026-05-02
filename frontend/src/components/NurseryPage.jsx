@@ -3,8 +3,8 @@ import apiService from '../services/api';
 import { formatDate, getInitialDate } from '../utils/helpers';
 import MonthSelector from './MonthSelector';
 import {
-    STANDARD_RATES, DAYS, SESSION_OPTIONS, BANK_HOLIDAYS,
-    ymd, weeklyStretched, weeklyStandard, findEffectiveOverride,
+    STANDARD_RATES, DAYS, SESSION_OPTIONS,
+    ymd, computeMonthSummary, findEffectiveOverride,
 } from '../utils/nurseryCalc';
 
 // ------------------------- Persistent state -------------------------
@@ -340,128 +340,9 @@ const NurseryPage = ({ onSettingsChange }) => {
     }, [loaded, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides, onSettingsChange]);
 
     const calc = useMemo(() => {
-        const year = currentDate.getFullYear();
-        const monthIdx = currentDate.getMonth();
-        const monthLabel = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
-
-        const weekdayCounts = { funded: [0, 0, 0, 0, 0], standard: [0, 0, 0, 0, 0], bankHols: [0, 0, 0, 0, 0] };
-        const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-        const bankHolDates = [];
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dow = new Date(year, monthIdx, d).getDay();
-            if (dow >= 1 && dow <= 5) {
-                const wd = dow - 1;
-                const iso = ymd(year, monthIdx, d);
-                const isBankHol = BANK_HOLIDAYS.has(iso);
-                const isStandard = (monthIdx === 3 && d <= 7)
-                                || (monthIdx === 11 && d >= 25);
-                if (isStandard) weekdayCounts.standard[wd]++;
-                else            weekdayCounts.funded[wd]++;
-                if (isBankHol) {
-                    weekdayCounts.bankHols[wd]++;
-                    bankHolDates.push({ date: iso, wd });
-                }
-            }
-        }
-
-        const ellisStretched   = weeklyStretched(effEllisSchedule,   ellis.ageBracket,   ellis.scheme,   effFullWeekModel);
-        const ellisStandard    = weeklyStandard (effEllisSchedule,   ellis.ageBracket);
-        const gaspardStretched = weeklyStretched(effGaspardSchedule, gaspard.ageBracket, gaspard.scheme, effFullWeekModel);
-        const gaspardStandard  = weeklyStandard (effGaspardSchedule, gaspard.ageBracket);
-
-        const eSib = ellis.siblingDiscount ? 0.90 : 1.00;
-        const gSib = gaspard.siblingDiscount ? 0.90 : 1.00;
-        const tfMult = effTaxFree ? 0.80 : 1.00;
-
-        const monthlyDaily = [0, 1, 2, 3, 4].map(i => {
-            const nFunded   = weekdayCounts.funded[i];
-            const nStandard = weekdayCounts.standard[i];
-            const nBankHols = weekdayCounts.bankHols[i];
-            const nFundNorm = Math.max(0, nFunded - nBankHols);
-            const occurrences = nFunded + nStandard;
-
-            const eFunded     = ellisStretched.daily[i];
-            const eFundedNoFC = ellisStretched.dailyNoFC[i];
-            const gFunded     = gaspardStretched.daily[i];
-            const gFundedNoFC = gaspardStretched.dailyNoFC[i];
-            const eStandard   = ellisStandard.daily[i];
-            const gStandard   = gaspardStandard.daily[i];
-
-            const eMonthlyGross = nFundNorm * eFunded + nBankHols * eFundedNoFC + nStandard * eStandard;
-            const gMonthlyGross = nFundNorm * gFunded + nBankHols * gFundedNoFC + nStandard * gStandard;
-            const eMonthlyNet   = eMonthlyGross * eSib;
-            const gMonthlyNet   = gMonthlyGross * gSib;
-            const combined      = eMonthlyNet + gMonthlyNet;
-            const milGrossPay   = combined * (effMil[i] / 100);
-            const milPay        = milGrossPay * tfMult;
-            const parentPay     = (combined - milGrossPay) * tfMult;
-            return {
-                eFundedType: effEllisSchedule[i],
-                gFundedType: effGaspardSchedule[i],
-                eFundedHrs: ellisStretched.allocated[i],
-                gFundedHrs: gaspardStretched.allocated[i],
-                nFunded, nStandard, nBankHols, nFundNorm, occurrences,
-                eMonthlyGross, eMonthlyNet,
-                gMonthlyGross, gMonthlyNet,
-                combined, milGrossPay, milPay, parentPay,
-            };
-        });
-
-        const monthAdhocs = adhoc.filter(a => {
-            if (!a.date) return false;
-            const [yy, mm] = a.date.split('-').map(Number);
-            return yy === year && (mm - 1) === monthIdx;
-        }).map(a => {
-            const rates = STANDARD_RATES[a.ageBracket];
-            const cost = a.type === 'fullDay' ? rates.fullDay : rates.morning;
-            const eGross = a.child === 'ellis'   ? cost : 0;
-            const gGross = a.child === 'gaspard' ? cost : 0;
-            const eNet = eGross * eSib;
-            const gNet = gGross * gSib;
-            const combined = eNet + gNet;
-            const [yy, mm, dd] = a.date.split('-').map(Number);
-            const dow = new Date(yy, mm - 1, dd).getDay();
-            const wd = (dow >= 1 && dow <= 5) ? dow - 1 : -1;
-            const milPct = wd >= 0 ? effMil[wd] : 0;
-            const milGrossPay = combined * (milPct / 100);
-            const milPay = milGrossPay * tfMult;
-            const parentPay = (combined - milGrossPay) * tfMult;
-            return {
-                ...a,
-                wd, milPct, cost,
-                eGross, gGross, eNet, gNet, combined,
-                milGrossPay, milPay, parentPay,
-            };
-        });
-
-        const adhocTotals = monthAdhocs.reduce((acc, a) => ({
-            combined:     acc.combined     + a.combined,
-            milGrossPay:  acc.milGrossPay  + a.milGrossPay,
-            milPay:       acc.milPay       + a.milPay,
-            parentPay:    acc.parentPay    + a.parentPay,
-            eNet:         acc.eNet         + a.eNet,
-            gNet:         acc.gNet         + a.gNet,
-        }), { combined: 0, milGrossPay: 0, milPay: 0, parentPay: 0, eNet: 0, gNet: 0 });
-
-        const sum = (fn) => monthlyDaily.reduce((a, m) => a + fn(m), 0);
-        const gross    = sum(m => m.combined)    + adhocTotals.combined;
-        const milGross = sum(m => m.milGrossPay) + adhocTotals.milGrossPay;
-        const milTotal = sum(m => m.milPay)      + adhocTotals.milPay;
-        const parentOOP = sum(m => m.parentPay)  + adhocTotals.parentPay;
-        const tfSaving = taxFree ? gross * 0.20 : 0;
-
-        const monthly = {
-            gross, milGross, mil: milTotal,
-            parentBeforeTF: gross - milGross,
-            tfSaving, parentOOP,
-        };
-
-        return {
-            monthly, monthlyDaily,
-            year, monthIdx, monthLabel, weekdayCounts, daysInMonth,
-            bankHolDates, monthAdhocs,
-        };
-    }, [ellis, gaspard, taxFree, currentDate, adhoc, effEllisSchedule, effGaspardSchedule, effMil, effTaxFree, effFullWeekModel]);
+        const settings = { ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides };
+        return computeMonthSummary(settings, currentDate);
+    }, [ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides, currentDate]);
 
     return (
         <div>

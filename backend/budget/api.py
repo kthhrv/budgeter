@@ -10,6 +10,7 @@ import uuid
 import calendar
 
 from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings
+from django.db.models import Prefetch
 from django.middleware.csrf import get_token
 
 api = NinjaAPI(auth=django_auth)
@@ -93,7 +94,56 @@ class BudgetItemVersionInputSchema(Schema):
     value: float
     is_one_off: bool = False
 
-# --- Helper ---
+# --- Helpers ---
+
+def _serialize_version(budget_item, effective_version, month_obj):
+    """Build a BudgetItemVersionSchema payload for the given item + effective version + month."""
+    calculated_value = float(effective_version.value)
+    occurrences = None
+    if budget_item.calculation_type == 'weekly_count' and budget_item.weekly_payment_day:
+        occurrences = calculate_weekly_occurrences(month_obj.start_date.year, month_obj.start_date.month, budget_item.weekly_payment_day)
+        calculated_value = float(effective_version.value) * occurrences
+    return BudgetItemVersionSchema(
+        budget_item_id=budget_item.budget_item_id,
+        item_name=budget_item.item_name,
+        item_type=budget_item.item_type,
+        owner=budget_item.owner,
+        expense_pot=budget_item.expense_pot,
+        is_tab_repayment=budget_item.is_tab_repayment,
+        is_extra=budget_item.is_extra,
+        is_nursery_linked=budget_item.is_nursery_linked,
+        calculation_type=budget_item.calculation_type,
+        weekly_payment_day=budget_item.weekly_payment_day,
+        value=float(effective_version.value),
+        effective_value=calculated_value,
+        effective_from_month_name=effective_version.effective_from_month.month_name,
+        is_one_off=effective_version.is_one_off,
+        occurrences=occurrences,
+    )
+
+
+def _effective_version_for_month(item, month_obj):
+    """Pick the effective BudgetItemVersion for `item` in `month_obj` from prefetched `item.versions.all()`.
+
+    Versions must be prefetched ordered by `-effective_from_month__start_date`.
+    Prefers an exact month match (which may be a one-off); otherwise falls back to the most
+    recent non-one-off version effective on or before this month.
+    """
+    exact = None
+    fallback = None
+    for v in item.versions.all():
+        if v.month_id == month_obj.month_id:
+            exact = v
+            break
+    if exact is not None:
+        return exact
+    for v in item.versions.all():
+        if not v.is_one_off and v.effective_from_month.start_date <= month_obj.start_date:
+            fallback = v
+            break  # versions are sorted desc — first match is most recent
+    return fallback
+
+
 def calculate_weekly_occurrences(year, month_num, day_of_week):
     count = 0
     cal = calendar.Calendar()
@@ -136,41 +186,27 @@ def list_all_months(request):
 @api.get("/months/{month_id}/items/", response=List[BudgetItemVersionSchema])
 def list_budget_items_for_month(request, month_id: str):
     month_obj = get_object_or_404(Month, month_id=month_id)
-    budget_items_data = []
 
-    for budget_item in BudgetItem.objects.all():
-        if budget_item.last_payment_month and month_obj.start_date > budget_item.last_payment_month.end_date:
+    versions_qs = (
+        BudgetItemVersion.objects
+        .select_related('effective_from_month', 'month')
+        .order_by('-effective_from_month__start_date')
+    )
+    items = (
+        BudgetItem.objects
+        .select_related('last_payment_month')
+        .prefetch_related(Prefetch('versions', queryset=versions_qs))
+    )
+
+    out = []
+    for item in items:
+        if item.last_payment_month and month_obj.start_date > item.last_payment_month.end_date:
             continue
-
-        effective_version = None
-        try:
-            effective_version = BudgetItemVersion.objects.get(budget_item=budget_item, month=month_obj)
-        except BudgetItemVersion.DoesNotExist:
-            effective_version = BudgetItemVersion.objects.filter(
-                budget_item=budget_item,
-                effective_from_month__start_date__lte=month_obj.start_date,
-                is_one_off=False
-            ).order_by('-effective_from_month__start_date').first()
-
-        if effective_version:
-            calculated_value = float(effective_version.value)
-            occurrences = None
-            if budget_item.calculation_type == 'weekly_count' and budget_item.weekly_payment_day:
-                occurrences = calculate_weekly_occurrences(month_obj.start_date.year, month_obj.start_date.month, budget_item.weekly_payment_day)
-                calculated_value = float(effective_version.value) * occurrences
-            
-            budget_items_data.append(BudgetItemVersionSchema(
-                budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-                owner=budget_item.owner, expense_pot=budget_item.expense_pot, is_tab_repayment=budget_item.is_tab_repayment,
-                is_extra=budget_item.is_extra,
-                is_nursery_linked=budget_item.is_nursery_linked,
-                calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
-                value=float(effective_version.value),
-                effective_value=calculated_value, effective_from_month_name=effective_version.effective_from_month.month_name,
-                is_one_off=effective_version.is_one_off,
-                occurrences=occurrences
-            ))
-    return budget_items_data
+        version = _effective_version_for_month(item, month_obj)
+        if version is None:
+            continue
+        out.append(_serialize_version(item, version, month_obj))
+    return out
 
 @api.put("/months/{month_id}/items/{budget_item_id}/value/", response={200: BudgetItemVersionSchema, 403: dict})
 def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid.UUID, payload: BudgetItemVersionInputSchema):
@@ -185,27 +221,12 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         return 403, {"detail": "Cannot edit budget items for previous months"}
     
     with transaction.atomic():
-        budget_item_version, created = BudgetItemVersion.objects.update_or_create(
+        budget_item_version, _ = BudgetItemVersion.objects.update_or_create(
             budget_item=budget_item, month=month,
             defaults={'value': payload.value, 'effective_from_month': month, 'is_one_off': payload.is_one_off}
         )
     budget_item.refresh_from_db()
-    calculated_value = float(budget_item_version.value)
-    occurrences = None
-    if budget_item.calculation_type == 'weekly_count' and budget_item.weekly_payment_day:
-        occurrences = calculate_weekly_occurrences(month.start_date.year, month.start_date.month, budget_item.weekly_payment_day)
-        calculated_value = float(budget_item_version.value) * occurrences
-    return BudgetItemVersionSchema(
-        budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
-        owner=budget_item.owner, expense_pot=budget_item.expense_pot, is_tab_repayment=budget_item.is_tab_repayment,
-        is_extra=budget_item.is_extra,
-        is_nursery_linked=budget_item.is_nursery_linked,
-        calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
-        value=float(budget_item_version.value),
-        effective_value=calculated_value, effective_from_month_name=budget_item_version.effective_from_month.month_name,
-        is_one_off=budget_item_version.is_one_off,
-        occurrences=occurrences
-    )
+    return _serialize_version(budget_item, budget_item_version, month)
 
 @api.delete("/months/{month_id}/items/{budget_item_id}/", response={204: None, 403: dict})
 def delete_budget_item_from_month(request, month_id: str, budget_item_id: uuid.UUID):
@@ -279,15 +300,8 @@ def edit_budget_item(request, budget_item_id: uuid.UUID, payload: BudgetItemEdit
         budget_item.last_payment_month = get_object_or_404(Month, month_id=month_id) if month_id else None
     
     new_calc_type = update_data.get('calculation_type', budget_item.calculation_type)
-    
     if new_calc_type != 'weekly_count':
         update_data['weekly_payment_day'] = None
-    elif 'weekly_payment_day' in update_data and new_calc_type == 'weekly_count':
-        # Allow setting weekly_payment_day if we are currently or becoming weekly_count
-        pass
-    elif 'calculation_type' in update_data and update_data['calculation_type'] == 'weekly_count' and not budget_item.weekly_payment_day and 'weekly_payment_day' not in update_data:
-        # If switching to weekly but no day provided, we might want a default or just leave it None/handled by Schema
-        pass
 
     for attr, value in update_data.items():
         setattr(budget_item, attr, value)
@@ -359,22 +373,23 @@ def get_tabs(request):
     # Auto-repayments: for each budget item with is_tab_repayment, compute effective value per month.
     # Only surface months that have started — future months shouldn't show a repayment yet.
     today = datetime.date.today()
-    auto_items = BudgetItem.objects.filter(is_tab_repayment=True)
-    all_months = Month.objects.filter(start_date__lte=today).order_by('start_date')
+    versions_qs = (
+        BudgetItemVersion.objects
+        .select_related('effective_from_month', 'month')
+        .order_by('-effective_from_month__start_date')
+    )
+    auto_items = list(
+        BudgetItem.objects
+        .filter(is_tab_repayment=True)
+        .select_related('last_payment_month')
+        .prefetch_related(Prefetch('versions', queryset=versions_qs))
+    )
+    all_months = list(Month.objects.filter(start_date__lte=today).order_by('start_date'))
     for bi in auto_items:
         for month_obj in all_months:
             if bi.last_payment_month and month_obj.start_date > bi.last_payment_month.end_date:
                 continue
-            # Same rollover logic as list_budget_items_for_month
-            effective_version = None
-            try:
-                effective_version = BudgetItemVersion.objects.get(budget_item=bi, month=month_obj)
-            except BudgetItemVersion.DoesNotExist:
-                effective_version = BudgetItemVersion.objects.filter(
-                    budget_item=bi,
-                    effective_from_month__start_date__lte=month_obj.start_date,
-                    is_one_off=False
-                ).order_by('-effective_from_month__start_date').first()
+            effective_version = _effective_version_for_month(bi, month_obj)
             if not effective_version:
                 continue
             calc_value = float(effective_version.value)
