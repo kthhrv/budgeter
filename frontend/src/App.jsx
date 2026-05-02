@@ -18,20 +18,22 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
 
     return (
         <div className="animate-fadeIn">
-            {/* Mobile: interleaved card + tables per owner */}
+            {/* Mobile: all breakdown cards first, then tables grouped per owner */}
             <div className="xl:hidden space-y-6">
                 <div className="space-y-4">
                     <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
+                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
+                </div>
+                <div className="space-y-4">
                     <BudgetTable title="Joint Income" itemType="income" ownerFilter="shared" {...tableProps} />
                     <BudgetTable title="Joint Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
                 </div>
                 <div className="space-y-4">
-                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
                     <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
                     <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
                 </div>
                 <div className="space-y-4">
-                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
                     <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
                     <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
                 </div>
@@ -304,15 +306,19 @@ const App = () => {
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
                 {activePage === 'budget' ? (
                     <>
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="w-24"></div>
-                            <MonthSelector currentDate={currentDate} isLoading={isLoading} />
-                            <div className="flex items-center gap-2">
-                                <SearchComponent
-                                    searchTerm={searchTerm}
-                                    onSearchChange={setSearchTerm}
-                                    onClearSearch={() => setSearchTerm('')}
-                                />
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+                            <div className="hidden md:block md:w-24"></div>
+                            <div className="flex justify-center">
+                                <MonthSelector currentDate={currentDate} isLoading={isLoading} />
+                            </div>
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <div className="flex-1 md:flex-initial min-w-0">
+                                    <SearchComponent
+                                        searchTerm={searchTerm}
+                                        onSearchChange={setSearchTerm}
+                                        onClearSearch={() => setSearchTerm('')}
+                                    />
+                                </div>
                                 <button
                                     onClick={handleOpenNewCategoryModal}
                                     disabled={isEditingDisabled}

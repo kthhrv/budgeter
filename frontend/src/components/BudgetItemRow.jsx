@@ -12,6 +12,21 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
         setShowDeleteConfirm(false);
     }
 
+    const isClickable = !isSynthetic && !isEditingDisabled;
+
+    const handleRowClick = () => {
+        if (isClickable) onEditCategory(item.budget_item_id);
+    };
+
+    const handleRowKeyDown = (e) => {
+        if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onEditCategory(item.budget_item_id);
+        }
+    };
+
+    const stopPropagation = (e) => e.stopPropagation();
+
     const ownerColors = { shared: 'bg-indigo-100 text-indigo-800', keith: 'bg-blue-100 text-blue-800', tild: 'bg-pink-100 text-pink-800' };
 
     return (
@@ -23,7 +38,13 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                 title="Delete Item"
                 message={`Are you sure you want to delete '${item.item_name}'? This action cannot be undone.`}
             />
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 mb-3 group">
+            <div
+                className={`bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all duration-200 mb-3 group ${isClickable ? 'cursor-pointer hover:shadow-md active:bg-gray-50' : ''}`}
+                onClick={handleRowClick}
+                onKeyDown={handleRowKeyDown}
+                role={isClickable ? 'button' : undefined}
+                tabIndex={isClickable ? 0 : undefined}
+            >
                 <div className="flex items-center justify-between">
                     <div className="grow min-w-0">
                         <div className="flex items-center flex-wrap gap-2">
@@ -46,10 +67,22 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                         }`}>
                             £{(parseFloat(item.effective_value) || 0).toFixed(2)}
                         </span>
-                        {!isSynthetic && !isEditingDisabled && (
-                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => onEditCategory(item.budget_item_id)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"><Edit2 className="h-4 w-4" /></button>
-                                <button onClick={() => setShowDeleteConfirm(true)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                        {isClickable && (
+                            <div className="flex items-center">
+                                <button
+                                    onClick={(e) => { stopPropagation(e); onEditCategory(item.budget_item_id); }}
+                                    className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors hidden md:inline-flex md:opacity-0 md:group-hover:opacity-100"
+                                    aria-label="Edit item"
+                                >
+                                    <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => { stopPropagation(e); setShowDeleteConfirm(true); }}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors md:opacity-0 md:group-hover:opacity-100"
+                                    aria-label="Delete item"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
                             </div>
                         )}
                         {!isSynthetic && isEditingDisabled && (
