@@ -225,7 +225,7 @@ function MilPanel({ mil, setMil }) {
 
 // ------------------------- Main page -------------------------
 
-const NurseryPage = () => {
+const NurseryPage = ({ onSettingsChange }) => {
     const [ellis, setEllis]                 = useState(DEFAULTS.ellis);
     const [gaspard, setGaspard]             = useState(DEFAULTS.gaspard);
     const [mil, setMil]                     = useState(DEFAULTS.mil);
@@ -333,17 +333,20 @@ const NurseryPage = () => {
         return () => { cancelled = true; };
     }, []);
 
-    // Debounced save on any change after initial load.
+    // Debounced save to the API + immediate notify of any parent (e.g. App.jsx)
+    // that needs the latest settings in memory (so is_nursery_linked budget items
+    // stay in sync without a round-trip through the API).
     useEffect(() => {
         if (!loaded) return;
+        const blob = { ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides };
+        if (onSettingsChange) onSettingsChange(blob);
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
         saveTimeout.current = setTimeout(() => {
-            apiService.updateNurserySettings({
-                ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides,
-            }).catch(err => console.error('Nursery settings save failed', err));
+            apiService.updateNurserySettings(blob)
+                .catch(err => console.error('Nursery settings save failed', err));
         }, 500);
         return () => { if (saveTimeout.current) clearTimeout(saveTimeout.current); };
-    }, [loaded, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides]);
+    }, [loaded, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides, onSettingsChange]);
 
     const calc = useMemo(() => {
         const year = currentDate.getFullYear();

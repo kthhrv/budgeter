@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Menu } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
-import { computeMonthSummary } from './utils/nurseryCalc';
+import { computeMonthSummary, applyNurseryLink } from './utils/nurseryCalc';
 import apiService from './services/api';
 import Toast from './components/Toast';
 import LoadingSkeleton from './components/LoadingSkeleton';
@@ -135,21 +135,7 @@ const App = () => {
 
     const processedBudgetItems = useMemo(() => {
         const currentMonthName = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
-
-        // For each is_nursery_linked item, replace its effective_value with the
-        // auto-computed nursery Transfer-to-TFC for the displayed month — UNLESS
-        // there's a one-off override pinned to this month, in which case the user's
-        // explicit value wins.
-        const itemsWithNurserySub = budgetItems.map(item => {
-            if (item.is_nursery_linked && nurseryAutoTFC !== null) {
-                const overriddenForMonth = item.is_one_off === true
-                    && item.effective_from_month_name === currentMonthName;
-                if (!overriddenForMonth) {
-                    return { ...item, effective_value: nurseryAutoTFC };
-                }
-            }
-            return item;
-        });
+        const itemsWithNurserySub = applyNurseryLink(budgetItems, nurseryAutoTFC, currentMonthName);
 
         const additionalIncomes = [];
         for (const item of itemsWithNurserySub) {
@@ -364,7 +350,7 @@ const App = () => {
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
                 {activePage === 'nursery' ? (
-                    <NurseryPage />
+                    <NurseryPage onSettingsChange={setNurserySettings} />
                 ) : activePage === 'budget' ? (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] md:items-center gap-3 mb-6">

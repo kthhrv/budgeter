@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMonthSummary, effectiveForMonth } from '../utils/nurseryCalc';
+import { computeMonthSummary, effectiveForMonth, applyNurseryLink } from '../utils/nurseryCalc';
 
 const baseSettings = () => ({
     ellis: {
@@ -63,6 +63,60 @@ describe('computeMonthSummary', () => {
         const summary = computeMonthSummary(s, new Date(2026, 5, 1));
         const baseline = computeMonthSummary(baseSettings(), new Date(2026, 5, 1));
         expect(summary.totalInvoiced).toBeCloseTo(baseline.totalInvoiced, 2);
+    });
+});
+
+describe('applyNurseryLink', () => {
+    const baseItem = (overrides = {}) => ({
+        budget_item_id: 'a',
+        item_name: 'Nursery',
+        item_type: 'expense',
+        owner: 'shared',
+        effective_value: 999,
+        is_nursery_linked: false,
+        is_one_off: false,
+        effective_from_month_name: 'June 2026',
+        ...overrides,
+    });
+
+    it('does not modify items that are not nursery-linked', () => {
+        const items = [baseItem({ is_nursery_linked: false, effective_value: 50 })];
+        const out = applyNurseryLink(items, 200, 'June 2026');
+        expect(out[0].effective_value).toBe(50);
+    });
+
+    it('substitutes effective_value with the auto TFC for linked items', () => {
+        const items = [baseItem({ is_nursery_linked: true, effective_value: 999 })];
+        const out = applyNurseryLink(items, 250.50, 'June 2026');
+        expect(out[0].effective_value).toBe(250.50);
+    });
+
+    it('preserves a per-month one-off override (linked, is_one_off, month matches)', () => {
+        const items = [baseItem({
+            is_nursery_linked: true,
+            is_one_off: true,
+            effective_from_month_name: 'June 2026',
+            effective_value: 100,
+        })];
+        const out = applyNurseryLink(items, 250, 'June 2026');
+        expect(out[0].effective_value).toBe(100);
+    });
+
+    it('still substitutes when is_one_off=true but month does not match (override is for a different month)', () => {
+        const items = [baseItem({
+            is_nursery_linked: true,
+            is_one_off: true,
+            effective_from_month_name: 'May 2026',
+            effective_value: 100,
+        })];
+        const out = applyNurseryLink(items, 250, 'June 2026');
+        expect(out[0].effective_value).toBe(250);
+    });
+
+    it('returns items unchanged when totalTFC is null (settings not yet loaded)', () => {
+        const items = [baseItem({ is_nursery_linked: true, effective_value: 999 })];
+        const out = applyNurseryLink(items, null, 'June 2026');
+        expect(out[0].effective_value).toBe(999);
     });
 });
 

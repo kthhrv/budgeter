@@ -141,6 +141,31 @@ describe('ItemCategoryModal', () => {
         });
     });
 
+    describe('Nursery linking', () => {
+        it('relabels the One-off toggle to "Override Nursery sync" when item is linked', () => {
+            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, is_nursery_linked: true }} />);
+            expect(screen.getByText(/Override Nursery sync for this month/)).toBeInTheDocument();
+            expect(screen.queryByText('One-off for this month')).not.toBeInTheDocument();
+        });
+
+        it('shows "One-off for this month" when item is not linked', () => {
+            render(<ItemCategoryModal {...defaultProps} item={baseItem} />);
+            expect(screen.getByText('One-off for this month')).toBeInTheDocument();
+        });
+
+        it('shows the "Linked to Nursery" toggle for expense items', () => {
+            render(<ItemCategoryModal {...defaultProps} item={baseItem} />);
+            expect(getCheckbox('is_nursery_linked')).not.toBeNull();
+        });
+
+        it('hides the "Linked to Nursery" toggle for non-expense items', async () => {
+            render(<ItemCategoryModal {...defaultProps} />);
+            const user = userEvent.setup();
+            await user.selectOptions(getSelect('item_type'), 'income');
+            expect(getCheckbox('is_nursery_linked')).toBeNull();
+        });
+    });
+
     describe('Submission', () => {
         it('passes formData to onSave when creating a new item', async () => {
             const onSave = vi.fn();

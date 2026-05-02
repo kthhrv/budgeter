@@ -219,3 +219,18 @@ export function computeMonthSummary(settings, date) {
         totalTFC:   totalInvoiced   * tfcMult,
     };
 }
+
+// Substitute effective_value with the auto-computed Transfer-to-TFC for any
+// item flagged is_nursery_linked, unless that item has an explicit one-off
+// override pinned to the displayed month. Used by the budget tab to keep
+// linked items in sync with the Nursery calculator without a button press.
+export function applyNurseryLink(items, totalTFC, currentMonthName) {
+    if (totalTFC == null) return items;
+    return items.map(item => {
+        if (!item.is_nursery_linked) return item;
+        const overriddenForMonth = item.is_one_off === true
+            && item.effective_from_month_name === currentMonthName;
+        if (overriddenForMonth) return item;
+        return { ...item, effective_value: totalTFC };
+    });
+}
