@@ -55,6 +55,7 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                                 {item.groceries_pot && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">Groceries Pot</span>}
                                 {item.is_tab_repayment && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Tab Repayment</span>}
                                 {item.is_extra && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">Extra</span>}
+                                {item.is_savings && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-100 text-sky-800">Savings</span>}
                                 {item.is_one_off && <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">One-off</span>}
                             </div>
                         </div>

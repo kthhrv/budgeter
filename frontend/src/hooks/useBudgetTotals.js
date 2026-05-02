@@ -26,8 +26,14 @@ export const useBudgetTotals = (items) => {
         const keithShare = sharedTotal * keithProportion;
         const tildShare = sharedTotal * tildProportion;
 
-        const keithDirectExpenses = expenses.filter(i => i.owner === 'keith' && !i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        const tildDirectExpenses = expenses.filter(i => i.owner === 'tild' && !i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const keithPersonalExpenses = expenses.filter(i => i.owner === 'keith' && !i.is_tab_repayment);
+        const tildPersonalExpenses = expenses.filter(i => i.owner === 'tild' && !i.is_tab_repayment);
+
+        const keithSavings = keithPersonalExpenses.filter(i => i.is_savings).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const tildSavings = tildPersonalExpenses.filter(i => i.is_savings).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+
+        const keithDirectExpenses = keithPersonalExpenses.filter(i => !i.is_savings).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const tildDirectExpenses = tildPersonalExpenses.filter(i => !i.is_savings).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
 
         const keithTabRepayment = expenses.filter(i => i.owner === 'keith' && i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
         const tildTabRepayment = expenses.filter(i => i.owner === 'tild' && i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
@@ -35,8 +41,8 @@ export const useBudgetTotals = (items) => {
         const keithIncome = incomes.filter(i => i.owner === 'keith').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
         const tildIncome = incomes.filter(i => i.owner === 'tild').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
 
-        const keithRemaining = keithIncome - keithDirectExpenses - keithShare - keithTabRepayment + tildTabRepayment;
-        const tildRemaining = tildIncome - tildDirectExpenses - tildShare - tildTabRepayment + keithTabRepayment;
+        const keithRemaining = keithIncome - keithDirectExpenses - keithSavings - keithShare - keithTabRepayment + tildTabRepayment;
+        const tildRemaining = tildIncome - tildDirectExpenses - tildSavings - tildShare - tildTabRepayment + keithTabRepayment;
 
         const billsPotTotal = items
             .filter(item => item.bills_pot)
@@ -52,6 +58,7 @@ export const useBudgetTotals = (items) => {
             keithShare, tildShare, keithProportion, tildProportion,
             keithRemaining, tildRemaining, keithIncome, tildIncome,
             keithDirectExpenses, tildDirectExpenses,
+            keithSavings, tildSavings,
             keithTabRepayment, tildTabRepayment,
             billsPotTotal, groceriesPotTotal, sharedTotal, sharedExpenseTotal, extraTotal, sharedIncome
         };

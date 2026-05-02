@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Home, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { User, Home, TrendingUp, TrendingDown, Wallet, PiggyBank } from 'lucide-react';
 
 export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sharedExpenses, extraTotal = 0, totalContributions }) => {
     const remaining = sharedIncome + totalContributions - sharedExpenses;
@@ -29,7 +29,7 @@ export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sha
     );
 };
 
-export const PersonCard = ({ name, color, income, directExpenses, share, sharedTotal, proportion, remaining, repaymentIn = 0, repaymentOut = 0 }) => {
+export const PersonCard = ({ name, color, income, directExpenses, savings = 0, share, sharedTotal, proportion, remaining, repaymentIn = 0, repaymentOut = 0 }) => {
     const styles = {
         blue: { bg: 'bg-blue-100', icon: 'text-blue-600', title: 'text-blue-800', ok: 'text-blue-700', okBg: 'bg-blue-50' },
         pink: { bg: 'bg-pink-100', icon: 'text-pink-600', title: 'text-pink-800', ok: 'text-pink-700', okBg: 'bg-pink-50' },
@@ -47,6 +47,9 @@ export const PersonCard = ({ name, color, income, directExpenses, share, sharedT
                 {repaymentIn > 0 && <div className="ml-6 flex justify-between items-center text-xs text-gray-500"><span>Tab Repayment In</span> <span className="font-medium">£{repaymentIn.toFixed(2)}</span></div>}
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Personal Expenses</span> <span className="font-semibold text-red-500">- £{(directExpenses + repaymentOut).toFixed(2)}</span></div>
                 {repaymentOut > 0 && <div className="ml-6 flex justify-between items-center text-xs text-gray-500"><span>Tab Repayment Out</span> <span className="font-medium">£{repaymentOut.toFixed(2)}</span></div>}
+                {savings > 0 && (
+                    <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><PiggyBank className="mr-2 h-4 w-4 text-sky-500" />Savings</span> <span className="font-semibold text-sky-600">- £{savings.toFixed(2)}</span></div>
+                )}
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><TrendingDown className="mr-2 h-4 w-4 text-red-400" />Joint Expenses</span> <span className="font-semibold text-red-500">- £{share.toFixed(2)}</span></div>
                 <div className="flex justify-between items-center"><span className="flex items-center text-gray-400 text-xs"><span className="mr-6">&nbsp;</span>{(proportion * 100).toFixed(1)}% of £{sharedTotal.toFixed(0)}</span></div>
             </div>

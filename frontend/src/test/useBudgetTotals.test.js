@@ -113,6 +113,21 @@ describe('useBudgetTotals', () => {
         expect(result.current.keithIncome).toBeCloseTo(1500.50);
     });
 
+    it('separates personal savings from direct expenses but still subtracts from remaining', () => {
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '2000' }),
+            makeItem({ item_type: 'expense', owner: 'keith', effective_value: '300' }),
+            makeItem({ item_type: 'expense', owner: 'keith', effective_value: '100', is_savings: true }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        expect(result.current.keithDirectExpenses).toBe(300);
+        expect(result.current.keithSavings).toBe(100);
+        // Remaining still feels the savings: 2000 - 300 - 100 - 0 (shared)
+        expect(result.current.keithRemaining).toBe(1600);
+    });
+
     it('separates extra (buffer) items from joint expenses but keeps them in contributions', () => {
         const items = [
             makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),

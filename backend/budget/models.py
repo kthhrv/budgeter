@@ -94,6 +94,10 @@ class BudgetItem(models.Model):
         default=False,
         help_text="If true, contributions still cover this item but it is treated as a buffer/savings line — excluded from the joint Expenses total and reflected in Remaining."
     )
+    is_savings = models.BooleanField(
+        default=False,
+        help_text="If true, this personal expense is treated as savings — shown as its own line on the owner's card but still subtracted from Remaining."
+    )
     calculation_type = models.CharField(
         max_length=20,
         choices=CALCULATION_TYPE_CHOICES,
