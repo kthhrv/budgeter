@@ -261,11 +261,7 @@ function MilPanel({ mil, setMil, hasMonthOverride, monthLabel }) {
                 <h2 className="text-lg font-semibold text-gray-800">Mother-in-law contribution</h2>
                 <OverrideToggle hasOverride={hasMonthOverride} monthLabel={monthLabel} />
             </div>
-            <p className="text-xs text-gray-500 mb-4">
-                How much of each day's combined nursery cost she covers.
-                Defaults to a Full day on Thursday and a Half day on Friday.
-            </p>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-2 mt-3">
                 {DAYS.map((d, i) => (
                     <label key={d} className="text-center">
                         <span className="block text-xs text-gray-500 mb-1">{d.slice(0, 3)}</span>
@@ -296,12 +292,7 @@ function AdHocPanel({ adhoc, addAdHoc, removeAdHoc, monthAdhocs, monthLabel }) {
 
     return (
         <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800 mb-1">Ad-hoc days</h2>
-            <p className="text-xs text-gray-500 mb-3">
-                One-off sessions on top of the regular schedule (e.g. an extra Friday).
-                Billed at the standard session rate with no food/cons.
-            </p>
-
+            <h2 className="text-lg font-semibold text-gray-800 mb-3">Ad-hoc days</h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
                 <label className="text-xs col-span-2">
                     <span className="block text-gray-500 mb-1">Date</span>
@@ -741,11 +732,6 @@ const NurseryPage = () => {
                         <Toggle checked={showBreakdown} onChange={setShowBreakdown}
                                 label="Show detailed monthly breakdown" />
                     </div>
-                    <p className="text-xs text-gray-500 mt-4">
-                        Turn the Full Week model off to see the per-session pricing (non-funded
-                        hours at ~£7.90/hr for full days). Your May 2026 invoices confirm the
-                        nursery is using the Full Week model.
-                    </p>
                 </div>
             </div>
 
@@ -784,11 +770,7 @@ const NurseryPage = () => {
                         <h2 className="text-lg font-semibold text-gray-800">What your mother-in-law should transfer</h2>
                         <span className="text-2xl font-bold num text-rose-600">{money(calc.monthly.mil)} / month</span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-4">
-                        Based on the actual number of each weekday in {calc.monthLabel}.
-                        {effTaxFree && ' Her transfer is reduced by 20% because tax-free childcare tops up her share too.'}
-                    </p>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto mt-3">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-left text-gray-500 border-b">
@@ -832,11 +814,7 @@ const NurseryPage = () => {
 
             {showBreakdown && (
                 <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 mb-4">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-1">Breakdown for {calc.monthLabel}</h2>
-                    <p className="text-xs text-gray-500 mb-3">
-                        Each row shows one weekday × its actual occurrences in {calc.monthLabel}.
-                        Bank holidays (BH) still incur the stretched base fee but no food/cons.
-                    </p>
+                    <h2 className="text-lg font-semibold text-gray-800 mb-3">Breakdown for {calc.monthLabel}</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
@@ -957,8 +935,7 @@ const NurseryPage = () => {
 
                     <div className="mt-5">
                         <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="text-sm font-semibold text-gray-700 mb-1">Invoice from nursery</div>
-                            <p className="text-xs text-gray-500 mb-3">Invoiced = nursery's per-child total (after sibling discount). MIL covers = what she actually transfers per child{effTaxFree ? ' (her share × 80% so the TFC top-up matches)' : ''}. Transfer to TFC = invoice × 80% (the government tops up the rest).</p>
+                            <div className="text-sm font-semibold text-gray-700 mb-3">Invoice from nursery</div>
                             {(() => {
                                 const milMult = effTaxFree ? 0.80 : 1.00;
                                 // Per-child MIL coverage = sum over days of (child's net cost that day × MIL%) × tax-free factor.
@@ -1003,24 +980,6 @@ const NurseryPage = () => {
                 </div>
             )}
 
-            <footer className="text-xs text-gray-400 mt-6 space-y-1">
-                <p>
-                    <b>Full Week model (on):</b> all non-funded hours priced at £356÷50 = £7.12/hr
-                    (what your invoices use from May 2026). <b>Off:</b> per-session pricing where
-                    a full day's non-funded hours are £79÷10 = £7.90/hr. Funded hours are applied
-                    in 5-hr or 10-hr blocks with a 2.8-hr leftover (30-hr scheme) or 1.4-hr
-                    leftover (15-hr scheme) on one partial session.
-                </p>
-                <p>
-                    Bank holidays are still charged for the base weekly fee (flat weekly rate)
-                    but no food/consumables. Non-funded weeks 1–7 April and 25–31 December are
-                    billed at standard session rates.
-                </p>
-                <p>
-                    Ellis turns 2 on 23 May 2026 — switch his age bracket to "0–2" for months
-                    before that, or add ad-hoc days at the 0–2 rate for the transition month.
-                </p>
-            </footer>
         </div>
     );
 };
