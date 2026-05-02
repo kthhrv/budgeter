@@ -618,15 +618,18 @@ const NurseryPage = () => {
             const percent = effMil[i];
             const eType = effEllisSchedule[i];
             const gType = effGaspardSchedule[i];
-            const anyAttendance = (eType !== 'none') || (gType !== 'none');
+            const adhocsOnDay = monthAdhocs.filter(a => a.wd === i);
+            const anyAttendance = (eType !== 'none') || (gType !== 'none') || adhocsOnDay.length > 0;
             const isFullCover    = percent >= 100;
             const isPartialCover = percent > 0 && percent < 100;
-            const occurrences = monthlyDaily[i].occurrences;
+            const scheduleOccurrences = (eType !== 'none' || gType !== 'none') ? monthlyDaily[i].occurrences : 0;
+            const occurrences = scheduleOccurrences + adhocsOnDay.length;
+            const adhocMilPay = adhocsOnDay.reduce((s, a) => s + a.milPay, 0);
             return {
                 day: DAYS[i], percent, anyAttendance, occurrences,
                 fullDaysPerMonth: isFullCover    ? occurrences : 0,
                 halfDaysPerMonth: isPartialCover ? occurrences : 0,
-                monthlyPay: monthlyDaily[i].milPay,
+                monthlyPay: monthlyDaily[i].milPay + adhocMilPay,
             };
         }).filter(d => d.percent > 0 && d.anyAttendance);
 
@@ -959,9 +962,9 @@ const NurseryPage = () => {
                             {(() => {
                                 const milMult = effTaxFree ? 0.80 : 1.00;
                                 // Per-child MIL coverage = sum over days of (child's net cost that day × MIL%) × tax-free factor.
-                                const ellisMIL = (calc.monthlyDaily.reduce((a, m, i) => a + m.eMonthlyNet * (mil[i] / 100), 0)
+                                const ellisMIL = (calc.monthlyDaily.reduce((a, m, i) => a + m.eMonthlyNet * (effMil[i] / 100), 0)
                                     + calc.monthAdhocs.reduce((a, x) => a + x.eNet * (x.milPct / 100), 0)) * milMult;
-                                const gaspardMIL = (calc.monthlyDaily.reduce((a, m, i) => a + m.gMonthlyNet * (mil[i] / 100), 0)
+                                const gaspardMIL = (calc.monthlyDaily.reduce((a, m, i) => a + m.gMonthlyNet * (effMil[i] / 100), 0)
                                     + calc.monthAdhocs.reduce((a, x) => a + x.gNet * (x.milPct / 100), 0)) * milMult;
                                 const ellisTotal   = calc.monthlyDaily.reduce((a, m) => a + m.eMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.eNet, 0);
                                 const gaspardTotal = calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0);
