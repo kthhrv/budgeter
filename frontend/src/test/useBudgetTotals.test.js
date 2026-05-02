@@ -113,6 +113,23 @@ describe('useBudgetTotals', () => {
         expect(result.current.keithIncome).toBeCloseTo(1500.50);
     });
 
+    it('separates extra (buffer) items from joint expenses but keeps them in contributions', () => {
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '2000' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '600' }),
+            makeItem({ item_name: 'Extra', item_type: 'expense', owner: 'shared', effective_value: '100', is_extra: true }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        expect(result.current.sharedTotal).toBe(700);
+        expect(result.current.extraTotal).toBe(100);
+        expect(result.current.sharedExpenseTotal).toBe(600);
+        // Each contributes their share of the full sharedTotal (incl. extra)
+        expect(result.current.keithShare).toBe(350);
+        expect(result.current.tildShare).toBe(350);
+    });
+
     it('separates tab repayments from direct expenses', () => {
         const items = [
             makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),

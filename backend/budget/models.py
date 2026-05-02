@@ -90,6 +90,10 @@ class BudgetItem(models.Model):
         default=False,
         help_text="If true, each month's value is automatically added as a tab repayment."
     )
+    is_extra = models.BooleanField(
+        default=False,
+        help_text="If true, contributions still cover this item but it is treated as a buffer/savings line — excluded from the joint Expenses total and reflected in Remaining."
+    )
     calculation_type = models.CharField(
         max_length=20,
         choices=CALCULATION_TYPE_CHOICES,

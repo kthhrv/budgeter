@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, Home, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 
-export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sharedExpenses, totalContributions }) => {
+export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sharedExpenses, extraTotal = 0, totalContributions }) => {
     const remaining = sharedIncome + totalContributions - sharedExpenses;
     return (
         <div className="p-5 bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow flex flex-col h-full">
@@ -17,6 +17,9 @@ export const SharedCard = ({ billsPotTotal, groceriesPotTotal, sharedIncome, sha
                     <div className="flex justify-between items-center"><span>Bills Pot</span> <span className="font-medium">£{billsPotTotal.toFixed(2)}</span></div>
                     <div className="flex justify-between items-center"><span>Groceries Pot</span> <span className="font-medium">£{groceriesPotTotal.toFixed(2)}</span></div>
                 </div>
+                {extraTotal > 0 && (
+                    <div className="flex justify-between items-center"><span className="flex items-center text-gray-600"><Wallet className="mr-2 h-4 w-4 text-amber-500" />Extra</span> <span className="font-semibold text-amber-600">£{extraTotal.toFixed(2)}</span></div>
+                )}
             </div>
             <div className={`mt-4 pt-4 flex justify-between items-center rounded-lg p-3 -mx-1 ${remaining >= 0 ? 'bg-purple-50' : 'bg-red-50'}`}>
                 <span className="flex items-center font-bold text-gray-700"><Wallet className="mr-2 h-5 w-5" />Remaining</span>

@@ -19,7 +19,10 @@ export const useBudgetTotals = (items) => {
             tildProportion = tildSalary / totalSalaryIncome;
         }
 
-        const sharedTotal = expenses.filter(i => i.owner === 'shared').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const sharedExpenseItems = expenses.filter(i => i.owner === 'shared');
+        const sharedTotal = sharedExpenseItems.reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const extraTotal = sharedExpenseItems.filter(i => i.is_extra).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const sharedExpenseTotal = sharedTotal - extraTotal;
         const keithShare = sharedTotal * keithProportion;
         const tildShare = sharedTotal * tildProportion;
 
@@ -50,7 +53,7 @@ export const useBudgetTotals = (items) => {
             keithRemaining, tildRemaining, keithIncome, tildIncome,
             keithDirectExpenses, tildDirectExpenses,
             keithTabRepayment, tildTabRepayment,
-            billsPotTotal, groceriesPotTotal, sharedTotal, sharedIncome
+            billsPotTotal, groceriesPotTotal, sharedTotal, sharedExpenseTotal, extraTotal, sharedIncome
         };
     }, [items]);
 };

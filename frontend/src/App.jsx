@@ -21,7 +21,7 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
             {/* Mobile: all breakdown cards first, then tables grouped per owner */}
             <div className="xl:hidden space-y-6">
                 <div className="space-y-4">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} totalContributions={totals.keithShare + totals.tildShare} />
                     <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
                     <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
                 </div>
@@ -42,7 +42,7 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
             {/* Desktop: aligned 3-column grid */}
             <div className="hidden xl:block space-y-6">
                 <div className="grid grid-cols-3 gap-6 items-stretch">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} totalContributions={totals.keithShare + totals.tildShare} />
                     <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
                     <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
                 </div>
