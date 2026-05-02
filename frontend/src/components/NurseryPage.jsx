@@ -605,27 +605,8 @@ const NurseryPage = () => {
             tfSaving, parentOOP,
         };
 
-        const milSummary = [0, 1, 2, 3, 4].map(i => {
-            const percent = effMil[i];
-            const eType = effEllisSchedule[i];
-            const gType = effGaspardSchedule[i];
-            const adhocsOnDay = monthAdhocs.filter(a => a.wd === i);
-            const anyAttendance = (eType !== 'none') || (gType !== 'none') || adhocsOnDay.length > 0;
-            const isFullCover    = percent >= 100;
-            const isPartialCover = percent > 0 && percent < 100;
-            const scheduleOccurrences = (eType !== 'none' || gType !== 'none') ? monthlyDaily[i].occurrences : 0;
-            const occurrences = scheduleOccurrences + adhocsOnDay.length;
-            const adhocMilPay = adhocsOnDay.reduce((s, a) => s + a.milPay, 0);
-            return {
-                day: DAYS[i], percent, anyAttendance, occurrences,
-                fullDaysPerMonth: isFullCover    ? occurrences : 0,
-                halfDaysPerMonth: isPartialCover ? occurrences : 0,
-                monthlyPay: monthlyDaily[i].milPay + adhocMilPay,
-            };
-        }).filter(d => d.percent > 0 && d.anyAttendance);
-
         return {
-            monthly, monthlyDaily, milSummary,
+            monthly, monthlyDaily,
             year, monthIdx, monthLabel, weekdayCounts, daysInMonth,
             bankHolDates, monthAdhocs,
         };
@@ -763,54 +744,6 @@ const NurseryPage = () => {
                     <div className="text-xs text-indigo-50 mt-1">gross, before any discounts</div>
                 </div>
             </div>
-
-            {calc.milSummary.length > 0 && (
-                <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 mb-4 border-l-4 border-rose-300">
-                    <div className="flex items-baseline justify-between mb-2">
-                        <h2 className="text-lg font-semibold text-gray-800">What your mother-in-law should transfer</h2>
-                        <span className="text-2xl font-bold num text-rose-600">{money(calc.monthly.mil)} / month</span>
-                    </div>
-                    <div className="overflow-x-auto mt-3">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left text-gray-500 border-b">
-                                    <th className="py-2">Day</th>
-                                    <th className="py-2 text-right">Coverage</th>
-                                    <th className="py-2 text-right">Full-cover days</th>
-                                    <th className="py-2 text-right">Half-cover days</th>
-                                    <th className="py-2 text-right">She transfers</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {calc.milSummary.map(d => {
-                                    const coverage = d.percent >= 100 ? 'Full day' : d.percent > 0 ? 'Half day' : '–';
-                                    return (
-                                        <tr key={d.day} className="border-b last:border-none">
-                                            <td className="py-2">{d.day}</td>
-                                            <td className="py-2 text-right">{coverage}</td>
-                                            <td className="py-2 text-right num">{d.fullDaysPerMonth > 0 ? d.fullDaysPerMonth : '–'}</td>
-                                            <td className="py-2 text-right num">{d.halfDaysPerMonth > 0 ? d.halfDaysPerMonth : '–'}</td>
-                                            <td className="py-2 text-right num font-medium">{money(d.monthlyPay)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            <tfoot>
-                                <tr className="font-semibold">
-                                    <td className="py-2" colSpan="2">Total for {calc.monthLabel}</td>
-                                    <td className="py-2 text-right num">
-                                        {calc.milSummary.reduce((a, d) => a + d.fullDaysPerMonth, 0)}
-                                    </td>
-                                    <td className="py-2 text-right num">
-                                        {calc.milSummary.reduce((a, d) => a + d.halfDaysPerMonth, 0)}
-                                    </td>
-                                    <td className="py-2 text-right num text-rose-600">{money(calc.monthly.mil)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            )}
 
             {showBreakdown && (
                 <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 mb-4">
