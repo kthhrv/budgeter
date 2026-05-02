@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import BudgetItemRow from '../components/BudgetItemRow';
 
 const makeItem = (overrides = {}) => ({
@@ -9,7 +10,7 @@ const makeItem = (overrides = {}) => ({
     item_type: 'expense',
     owner: 'shared',
     effective_value: '50.00',
-    bills_pot: false,
+    expense_pot: '',
     is_one_off: false,
     calculation_type: 'fixed',
     effective_from_month_name: 'January 2026',
@@ -44,7 +45,7 @@ describe('BudgetItemRow', () => {
     });
 
     it('shows Bills Pot badge when flagged', () => {
-        render(<BudgetItemRow {...defaultProps} item={makeItem({ bills_pot: true })} />);
+        render(<BudgetItemRow {...defaultProps} item={makeItem({ expense_pot: 'bills' })} />);
         expect(screen.getByText('Bills Pot')).toBeInTheDocument();
     });
 
@@ -72,5 +73,50 @@ describe('BudgetItemRow', () => {
         render(<BudgetItemRow {...defaultProps} item={makeItem({ calculation_type: 'weekly_count', weekly_payment_day: 1, occurrences: 4 })} />);
         expect(screen.getByText(/Weekly on Monday/)).toBeInTheDocument();
         expect(screen.getByText(/4 occurrences/)).toBeInTheDocument();
+    });
+
+    it('shows Groceries Pot badge when expense_pot is groceries', () => {
+        render(<BudgetItemRow {...defaultProps} item={makeItem({ expense_pot: 'groceries' })} />);
+        expect(screen.getByText('Groceries Pot')).toBeInTheDocument();
+    });
+
+    it('shows Extra badge when item.is_extra is true', () => {
+        render(<BudgetItemRow {...defaultProps} item={makeItem({ is_extra: true })} />);
+        expect(screen.getByText('Extra')).toBeInTheDocument();
+    });
+
+    it('shows Tab Repayment badge when item.is_tab_repayment is true', () => {
+        render(<BudgetItemRow {...defaultProps} item={makeItem({ is_tab_repayment: true, owner: 'keith' })} />);
+        expect(screen.getByText('Tab Repayment')).toBeInTheDocument();
+    });
+
+    it('does not render any pot badge when expense_pot is empty', () => {
+        render(<BudgetItemRow {...defaultProps} />);
+        expect(screen.queryByText('Bills Pot')).not.toBeInTheDocument();
+        expect(screen.queryByText('Groceries Pot')).not.toBeInTheDocument();
+    });
+
+    it('clicking the row calls onEditCategory when editable', async () => {
+        const onEditCategory = vi.fn();
+        const user = userEvent.setup();
+        render(<BudgetItemRow {...defaultProps} onEditCategory={onEditCategory} />);
+        await user.click(screen.getByText('Internet'));
+        expect(onEditCategory).toHaveBeenCalledWith('abc-123');
+    });
+
+    it('clicking the row does not call onEditCategory when isEditingDisabled', async () => {
+        const onEditCategory = vi.fn();
+        const user = userEvent.setup();
+        render(<BudgetItemRow {...defaultProps} onEditCategory={onEditCategory} isEditingDisabled={true} />);
+        await user.click(screen.getByText('Internet'));
+        expect(onEditCategory).not.toHaveBeenCalled();
+    });
+
+    it('clicking the row does not call onEditCategory for synthetic repayment items', async () => {
+        const onEditCategory = vi.fn();
+        const user = userEvent.setup();
+        render(<BudgetItemRow {...defaultProps} item={makeItem({ budget_item_id: 'foo-repay-income' })} onEditCategory={onEditCategory} />);
+        await user.click(screen.getByText('Internet'));
+        expect(onEditCategory).not.toHaveBeenCalled();
     });
 });

@@ -8,7 +8,7 @@ const makeItem = (overrides) => ({
     item_type: 'expense',
     owner: 'shared',
     effective_value: '100',
-    bills_pot: false,
+    expense_pot: '',
     calculation_type: 'fixed',
     is_one_off: false,
     ...overrides,
@@ -81,16 +81,28 @@ describe('useBudgetTotals', () => {
         expect(result.current.keithDirectExpenses).toBe(200);
     });
 
-    it('calculates bills pot total from flagged items', () => {
+    it('calculates bills pot total from items tagged as bills', () => {
         const items = [
-            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '100', bills_pot: true }),
-            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '200', bills_pot: true }),
-            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '300', bills_pot: false }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '100', expense_pot: 'bills' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '200', expense_pot: 'bills' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '300', expense_pot: '' }),
         ];
         const { result } = renderHook(() => useBudgetTotals(items));
 
         expect(result.current.billsPotTotal).toBe(300);
         expect(result.current.sharedTotal).toBe(600);
+    });
+
+    it('calculates groceries pot total from items tagged as groceries', () => {
+        const items = [
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '60', expense_pot: 'groceries' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '40', expense_pot: 'groceries' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '500', expense_pot: 'bills' }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        expect(result.current.groceriesPotTotal).toBe(100);
+        expect(result.current.billsPotTotal).toBe(500);
     });
 
     it('calculates shared income', () => {
@@ -132,12 +144,12 @@ describe('useBudgetTotals', () => {
         expect(result.current.keithTabRepayment).toBe(200);
     });
 
-    it('separates personal savings from direct expenses but still subtracts from remaining', () => {
+    it('treats personal savings (item_type=savings) as a separate outgoing', () => {
         const items = [
             makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),
             makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '2000' }),
             makeItem({ item_type: 'expense', owner: 'keith', effective_value: '300' }),
-            makeItem({ item_type: 'expense', owner: 'keith', effective_value: '100', is_savings: true }),
+            makeItem({ item_type: 'savings', owner: 'keith', effective_value: '100' }),
         ];
         const { result } = renderHook(() => useBudgetTotals(items));
 
@@ -145,6 +157,23 @@ describe('useBudgetTotals', () => {
         expect(result.current.keithSavings).toBe(100);
         // Remaining still feels the savings: 2000 - 300 - 100 - 0 (shared)
         expect(result.current.keithRemaining).toBe(1600);
+    });
+
+    it('shared savings are funded by proportional contributions and leave the joint pot', () => {
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '3000' }),
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '1000' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '400' }),
+            makeItem({ item_type: 'savings', owner: 'shared', effective_value: '200' }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        expect(result.current.sharedSavings).toBe(200);
+        // 75/25 split — contributions cover expenses + savings (600)
+        expect(result.current.keithShare).toBeCloseTo(450);
+        expect(result.current.tildShare).toBeCloseTo(150);
+        // Remaining = sharedIncome (0) + contributions (600) - sharedExpenses (400) - sharedSavings (200) = 0
+        // (savings outflow exactly cancels its contribution share, so it doesn't add to remaining like Extra does)
     });
 
     it('separates extra (buffer) items from joint expenses but keeps them in contributions', () => {

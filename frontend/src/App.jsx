@@ -15,34 +15,38 @@ import TabsPage from './components/TabsPage';
 const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
     const totals = useBudgetTotals(items);
     const tableProps = { items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled };
+    const hasSavings = (owner) => items.some(i => i.item_type === 'savings' && i.owner === owner);
 
     return (
         <div className="animate-fadeIn">
             {/* Mobile: all breakdown cards first, then tables grouped per owner */}
             <div className="xl:hidden space-y-6">
                 <div className="space-y-4">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} sharedSavings={totals.sharedSavings} totalContributions={totals.keithShare + totals.tildShare} />
                     <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} savings={totals.keithSavings} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
                     <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} savings={totals.tildSavings} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
                 </div>
                 <div className="space-y-4">
                     <BudgetTable title="Joint Income" itemType="income" ownerFilter="shared" {...tableProps} />
                     <BudgetTable title="Joint Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
+                    {hasSavings('shared') && <BudgetTable title="Joint Savings" itemType="savings" ownerFilter="shared" {...tableProps} />}
                 </div>
                 <div className="space-y-4">
                     <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
                     <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
+                    {hasSavings('keith') && <BudgetTable title="Keith's Savings" itemType="savings" ownerFilter="keith" {...tableProps} />}
                 </div>
                 <div className="space-y-4">
                     <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
                     <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
+                    {hasSavings('tild') && <BudgetTable title="Tild's Savings" itemType="savings" ownerFilter="tild" {...tableProps} />}
                 </div>
             </div>
 
             {/* Desktop: aligned 3-column grid */}
             <div className="hidden xl:block space-y-6">
                 <div className="grid grid-cols-3 gap-6 items-stretch">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} totalContributions={totals.keithShare + totals.tildShare} />
+                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} sharedSavings={totals.sharedSavings} totalContributions={totals.keithShare + totals.tildShare} />
                     <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} savings={totals.keithSavings} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
                     <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} savings={totals.tildSavings} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
                 </div>
@@ -50,14 +54,17 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
                     <div className="space-y-4">
                         <BudgetTable title="Joint Income" itemType="income" ownerFilter="shared" {...tableProps} />
                         <BudgetTable title="Joint Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
+                        {hasSavings('shared') && <BudgetTable title="Joint Savings" itemType="savings" ownerFilter="shared" {...tableProps} />}
                     </div>
                     <div className="space-y-4">
                         <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
                         <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
+                        {hasSavings('keith') && <BudgetTable title="Keith's Savings" itemType="savings" ownerFilter="keith" {...tableProps} />}
                     </div>
                     <div className="space-y-4">
                         <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
                         <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
+                        {hasSavings('tild') && <BudgetTable title="Tild's Savings" itemType="savings" ownerFilter="tild" {...tableProps} />}
                     </div>
                 </div>
             </div>

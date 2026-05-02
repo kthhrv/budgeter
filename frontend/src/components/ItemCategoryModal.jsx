@@ -1,42 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import { formatDate, DAY_CHOICES } from '../utils/helpers';
 
 const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
     const isNew = !item?.budget_item_id;
     const [formData, setFormData] = useState({
-        item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false, groceries_pot: false, is_tab_repayment: false, is_extra: false, is_savings: false,
+        item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false,
         calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
         last_payment_month_id: ''
     });
+    const [hasExpiry, setHasExpiry] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             if (isNew) {
                 setFormData({
-                    item_name: '', item_type: 'expense', owner: 'shared', bills_pot: false, groceries_pot: false, is_tab_repayment: false, is_extra: false, is_savings: false,
+                    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false,
                     calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
                     last_payment_month_id: ''
                 });
+                setHasExpiry(false);
             } else {
                 setFormData({
                     item_name: item.item_name || '',
                     item_type: item.item_type || 'expense',
                     owner: item.owner || 'shared',
-                    bills_pot: item.bills_pot || false,
-                    groceries_pot: item.groceries_pot || false,
+                    expense_pot: item.expense_pot || '',
                     is_tab_repayment: item.is_tab_repayment || false,
                     is_extra: item.is_extra || false,
-                    is_savings: item.is_savings || false,
                     calculation_type: item.calculation_type || 'fixed',
                     weekly_payment_day: item.weekly_payment_day || '',
                     last_payment_month_id: item.last_payment_month_id || '',
                     value: item.value || '',
                     is_one_off: item.is_one_off || false
                 });
+                setHasExpiry(!!item.last_payment_month_id);
             }
         }
     }, [item, isOpen, isNew]);
+
+    const toggleExpiry = (checked) => {
+        setHasExpiry(checked);
+        if (!checked) {
+            setFormData(prev => ({ ...prev, last_payment_month_id: '' }));
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -46,6 +53,17 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
             const next = { ...prev, [name]: type === 'checkbox' ? checked : value };
             if (name === 'is_tab_repayment' && checked && prev.owner === 'shared') {
                 next.owner = 'keith';
+            }
+            if (name === 'owner' && value === 'shared') {
+                next.is_tab_repayment = false;
+            }
+            if (name === 'item_type' && value !== 'expense') {
+                next.expense_pot = '';
+                next.is_tab_repayment = false;
+                next.is_extra = false;
+            }
+            if (name === 'expense_pot' && value !== '') {
+                next.is_extra = false;
             }
             return next;
         });
@@ -88,13 +106,25 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label htmlFor="item_type" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Type</label>
-                            <select name="item_type" value={formData.item_type} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all"><option value="expense">Expense</option><option value="income">Income</option></select>
+                            <select name="item_type" value={formData.item_type} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all"><option value="expense">Expense</option><option value="income">Income</option><option value="savings">Savings</option></select>
                         </div>
                         <div>
                             <label htmlFor="owner" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Owner</label>
                             <select name="owner" value={formData.owner} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all">{OWNER_CHOICES.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}</select>
                         </div>
                     </div>
+
+                    {/* Pot (expenses only) */}
+                    {formData.item_type === 'expense' && (
+                        <div>
+                            <label htmlFor="expense_pot" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Pot</label>
+                            <select id="expense_pot" name="expense_pot" value={formData.expense_pot} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all">
+                                <option value="">None</option>
+                                <option value="bills">Bills Pot</option>
+                                <option value="groceries">Groceries Pot</option>
+                            </select>
+                        </div>
+                    )}
 
                     {/* Calculation & Payment Day */}
                     <div className="grid grid-cols-2 gap-3">
@@ -110,27 +140,18 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                         )}
                     </div>
 
-                    {/* Last Payment Month */}
+                    {/* Value */}
                     <div>
-                        <label htmlFor="last_payment_month_id" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Expiry Month</label>
-                        <div className="flex gap-2 items-center">
-                            <input type="month" name="last_payment_month_id" value={formData.last_payment_month_id} onChange={handleChange} min={formatDate(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1), 'YYYY-MM')} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all" />
-                            {formData.last_payment_month_id && (
-                                <button type="button" onClick={() => setFormData(prev => ({ ...prev, last_payment_month_id: '' }))} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0" title="Clear expiry">
-                                    <X className="h-5 w-5" />
-                                </button>
-                            )}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">{formData.last_payment_month_id ? `Expires after ${new Date(formData.last_payment_month_id + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}` : 'No expiration — runs indefinitely'}</p>
-                    </div>
-
-                    {/* Value Section */}
-                    <div className="p-4 bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-xl border border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Value & Options</h3>
+                        <label htmlFor="value" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Value</label>
                         <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">£</span>
-                            <input type="number" name="value" step="0.01" value={formData.value} onChange={handleChange} placeholder="0.00" className="block w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-3 text-lg font-semibold text-gray-800 placeholder-gray-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" required />
+                            <input id="value" type="number" name="value" step="0.01" value={formData.value} onChange={handleChange} placeholder="0.00" className="block w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 py-3 text-lg font-semibold text-gray-800 placeholder-gray-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all" required />
                         </div>
+                    </div>
+
+                    {/* Options */}
+                    <div className="p-4 bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-xl border border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Options</h3>
 
                         {/* Toggle Switches */}
                         <div className="mt-4 space-y-3">
@@ -142,50 +163,46 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                                     <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
                                 </div>
                             </label>
-                            <label htmlFor="bills_pot" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Part of Bills Pot</span>
+                            <label htmlFor="has_expiry" className="flex items-center justify-between cursor-pointer group">
+                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Expires</span>
                                 <div className="relative">
-                                    <input id="bills_pot" type="checkbox" name="bills_pot" checked={formData.bills_pot} onChange={handleChange} className="sr-only peer" />
-                                    <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-purple-500 transition-colors"></div>
-                                    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
-                                </div>
-                            </label>
-                            <label htmlFor="groceries_pot" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Part of Groceries Pot</span>
-                                <div className="relative">
-                                    <input id="groceries_pot" type="checkbox" name="groceries_pot" checked={formData.groceries_pot} onChange={handleChange} className="sr-only peer" />
-                                    <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-green-500 transition-colors"></div>
-                                    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
-                                </div>
-                            </label>
-                            {formData.item_type === 'expense' && formData.owner !== 'shared' && !formData.is_tab_repayment && (
-                                <label htmlFor="is_savings" className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Savings (separate from expenses, still counts as outgoing)</span>
-                                    <div className="relative">
-                                        <input id="is_savings" type="checkbox" name="is_savings" checked={formData.is_savings} onChange={handleChange} className="sr-only peer" />
-                                        <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-sky-500 transition-colors"></div>
-                                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
-                                    </div>
-                                </label>
-                            )}
-                            {formData.item_type === 'expense' && formData.owner === 'shared' && !formData.is_tab_repayment && (
-                                <label htmlFor="is_extra" className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Extra (buffer in joint account, not an expense)</span>
-                                    <div className="relative">
-                                        <input id="is_extra" type="checkbox" name="is_extra" checked={formData.is_extra} onChange={handleChange} className="sr-only peer" />
-                                        <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-amber-500 transition-colors"></div>
-                                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
-                                    </div>
-                                </label>
-                            )}
-                            <label htmlFor="is_tab_repayment" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Tab Repayment</span>
-                                <div className="relative">
-                                    <input id="is_tab_repayment" type="checkbox" name="is_tab_repayment" checked={formData.is_tab_repayment} onChange={handleChange} className="sr-only peer" />
+                                    <input id="has_expiry" type="checkbox" checked={hasExpiry} onChange={(e) => toggleExpiry(e.target.checked)} className="sr-only peer" />
                                     <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
                                     <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
                                 </div>
                             </label>
+                            {hasExpiry && (
+                                <div className="pl-2">
+                                    <input type="month" name="last_payment_month_id" value={formData.last_payment_month_id} onChange={handleChange} min={formatDate(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1), 'YYYY-MM')} className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                    <p className="text-xs text-gray-400 mt-1">{formData.last_payment_month_id ? `Expires after ${new Date(formData.last_payment_month_id + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}` : 'Pick the last active month'}</p>
+                                </div>
+                            )}
+                            {formData.item_type === 'expense' && formData.owner === 'shared' && !formData.is_tab_repayment && (() => {
+                                const extraDisabled = formData.expense_pot !== '';
+                                return (
+                                    <label htmlFor="is_extra" className={`flex items-center justify-between group ${extraDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} title={extraDisabled ? 'Extra is not available when a pot is selected' : undefined}>
+                                        <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Extra (buffer in joint account, not an expense)</span>
+                                        <div className="relative">
+                                            <input id="is_extra" type="checkbox" name="is_extra" checked={formData.is_extra} disabled={extraDisabled} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-amber-500 transition-colors"></div>
+                                            <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
+                                        </div>
+                                    </label>
+                                );
+                            })()}
+                            {formData.item_type === 'expense' && (() => {
+                                const tabDisabled = formData.owner === 'shared';
+                                return (
+                                    <label htmlFor="is_tab_repayment" className={`flex items-center justify-between group ${tabDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} title={tabDisabled ? 'Tab repayments must be owned by Keith or Tild' : undefined}>
+                                        <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Tab Repayment</span>
+                                        <div className="relative">
+                                            <input id="is_tab_repayment" type="checkbox" name="is_tab_repayment" checked={formData.is_tab_repayment} disabled={tabDisabled} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
+                                            <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
+                                        </div>
+                                    </label>
+                                );
+                            })()}
                         </div>
                     </div>
 

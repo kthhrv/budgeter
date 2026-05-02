@@ -32,15 +32,10 @@ class MonthAdmin(admin.ModelAdmin):
 
 @admin.register(BudgetItem)
 class BudgetItemAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for the BudgetItem model.
-    Displays item name, type, description, owner, and bills_pot in the list view.
-    Allows searching by item name and filtering by item type, owner, and bills_pot.
-    """
-    list_display = ('item_name', 'item_type', 'owner', 'bills_pot', 'budget_item_id') # Added 'bills_pot'
+    list_display = ('item_name', 'item_type', 'owner', 'expense_pot', 'budget_item_id')
     search_fields = ('item_name', 'owner',)
-    list_filter = ('item_type', 'owner', 'bills_pot',) # Added 'bills_pot' to list filters
-    readonly_fields = ('budget_item_id',) # budget_item_id is UUIDField and should not be editable
+    list_filter = ('item_type', 'owner', 'expense_pot',)
+    readonly_fields = ('budget_item_id',)
 
 @admin.register(BudgetItemVersion)
 class BudgetItemVersionAdmin(admin.ModelAdmin):

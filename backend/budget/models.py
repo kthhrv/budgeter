@@ -43,6 +43,7 @@ class BudgetItem(models.Model):
     ITEM_TYPE_CHOICES = [
         ('expense', 'Expense'),
         ('income', 'Income'),
+        ('savings', 'Savings'),
     ]
 
     OWNER_CHOICES = [
@@ -54,6 +55,11 @@ class BudgetItem(models.Model):
     CALCULATION_TYPE_CHOICES = [
         ('fixed', 'Fixed Monthly Value'),
         ('weekly_count', 'Weekly Value by Occurrence Count'),
+    ]
+
+    EXPENSE_POT_CHOICES = [
+        ('bills', 'Bills Pot'),
+        ('groceries', 'Groceries Pot'),
     ]
 
     budget_item_id = models.UUIDField(
@@ -78,13 +84,12 @@ class BudgetItem(models.Model):
         default='shared', # Default owner set to 'shared'
         help_text="The owner or responsible party for this budget item."
     )
-    bills_pot = models.BooleanField(
-        default=False,
-        help_text="If true, this item is considered part of the 'bills pot'."
-    )
-    groceries_pot = models.BooleanField(
-        default=False,
-        help_text="If true, this item is considered part of the 'groceries pot'."
+    expense_pot = models.CharField(
+        max_length=20,
+        choices=EXPENSE_POT_CHOICES,
+        blank=True,
+        default='',
+        help_text="Optional sub-classification for an expense: bills pot or groceries pot."
     )
     is_tab_repayment = models.BooleanField(
         default=False,
@@ -93,10 +98,6 @@ class BudgetItem(models.Model):
     is_extra = models.BooleanField(
         default=False,
         help_text="If true, contributions still cover this item but it is treated as a buffer/savings line — excluded from the joint Expenses total and reflected in Remaining."
-    )
-    is_savings = models.BooleanField(
-        default=False,
-        help_text="If true, this personal expense is treated as savings — shown as its own line on the owner's card but still subtracted from Remaining."
     )
     calculation_type = models.CharField(
         max_length=20,

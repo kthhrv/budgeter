@@ -50,6 +50,29 @@ describe('SharedCard', () => {
         const remaining = screen.getByText('£-1800.00');
         expect(remaining).toHaveClass('text-red-600');
     });
+
+    it('renders Savings line when sharedSavings > 0', () => {
+        render(<SharedCard {...defaultProps} sharedSavings={150} />);
+        expect(screen.getByText('Savings')).toBeInTheDocument();
+        expect(screen.getByText('- £150.00')).toBeInTheDocument();
+    });
+
+    it('hides Savings line when sharedSavings is 0', () => {
+        render(<SharedCard {...defaultProps} sharedSavings={0} />);
+        expect(screen.queryByText('Savings')).not.toBeInTheDocument();
+    });
+
+    it('renders Extra line when extraTotal > 0', () => {
+        render(<SharedCard {...defaultProps} extraTotal={50} />);
+        expect(screen.getByText('Extra')).toBeInTheDocument();
+        expect(screen.getByText('£50.00')).toBeInTheDocument();
+    });
+
+    it('subtracts shared savings from Remaining', () => {
+        // Income 100 + contributions 1800 - expenses 2000 - savings 150 = -250
+        render(<SharedCard {...defaultProps} sharedSavings={150} />);
+        expect(screen.getByText('£-250.00')).toBeInTheDocument();
+    });
 });
 
 describe('PersonCard', () => {
@@ -73,7 +96,7 @@ describe('PersonCard', () => {
         render(<PersonCard {...defaultProps} />);
         expect(screen.getByText('Income')).toBeInTheDocument();
         expect(screen.getByText('Personal Expenses')).toBeInTheDocument();
-        expect(screen.getByText('Joint Expenses')).toBeInTheDocument();
+        expect(screen.getByText('Transfer to joint account')).toBeInTheDocument();
         expect(screen.getByText('Remaining')).toBeInTheDocument();
     });
 
@@ -128,5 +151,16 @@ describe('PersonCard', () => {
         render(<PersonCard {...defaultProps} repaymentOut={0} repaymentIn={0} />);
         expect(screen.queryByText('Tab Repayment Out')).not.toBeInTheDocument();
         expect(screen.queryByText('Tab Repayment In')).not.toBeInTheDocument();
+    });
+
+    it('renders Savings line when savings > 0', () => {
+        render(<PersonCard {...defaultProps} savings={120} />);
+        expect(screen.getByText('Savings')).toBeInTheDocument();
+        expect(screen.getByText('- £120.00')).toBeInTheDocument();
+    });
+
+    it('hides Savings line when savings is 0', () => {
+        render(<PersonCard {...defaultProps} savings={0} />);
+        expect(screen.queryByText('Savings')).not.toBeInTheDocument();
     });
 });

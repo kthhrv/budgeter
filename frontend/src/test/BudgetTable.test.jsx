@@ -10,7 +10,7 @@ const makeItem = (overrides = {}) => ({
     item_type: 'expense',
     owner: 'shared',
     effective_value: '100',
-    bills_pot: false,
+    expense_pot: '',
     is_one_off: false,
     calculation_type: 'fixed',
     effective_from_month_name: 'January 2026',
