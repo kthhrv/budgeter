@@ -203,6 +203,27 @@ class AutoRepaymentTestCase(TestCase):
         auto = [r for r in resp.json()['repayments'] if r['is_auto']]
         self.assertEqual(len(auto), 0)
 
+    def test_auto_repayment_does_not_populate_future_months(self):
+        # Create a month far in the future. The auto-repayment shouldn't appear
+        # for it since the month hasn't started yet.
+        future = Month.objects.create(
+            month_id='2099-01', month_name='January 2099',
+            start_date=datetime.date(2099, 1, 1), end_date=datetime.date(2099, 1, 31)
+        )
+        bi = BudgetItem.objects.create(
+            item_name='Tild Repayment', item_type='expense', owner='tild', is_tab_repayment=True
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=bi, month=self.jan, effective_from_month=self.jan, value=100, is_one_off=False
+        )
+        resp = self.client.get('/api/tabs/')
+        auto = [r for r in resp.json()['repayments'] if r['is_auto']]
+        # Notes should reference Jan and Feb but never the future month.
+        notes = [r['note'] for r in auto]
+        self.assertFalse(any('January 2099' in n for n in notes))
+        # Sanity check the future Month object is in the DB but not surfaced.
+        self.assertEqual(Month.objects.filter(month_id=future.month_id).count(), 1)
+
     def test_auto_repayment_respects_last_payment_month(self):
         bi = BudgetItem.objects.create(
             item_name='One-time Repayment', item_type='expense', owner='keith',

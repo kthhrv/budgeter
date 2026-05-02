@@ -350,9 +350,11 @@ def get_tabs(request):
             'date': r.date.isoformat(), 'note': r.note, 'is_auto': False,
         })
 
-    # Auto-repayments: for each budget item with is_tab_repayment, compute effective value per month
+    # Auto-repayments: for each budget item with is_tab_repayment, compute effective value per month.
+    # Only surface months that have started — future months shouldn't show a repayment yet.
+    today = datetime.date.today()
     auto_items = BudgetItem.objects.filter(is_tab_repayment=True)
-    all_months = Month.objects.all().order_by('start_date')
+    all_months = Month.objects.filter(start_date__lte=today).order_by('start_date')
     for bi in auto_items:
         for month_obj in all_months:
             if bi.last_payment_month and month_obj.start_date > bi.last_payment_month.end_date:
