@@ -113,6 +113,25 @@ describe('useBudgetTotals', () => {
         expect(result.current.keithIncome).toBeCloseTo(1500.50);
     });
 
+    it('excludes synthetic repayment income rows from personal income totals', () => {
+        // App.jsx generates synthetic income rows for "tild repay" / "keith repay"
+        // expenses so they appear under the recipient's income table. They must NOT
+        // be summed into the recipient's income total — repaymentIn already covers it
+        // and the PersonCard adds it on top, so summing here would double-count.
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '4213' }),
+            makeItem({
+                budget_item_id: 'abc-repay-income',
+                item_name: 'tild repay', item_type: 'income', owner: 'tild', effective_value: '200',
+            }),
+            makeItem({ item_name: 'tild repay', item_type: 'expense', owner: 'keith', effective_value: '200', is_tab_repayment: true }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        expect(result.current.tildIncome).toBe(4213);
+        expect(result.current.keithTabRepayment).toBe(200);
+    });
+
     it('separates personal savings from direct expenses but still subtracts from remaining', () => {
         const items = [
             makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),

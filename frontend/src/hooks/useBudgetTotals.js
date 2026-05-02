@@ -38,8 +38,9 @@ export const useBudgetTotals = (items) => {
         const keithTabRepayment = expenses.filter(i => i.owner === 'keith' && i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
         const tildTabRepayment = expenses.filter(i => i.owner === 'tild' && i.is_tab_repayment).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
 
-        const keithIncome = incomes.filter(i => i.owner === 'keith').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
-        const tildIncome = incomes.filter(i => i.owner === 'tild').reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const isSyntheticRepayment = (i) => String(i.budget_item_id).includes('-repay-income');
+        const keithIncome = incomes.filter(i => i.owner === 'keith' && !isSyntheticRepayment(i)).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
+        const tildIncome = incomes.filter(i => i.owner === 'tild' && !isSyntheticRepayment(i)).reduce((s, i) => s + (parseFloat(i.effective_value) || 0), 0);
 
         const keithRemaining = keithIncome - keithDirectExpenses - keithSavings - keithShare - keithTabRepayment + tildTabRepayment;
         const tildRemaining = tildIncome - tildDirectExpenses - tildSavings - tildShare - tildTabRepayment + keithTabRepayment;
