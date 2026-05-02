@@ -19,6 +19,8 @@ PROD_HOST = "192.168.0.191"
 PROD_USER = "root"
 PROD_DIR_TEMPLATE = "/opt/stacks/budgeter-{env}"
 DEFAULT_ENV = "demo"
+TARGET_PLATFORM = "linux/amd64"
+BUILDX_BUILDER = "amd64builder"
 
 IMAGE = f"{REGISTRY}/{REPO}"
 
@@ -53,10 +55,13 @@ def _ssh(c, cmd, env=DEFAULT_ENV):
 
 @task
 def build(c):
-    """Build Docker image tagged with git SHA and latest."""
+    """Build Docker image tagged with git SHA and latest (linux/amd64 for the deploy host)."""
     sha = _get_sha(c)
-    print(f"Building image — SHA: {sha}")
-    c.run(f"docker build -t {IMAGE}:{sha} -t {IMAGE}:latest -t budgeter:latest .")
+    print(f"Building image — SHA: {sha} (platform: {TARGET_PLATFORM})")
+    c.run(
+        f"docker buildx build --builder {BUILDX_BUILDER} --platform {TARGET_PLATFORM} --load "
+        f"-t {IMAGE}:{sha} -t {IMAGE}:latest -t budgeter:latest ."
+    )
 
 
 @task
