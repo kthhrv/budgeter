@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Menu } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
+import { computeMonthSummary } from './utils/nurseryCalc';
 import apiService from './services/api';
 import Toast from './components/Toast';
 import LoadingSkeleton from './components/LoadingSkeleton';
@@ -216,6 +217,25 @@ const App = () => {
         }
     };
 
+    const handleSyncFromNursery = async (budgetItemId) => {
+        try {
+            const settings = await apiService.getNurserySettings();
+            const summary = computeMonthSummary(settings, currentDate);
+            const monthId = formatDate(currentDate, 'YYYY-MM');
+            await apiService.updateBudgetItemValue(monthId, budgetItemId, {
+                value: parseFloat(summary.totalTFC.toFixed(2)),
+                is_one_off: false,
+            });
+            showToast(`Synced from Nursery: £${summary.totalTFC.toFixed(2)}`);
+            fetchData(currentDate);
+        } catch (error) {
+            console.error(error);
+            showToast(error.message || 'Failed to sync from Nursery', 'error');
+        } finally {
+            setIsCategoryModalOpen(false);
+        }
+    };
+
     const handleSaveCategory = async (idOrPayload, payloadIfUpdating) => {
         const isNew = typeof idOrPayload !== 'string';
         const fullPayload = isNew ? idOrPayload : payloadIfUpdating;
@@ -379,7 +399,7 @@ const App = () => {
                     <TabsPage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 )}
             </main>
-            <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} item={editingCategory} />
+            <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} onSyncFromNursery={handleSyncFromNursery} item={editingCategory} />
         </div>
     );
 }

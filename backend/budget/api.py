@@ -37,6 +37,7 @@ class BudgetItemSchema(Schema):
     expense_pot: str
     is_tab_repayment: bool
     is_extra: bool
+    is_nursery_linked: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -52,6 +53,7 @@ class BudgetItemInputSchema(Schema):
     expense_pot: str = ''
     is_tab_repayment: bool = False
     is_extra: bool = False
+    is_nursery_linked: bool = False
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -65,6 +67,7 @@ class BudgetItemEditSchema(Schema):
     expense_pot: Optional[str] = None
     is_tab_repayment: Optional[bool] = None
     is_extra: Optional[bool] = None
+    is_nursery_linked: Optional[bool] = None
     calculation_type: Optional[str] = None
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -77,6 +80,7 @@ class BudgetItemVersionSchema(Schema):
     expense_pot: str
     is_tab_repayment: bool
     is_extra: bool
+    is_nursery_linked: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     value: float
@@ -159,6 +163,7 @@ def list_budget_items_for_month(request, month_id: str):
                 budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
                 owner=budget_item.owner, expense_pot=budget_item.expense_pot, is_tab_repayment=budget_item.is_tab_repayment,
                 is_extra=budget_item.is_extra,
+                is_nursery_linked=budget_item.is_nursery_linked,
                 calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
                 value=float(effective_version.value),
                 effective_value=calculated_value, effective_from_month_name=effective_version.effective_from_month.month_name,
@@ -194,6 +199,7 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
         budget_item_id=budget_item.budget_item_id, item_name=budget_item.item_name, item_type=budget_item.item_type,
         owner=budget_item.owner, expense_pot=budget_item.expense_pot, is_tab_repayment=budget_item.is_tab_repayment,
         is_extra=budget_item.is_extra,
+        is_nursery_linked=budget_item.is_nursery_linked,
         calculation_type=budget_item.calculation_type, weekly_payment_day=budget_item.weekly_payment_day,
         value=float(budget_item_version.value),
         effective_value=calculated_value, effective_from_month_name=budget_item_version.effective_from_month.month_name,

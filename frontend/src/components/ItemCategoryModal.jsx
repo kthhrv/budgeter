@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { formatDate, DAY_CHOICES } from '../utils/helpers';
 
-const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
+const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onSyncFromNursery }) => {
     const isNew = !item?.budget_item_id;
     const [formData, setFormData] = useState({
-        item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false,
+        item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, is_nursery_linked: false,
         calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
         last_payment_month_id: ''
     });
@@ -14,7 +14,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
         if (isOpen) {
             if (isNew) {
                 setFormData({
-                    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false,
+                    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, is_nursery_linked: false,
                     calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
                     last_payment_month_id: ''
                 });
@@ -27,6 +27,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                     expense_pot: item.expense_pot || '',
                     is_tab_repayment: item.is_tab_repayment || false,
                     is_extra: item.is_extra || false,
+                    is_nursery_linked: item.is_nursery_linked || false,
                     calculation_type: item.calculation_type || 'fixed',
                     weekly_payment_day: item.weekly_payment_day || '',
                     last_payment_month_id: item.last_payment_month_id || '',
@@ -203,6 +204,25 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                                     </label>
                                 );
                             })()}
+                            {formData.item_type === 'expense' && (
+                                <label htmlFor="is_nursery_linked" className="flex items-center justify-between cursor-pointer group">
+                                    <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Linked to Nursery (Sync from calculator)</span>
+                                    <div className="relative">
+                                        <input id="is_nursery_linked" type="checkbox" name="is_nursery_linked" checked={formData.is_nursery_linked} onChange={handleChange} className="sr-only peer" />
+                                        <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-emerald-500 transition-colors"></div>
+                                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
+                                    </div>
+                                </label>
+                            )}
+                            {!isNew && formData.is_nursery_linked && onSyncFromNursery && (
+                                <button
+                                    type="button"
+                                    onClick={() => onSyncFromNursery(item.budget_item_id)}
+                                    className="w-full text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2 active:scale-[0.98] transition-all"
+                                >
+                                    Sync now from Nursery (current month)
+                                </button>
+                            )}
                         </div>
                     </div>
 

@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import apiService from '../services/api';
+import { formatDate, getInitialDate } from '../utils/helpers';
+import {
+    STANDARD_RATES, DAYS, SESSION_OPTIONS, BANK_HOLIDAYS,
+    ymd, weeklyStretched, weeklyStandard, findEffectiveOverride,
+} from '../utils/nurseryCalc';
 
 // ------------------------- Persistent state -------------------------
 
@@ -51,121 +56,6 @@ const DEFAULTS = {
     showBreakdown: true,
     adhoc: [],
 };
-
-// ------------------------- Fee data (Effective 1 Jan 2026) -------------------------
-
-const STANDARD_RATES = {
-    '0-2': { fullDay: 91.50, morning: 47.50, afternoon: 47.50, fullWeek: 356.00 },
-    '2-3': { fullDay: 79.00, morning: 45.50, afternoon: 45.50, fullWeek: 356.00 },
-    '3-5': { fullDay: 79.00, morning: 45.50, afternoon: 45.50, fullWeek: 356.00 },
-};
-
-const FULL_WEEK_HOURLY = 356 / 50; // £7.12 /hr
-
-const FOOD_CONSUMABLES = {
-    fullDay:   { food: 10.50, consumables: 1.50 },
-    morning:   { food:  6.80, consumables: 0.75 },
-    afternoon: { food:  3.70, consumables: 0.75 },
-};
-
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-const SESSION_OPTIONS = [
-    { value: 'none',      label: 'Not attending' },
-    { value: 'morning',   label: 'Morning (8am–1pm)' },
-    { value: 'afternoon', label: 'Afternoon (1pm–6pm)' },
-    { value: 'fullDay',   label: 'Full Day (8am–6pm)' },
-];
-
-const BANK_HOLIDAYS = new Set([
-    // 2026
-    '2026-01-01', '2026-04-03', '2026-04-06',
-    '2026-05-04', '2026-05-25', '2026-08-31',
-    '2026-12-25', '2026-12-28',
-    // 2027
-    '2027-01-01', '2027-03-26', '2027-03-29',
-    '2027-05-03', '2027-05-31', '2027-08-30',
-    '2027-12-27', '2027-12-28',
-]);
-
-const ymd = (y, m, d) =>
-    `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-
-// ------------------------- Helpers -------------------------
-
-const sessionHours = (t) => t === 'fullDay' ? 10 : (t === 'morning' || t === 'afternoon') ? 5 : 0;
-
-function sessionCost(type, ageBracket, fundedHours, fullWeekModel) {
-    if (type === 'none') return { base: 0, fc: 0, total: 0 };
-    const rates = STANDARD_RATES[ageBracket];
-    const fc = FOOD_CONSUMABLES[type];
-    const hrs = sessionHours(type);
-    const stdPrice = rates[type];
-
-    if (!fundedHours || fundedHours <= 0) {
-        return { base: stdPrice, fc: 0, total: stdPrice };
-    }
-
-    const hourly = fullWeekModel ? FULL_WEEK_HOURLY : stdPrice / hrs;
-    const nonFunded = hrs - fundedHours;
-    const frac = fundedHours / hrs;
-    const base = nonFunded * hourly;
-    const fcCost = fc.food * frac + fc.consumables * frac;
-    return { base, fc: fcCost, total: base + fcCost };
-}
-
-function allocateFunding(schedule, totalFunded) {
-    const allocated = [0, 0, 0, 0, 0];
-    if (!totalFunded) return allocated;
-
-    const priority = { afternoon: 3, morning: 2, fullDay: 1 };
-    const indexed = schedule
-        .map((t, i) => ({ t, i }))
-        .filter(x => x.t !== 'none')
-        .sort((a, b) => priority[b.t] - priority[a.t]);
-
-    let remaining = totalFunded;
-
-    for (const s of indexed) {
-        const need = sessionHours(s.t);
-        if (remaining + 1e-9 >= need) {
-            allocated[s.i] = need;
-            remaining -= need;
-        }
-    }
-
-    if (remaining > 1e-9) {
-        for (const s of indexed) {
-            if (allocated[s.i] === 0) {
-                const apply = Math.min(remaining, sessionHours(s.t));
-                allocated[s.i] = apply;
-                remaining -= apply;
-                if (remaining <= 1e-9) break;
-            }
-        }
-    }
-
-    return allocated;
-}
-
-function weeklyStretched(schedule, ageBracket, scheme, fullWeekModel) {
-    const totalFunded = scheme === '30hr' ? 22.8 : scheme === '15hr' ? 11.4 : 0;
-    const allocated = allocateFunding(schedule, totalFunded);
-    const parts = schedule.map((t, i) => sessionCost(t, ageBracket, allocated[i], fullWeekModel));
-    return {
-        daily:     parts.map(p => p.total),
-        dailyNoFC: parts.map(p => p.base),
-        dailyFC:   parts.map(p => p.fc),
-        allocated,
-        total:     parts.reduce((a, p) => a + p.total, 0),
-    };
-}
-
-function weeklyStandard(schedule, ageBracket) {
-    const rates = STANDARD_RATES[ageBracket];
-    const daily = schedule.map(s => s === 'none' ? 0 : (s === 'fullDay' ? rates.fullDay : rates.morning));
-    return { daily, total: daily.reduce((a, b) => a + b, 0) };
-}
 
 const money = (n) => `£${n.toFixed(2)}`;
 
@@ -376,18 +266,35 @@ const NurseryPage = () => {
     const [adhoc, setAdhoc]                 = useState(DEFAULTS.adhoc);
     const [monthOverrides, setMonthOverrides] = useState({});
     const [loaded, setLoaded]               = useState(false);
-    const [startDate]                       = useState(() => new Date());
-    const [monthOffset, setMonthOffset]     = useState(0);
+    const [currentDate, setCurrentDate]     = useState(() => getInitialDate());
+
+    // Stay in sync with the URL hash so the Budget tab and Nursery tab
+    // always show the same month.
+    useEffect(() => {
+        const sync = () => setCurrentDate(prev => {
+            const next = getInitialDate();
+            return prev.getTime() === next.getTime() ? prev : next;
+        });
+        window.addEventListener('hashchange', sync);
+        return () => window.removeEventListener('hashchange', sync);
+    }, []);
+
+    const changeMonth = (offset) => {
+        const next = new Date(currentDate);
+        next.setMonth(currentDate.getMonth() + offset);
+        window.location.hash = formatDate(next, 'YYYY-MM');
+    };
+
+    const today = new Date();
+    const isCurrentMonth = currentDate.getFullYear() === today.getFullYear()
+                        && currentDate.getMonth() === today.getMonth();
     const saveTimeout                       = useRef(null);
 
     const addAdHoc    = (a) => setAdhoc(prev => [...prev, a]);
     const removeAdHoc = (id) => setAdhoc(prev => prev.filter(a => a.id !== id));
 
     // Currently displayed month, as YYYY-MM
-    const monthKey = useMemo(() => {
-        const sd = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
-        return `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}`;
-    }, [startDate, monthOffset]);
+    const monthKey = useMemo(() => formatDate(currentDate, 'YYYY-MM'), [currentDate]);
 
     // "Has override" = the *currently displayed* month has its own entry for that section.
     // (Reset only clears the current month's entry, not any earlier ones.)
@@ -397,21 +304,11 @@ const NurseryPage = () => {
     const milHasOverride     = !!overridesAtMonth.mil;
     const billingHasOverride = !!overridesAtMonth.billing;
 
-    // Find the latest override at or before the displayed month for a given section.
-    // Edits propagate forward: a change in June carries through to July, August, ... until the next edit.
-    const findEffective = (section) => {
-        const keys = Object.keys(monthOverrides).filter(m => m <= monthKey).sort();
-        for (let i = keys.length - 1; i >= 0; i--) {
-            const v = monthOverrides[keys[i]]?.[section];
-            if (v != null) return v;
-        }
-        return null;
-    };
-
-    const effEllisOverride   = findEffective('ellis');
-    const effGaspardOverride = findEffective('gaspard');
-    const effMilOverride     = findEffective('mil');
-    const effBillingOverride = findEffective('billing');
+    // Latest override at or before the displayed month — edits propagate forward.
+    const effEllisOverride   = findEffectiveOverride(monthOverrides, monthKey, 'ellis');
+    const effGaspardOverride = findEffectiveOverride(monthOverrides, monthKey, 'gaspard');
+    const effMilOverride     = findEffectiveOverride(monthOverrides, monthKey, 'mil');
+    const effBillingOverride = findEffectiveOverride(monthOverrides, monthKey, 'billing');
 
     const effEllisSchedule   = effEllisOverride?.schedule   ?? ellis.schedule;
     const effGaspardSchedule = effGaspardOverride?.schedule ?? gaspard.schedule;
@@ -488,10 +385,9 @@ const NurseryPage = () => {
     }, [loaded, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides]);
 
     const calc = useMemo(() => {
-        const selectedDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
-        const year = selectedDate.getFullYear();
-        const monthIdx = selectedDate.getMonth();
-        const monthLabel = selectedDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+        const year = currentDate.getFullYear();
+        const monthIdx = currentDate.getMonth();
+        const monthLabel = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
 
         const weekdayCounts = { funded: [0, 0, 0, 0, 0], standard: [0, 0, 0, 0, 0], bankHols: [0, 0, 0, 0, 0] };
         const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
@@ -610,7 +506,7 @@ const NurseryPage = () => {
             year, monthIdx, monthLabel, weekdayCounts, daysInMonth,
             bankHolDates, monthAdhocs,
         };
-    }, [ellis, gaspard, taxFree, monthOffset, startDate, adhoc, effEllisSchedule, effGaspardSchedule, effMil, effTaxFree, effFullWeekModel]);
+    }, [ellis, gaspard, taxFree, currentDate, adhoc, effEllisSchedule, effGaspardSchedule, effMil, effTaxFree, effFullWeekModel]);
 
     return (
         <div>
@@ -640,7 +536,7 @@ const NurseryPage = () => {
 
             <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 mb-4 flex items-center justify-between gap-3">
                 <button
-                    onClick={() => setMonthOffset(o => o - 1)}
+                    onClick={() => changeMonth(-1)}
                     className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium flex items-center gap-1">
                     <ChevronLeft className="h-4 w-4" /> Previous
                 </button>
@@ -659,19 +555,54 @@ const NurseryPage = () => {
                             );
                         })}
                     </div>
-                    {monthOffset !== 0 && (
+                    {!isCurrentMonth && (
                         <button
-                            onClick={() => setMonthOffset(0)}
+                            onClick={() => { window.location.hash = formatDate(today, 'YYYY-MM'); }}
                             className="text-xs text-amber-600 hover:underline mt-1">
                             Jump to this month
                         </button>
                     )}
                 </div>
                 <button
-                    onClick={() => setMonthOffset(o => o + 1)}
+                    onClick={() => changeMonth(1)}
                     className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium flex items-center gap-1">
                     Next <ChevronRight className="h-4 w-4" />
                 </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-xl p-5 shadow">
+                    <div className="text-amber-50 text-sm mb-2">Transfer to TFC for {calc.monthLabel}</div>
+                    {(() => {
+                        const ellisInvoiced   = calc.monthlyDaily.reduce((a, m) => a + m.eMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.eNet, 0);
+                        const gaspardInvoiced = calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0);
+                        const tfcMult = effTaxFree ? 0.80 : 1.00;
+                        return (
+                            <div className="space-y-1">
+                                <div className="flex justify-between items-baseline">
+                                    <span className="text-amber-50 text-sm">Ellis</span>
+                                    <span className="text-2xl font-bold num">{money(ellisInvoiced * tfcMult)}</span>
+                                </div>
+                                <div className="flex justify-between items-baseline">
+                                    <span className="text-amber-50 text-sm">Gaspard</span>
+                                    <span className="text-2xl font-bold num">{money(gaspardInvoiced * tfcMult)}</span>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </div>
+                <div className="bg-gradient-to-br from-rose-400 to-rose-500 text-white rounded-xl p-5 shadow">
+                    <div className="text-rose-50 text-sm">MIL transfers in {calc.monthLabel}</div>
+                    <div className="text-3xl font-bold num">{money(calc.monthly.mil)}</div>
+                    <div className="text-xs text-rose-50 mt-1">
+                        {effTaxFree ? 'her share × 80% (tax-free)' : 'her share of the bill'}
+                    </div>
+                </div>
+                <div className="bg-gradient-to-br from-indigo-400 to-indigo-500 text-white rounded-xl p-5 shadow">
+                    <div className="text-indigo-50 text-sm">Total bill for {calc.monthLabel}</div>
+                    <div className="text-3xl font-bold num">{money(calc.monthly.gross)}</div>
+                    <div className="text-xs text-indigo-50 mt-1">gross, before any discounts</div>
+                </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -723,26 +654,6 @@ const NurseryPage = () => {
                     removeAdHoc={removeAdHoc}
                     monthAdhocs={calc.monthAdhocs}
                     monthLabel={calc.monthLabel} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-xl p-5 shadow">
-                    <div className="text-amber-50 text-sm">You pay in {calc.monthLabel}</div>
-                    <div className="text-3xl font-bold num">{money(calc.monthly.parentOOP)}</div>
-                    <div className="text-xs text-amber-50 mt-1">after MIL + tax-free childcare</div>
-                </div>
-                <div className="bg-gradient-to-br from-rose-400 to-rose-500 text-white rounded-xl p-5 shadow">
-                    <div className="text-rose-50 text-sm">MIL transfers in {calc.monthLabel}</div>
-                    <div className="text-3xl font-bold num">{money(calc.monthly.mil)}</div>
-                    <div className="text-xs text-rose-50 mt-1">
-                        {effTaxFree ? 'her share × 80% (tax-free)' : 'her share of the bill'}
-                    </div>
-                </div>
-                <div className="bg-gradient-to-br from-indigo-400 to-indigo-500 text-white rounded-xl p-5 shadow">
-                    <div className="text-indigo-50 text-sm">Total bill for {calc.monthLabel}</div>
-                    <div className="text-3xl font-bold num">{money(calc.monthly.gross)}</div>
-                    <div className="text-xs text-indigo-50 mt-1">gross, before any discounts</div>
-                </div>
             </div>
 
             {showBreakdown && (

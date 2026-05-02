@@ -100,6 +100,10 @@ class BudgetItem(models.Model):
         default=False,
         help_text="If true, contributions still cover this item but it is treated as a buffer/savings line — excluded from the joint Expenses total and reflected in Remaining."
     )
+    is_nursery_linked = models.BooleanField(
+        default=False,
+        help_text="If true, this item's monthly value can be auto-synced from the Nursery cost calculator's Transfer to TFC total."
+    )
     calculation_type = models.CharField(
         max_length=20,
         choices=CALCULATION_TYPE_CHOICES,
