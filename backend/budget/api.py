@@ -9,7 +9,7 @@ import datetime
 import uuid
 import calendar
 
-from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment
+from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings
 from django.middleware.csrf import get_token
 
 api = NinjaAPI(auth=django_auth)
@@ -445,3 +445,26 @@ def delete_tab_repayment(request, repayment_id: uuid.UUID):
     repayment = get_object_or_404(TabRepayment, id=repayment_id)
     repayment.delete()
     return 204, None
+
+
+# --- Nursery settings ---
+
+class NurserySettingsSchema(Schema):
+    data: dict
+
+class NurserySettingsInputSchema(Schema):
+    data: dict
+
+
+@api.get("/nursery/settings/", response=NurserySettingsSchema)
+def get_nursery_settings(request):
+    obj, _ = NurserySettings.objects.get_or_create(user=request.user)
+    return {"data": obj.data or {}}
+
+
+@api.put("/nursery/settings/", response=NurserySettingsSchema)
+def update_nursery_settings(request, payload: NurserySettingsInputSchema):
+    obj, _ = NurserySettings.objects.get_or_create(user=request.user)
+    obj.data = payload.data
+    obj.save(update_fields=["data", "updated_at"])
+    return {"data": obj.data}

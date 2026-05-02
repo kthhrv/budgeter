@@ -1,5 +1,6 @@
 # models.py for a Django Budget Management Application
 
+from django.conf import settings
 from django.db import models
 import uuid
 
@@ -128,7 +129,7 @@ class BudgetItem(models.Model):
 
     def __str__(self):
         return (f"{self.item_name} ({self.get_item_type_display()}) - Owner: {self.get_owner_display()}"
-                f"{' [Bills Pot]' if self.bills_pot else ''}"
+                f"{f' [{self.get_expense_pot_display()}]' if self.expense_pot else ''}"
                 f"{f' (Calc: {self.get_calculation_type_display()})' if self.calculation_type != 'fixed' else ''}")
 
 class BudgetItemVersion(models.Model):
@@ -240,3 +241,21 @@ class TabRepayment(models.Model):
 
     def __str__(self):
         return f"£{self.amount} by {self.paid_by} on {self.date}"
+
+
+class NurserySettings(models.Model):
+    """Per-user nursery calculator state (stored as a single JSON blob)."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="nursery_settings",
+    )
+    data = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Nursery Settings"
+        verbose_name_plural = "Nursery Settings"
+
+    def __str__(self):
+        return f"Nursery settings for {self.user}"

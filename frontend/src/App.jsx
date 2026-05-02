@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft } from 'lucide-react';
+import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
 import apiService from './services/api';
 import Toast from './components/Toast';
@@ -11,6 +11,7 @@ import { SharedCard, PersonCard } from './components/OwnerTotals';
 import BudgetTable from './components/BudgetTable';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
+import NurseryPage from './components/NurseryPage';
 
 const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
     const totals = useBudgetTotals(items);
@@ -300,6 +301,9 @@ const App = () => {
                         <button onClick={() => setActivePage('tabs')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activePage === 'tabs' ? 'bg-white text-indigo-700' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
                             <ArrowRightLeft className="h-4 w-4" /> Tabs
                         </button>
+                        <button onClick={() => setActivePage('nursery')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activePage === 'nursery' ? 'bg-white text-indigo-700' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
+                            <Baby className="h-4 w-4" /> Nursery
+                        </button>
                     </div>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
@@ -311,7 +315,9 @@ const App = () => {
             </header>
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
-                {activePage === 'budget' ? (
+                {activePage === 'nursery' ? (
+                    <NurseryPage />
+                ) : activePage === 'budget' ? (
                     <>
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
                             <div className="hidden md:block md:w-24"></div>

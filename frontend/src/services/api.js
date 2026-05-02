@@ -133,6 +133,23 @@ const apiService = {
         });
         if (!response.ok) throw new Error('Failed to delete tab repayment');
         return response;
+    },
+    async getNurserySettings() {
+        const response = await fetch(`${API_BASE_URL}/nursery/settings/`, { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch nursery settings');
+        const json = await response.json();
+        return json.data || {};
+    },
+    async updateNurserySettings(data) {
+        const response = await fetch(`${API_BASE_URL}/nursery/settings/`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ data }),
+            credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to update nursery settings');
+        const json = await response.json();
+        return json.data || {};
     }
 };
 
