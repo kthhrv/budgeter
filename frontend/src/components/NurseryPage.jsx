@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import apiService from '../services/api';
 import { formatDate, getInitialDate } from '../utils/helpers';
+import MonthSelector from './MonthSelector';
 import {
     STANDARD_RATES, DAYS, SESSION_OPTIONS, BANK_HOLIDAYS,
     ymd, weeklyStretched, weeklyStandard, findEffectiveOverride,
@@ -248,15 +248,6 @@ const NurseryPage = ({ onSettingsChange }) => {
         return () => window.removeEventListener('hashchange', sync);
     }, []);
 
-    const changeMonth = (offset) => {
-        const next = new Date(currentDate);
-        next.setMonth(currentDate.getMonth() + offset);
-        window.location.hash = formatDate(next, 'YYYY-MM');
-    };
-
-    const today = new Date();
-    const isCurrentMonth = currentDate.getFullYear() === today.getFullYear()
-                        && currentDate.getMonth() === today.getMonth();
     const saveTimeout                       = useRef(null);
 
     const addAdHoc    = (a) => setAdhoc(prev => [...prev, a]);
@@ -474,104 +465,44 @@ const NurseryPage = ({ onSettingsChange }) => {
 
     return (
         <div>
-            <header className="mb-6 flex items-start justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Nursery Cost Calculator</h1>
-                    <p className="text-gray-500">Busy Bees Tunbridge Wells · fees effective 1 January 2026</p>
-                    <p className="text-xs text-gray-400 mt-1">Your settings &amp; ad-hoc days are saved to your account.</p>
-                </div>
-                <button
-                    onClick={() => {
-                        if (window.confirm('Reset all settings and ad-hoc days to defaults?')) {
-                            setEllis(DEFAULTS.ellis);
-                            setGaspard(DEFAULTS.gaspard);
-                            setMil(DEFAULTS.mil);
-                            setTaxFree(DEFAULTS.taxFree);
-                            setFullWeekModel(DEFAULTS.fullWeekModel);
-                            setShowBreakdown(DEFAULTS.showBreakdown);
-                            setAdhoc(DEFAULTS.adhoc);
-                            clearAllStoredSettings();
-                        }
-                    }}
-                    className="text-xs text-gray-400 hover:text-rose-500 underline">
-                    Reset to defaults
-                </button>
-            </header>
-
-            <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100 mb-4 flex items-center justify-between gap-3">
-                <button
-                    onClick={() => changeMonth(-1)}
-                    className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium flex items-center gap-1">
-                    <ChevronLeft className="h-4 w-4" /> Previous
-                </button>
-                <div className="text-center flex-1">
-                    <div className="text-xs uppercase tracking-wide text-gray-400">Showing</div>
-                    <div className="text-xl font-semibold text-gray-800">{calc.monthLabel}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                        {DAYS.map((d, i) => {
-                            const n = calc.weekdayCounts.funded[i] + calc.weekdayCounts.standard[i];
-                            const bh = calc.weekdayCounts.bankHols[i];
-                            return (
-                                <span key={d} className="mx-1">
-                                    <b className="num">{n}</b> {d.slice(0, 3)}
-                                    {bh > 0 && <span className="text-rose-500" title="bank holiday"> ({bh} BH)</span>}
-                                </span>
-                            );
-                        })}
-                    </div>
-                    {!isCurrentMonth && (
-                        <button
-                            onClick={() => { window.location.hash = formatDate(today, 'YYYY-MM'); }}
-                            className="text-xs text-amber-600 hover:underline mt-1">
-                            Jump to this month
-                        </button>
-                    )}
-                </div>
-                <button
-                    onClick={() => changeMonth(1)}
-                    className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium flex items-center gap-1">
-                    Next <ChevronRight className="h-4 w-4" />
-                </button>
+            <div className="flex justify-center mb-4">
+                <MonthSelector currentDate={currentDate} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-xl p-5 shadow">
-                    <div className="text-amber-50 text-sm mb-2">Transfer to TFC for {calc.monthLabel}</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 items-stretch">
+                <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-xl p-5 shadow flex flex-col">
+                    <div className="text-amber-50 text-lg font-semibold mb-2">Transfer to TFC</div>
                     {(() => {
                         const ellisInvoiced   = calc.monthlyDaily.reduce((a, m) => a + m.eMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.eNet, 0);
                         const gaspardInvoiced = calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0);
                         const tfcMult = effTaxFree ? 0.80 : 1.00;
                         return (
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-baseline gap-3">
-                                    <div className="min-w-0">
-                                        <div className="text-amber-50 text-sm">Ellis</div>
-                                        <div className="text-amber-50/80 text-xs num truncate" title="TFC reference">1100116981235</div>
-                                    </div>
-                                    <span className="text-2xl font-bold num">{money(ellisInvoiced * tfcMult)}</span>
+                            <div className="flex-1 grid grid-cols-2 gap-3 items-center">
+                                <div className="text-center">
+                                    <div className="text-amber-50 text-sm">Ellis</div>
+                                    <div className="text-amber-50/80 text-xs num" title="TFC reference">1100116981235</div>
+                                    <div className="text-2xl font-bold num mt-1">{money(ellisInvoiced * tfcMult)}</div>
                                 </div>
-                                <div className="flex justify-between items-baseline gap-3">
-                                    <div className="min-w-0">
-                                        <div className="text-amber-50 text-sm">Gaspard</div>
-                                        <div className="text-amber-50/80 text-xs num truncate" title="TFC reference">1100067930356</div>
-                                    </div>
-                                    <span className="text-2xl font-bold num">{money(gaspardInvoiced * tfcMult)}</span>
+                                <div className="text-center">
+                                    <div className="text-amber-50 text-sm">Gaspard</div>
+                                    <div className="text-amber-50/80 text-xs num" title="TFC reference">1100067930356</div>
+                                    <div className="text-2xl font-bold num mt-1">{money(gaspardInvoiced * tfcMult)}</div>
                                 </div>
                             </div>
                         );
                     })()}
                 </div>
-                <div className="bg-gradient-to-br from-rose-400 to-rose-500 text-white rounded-xl p-5 shadow">
-                    <div className="text-rose-50 text-sm">MIL transfers in {calc.monthLabel}</div>
-                    <div className="text-3xl font-bold num">{money(calc.monthly.mil)}</div>
-                    <div className="text-xs text-rose-50 mt-1">
-                        {effTaxFree ? 'her share × 80% (tax-free)' : 'her share of the bill'}
+                <div className="bg-gradient-to-br from-rose-400 to-rose-500 text-white rounded-xl p-5 shadow flex flex-col">
+                    <div className="text-rose-50 text-lg font-semibold">MIL transfers</div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-3xl font-bold num">{money(calc.monthly.mil)}</div>
                     </div>
                 </div>
-                <div className="bg-gradient-to-br from-indigo-400 to-indigo-500 text-white rounded-xl p-5 shadow">
-                    <div className="text-indigo-50 text-sm">Total bill for {calc.monthLabel}</div>
-                    <div className="text-3xl font-bold num">{money(calc.monthly.gross)}</div>
-                    <div className="text-xs text-indigo-50 mt-1">gross, before any discounts</div>
+                <div className="bg-gradient-to-br from-indigo-400 to-indigo-500 text-white rounded-xl p-5 shadow flex flex-col">
+                    <div className="text-indigo-50 text-lg font-semibold">Total bill</div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-3xl font-bold num">{money(calc.monthly.gross)}</div>
+                    </div>
                 </div>
             </div>
 

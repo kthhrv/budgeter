@@ -7,6 +7,7 @@ const TabsPage = ({ showToast }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [showItemForm, setShowItemForm] = useState(false);
     const [showRepaymentForm, setShowRepaymentForm] = useState(false);
+    const [showPaidOff, setShowPaidOff] = useState(false);
     const [itemForm, setItemForm] = useState({ description: '', paid_by: 'tild', total_cost: '', amount_owed: '', date_added: new Date().toISOString().slice(0, 10) });
     const [repaymentForm, setRepaymentForm] = useState({ amount: '', paid_by: 'keith', date: new Date().toISOString().slice(0, 10), note: '' });
 
@@ -144,11 +145,20 @@ const TabsPage = ({ showToast }) => {
             <div className="grid md:grid-cols-2 gap-6">
                 {/* Tab Items */}
                 <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-4 gap-2">
                         <h3 className="text-lg font-bold text-gray-800">Expenses</h3>
-                        <button onClick={() => setShowItemForm(f => !f)} className="p-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all">
-                            <PlusCircle className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {paidOffIds.size > 0 && (
+                                <button
+                                    onClick={() => setShowPaidOff(v => !v)}
+                                    className="text-xs text-gray-500 hover:text-indigo-600 underline whitespace-nowrap">
+                                    {showPaidOff ? `Hide repaid (${paidOffIds.size})` : `Show repaid (${paidOffIds.size})`}
+                                </button>
+                            )}
+                            <button onClick={() => setShowItemForm(f => !f)} className="p-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all">
+                                <PlusCircle className="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
 
                     {showItemForm && (
@@ -192,7 +202,12 @@ const TabsPage = ({ showToast }) => {
 
                     <div className="space-y-2">
                         {data.items.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No expenses yet</p>}
-                        {data.items.map(item => {
+                        {data.items.length > 0 && !showPaidOff && data.items.every(item => paidOffIds.has(item.id)) &&
+                            <p className="text-sm text-gray-400 text-center py-4">All expenses are repaid — toggle "Show repaid" above.</p>
+                        }
+                        {data.items
+                            .filter(item => showPaidOff || !paidOffIds.has(item.id))
+                            .map(item => {
                             const isPaidOff = paidOffIds.has(item.id);
                             return (
                             <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:shadow-sm transition-shadow group ${isPaidOff ? 'opacity-50' : ''}`}>

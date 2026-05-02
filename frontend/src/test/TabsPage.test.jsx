@@ -47,13 +47,23 @@ describe('TabsPage', () => {
         });
     });
 
-    it('renders all items', async () => {
+    it('renders all items once "Show repaid" is toggled on', async () => {
+        const user = userEvent.setup();
         render(<TabsPage showToast={showToast} />);
-        await waitFor(() => {
-            expect(screen.getByText('Holiday')).toBeInTheDocument();
-            expect(screen.getByText('Dinner')).toBeInTheDocument();
-            expect(screen.getByText('Frame TV')).toBeInTheDocument();
-        });
+        await waitFor(() => screen.getByText('Show repaid (2)'));
+        await user.click(screen.getByText('Show repaid (2)'));
+        expect(screen.getByText('Holiday')).toBeInTheDocument();
+        expect(screen.getByText('Dinner')).toBeInTheDocument();
+        expect(screen.getByText('Frame TV')).toBeInTheDocument();
+    });
+
+    it('hides repaid items by default', async () => {
+        render(<TabsPage showToast={showToast} />);
+        await waitFor(() => screen.getByText('Dinner'));
+        // Holiday and Frame TV are paid off in this fixture and should be hidden.
+        expect(screen.queryByText('Holiday')).not.toBeInTheDocument();
+        expect(screen.queryByText('Frame TV')).not.toBeInTheDocument();
+        expect(screen.getByText('Dinner')).toBeInTheDocument();
     });
 
     it('renders repayments', async () => {
@@ -64,22 +74,24 @@ describe('TabsPage', () => {
         });
     });
 
-    it('shows paid_by badges', async () => {
+    it('shows paid_by badges (with repaid expenses revealed)', async () => {
+        const user = userEvent.setup();
         render(<TabsPage showToast={showToast} />);
-        await waitFor(() => {
-            const tildBadges = screen.getAllByText('tild');
-            expect(tildBadges.length).toBe(2); // Holiday + Dinner
-            expect(screen.getAllByText('keith').length).toBeGreaterThanOrEqual(2); // Frame TV + repayment
-        });
+        await waitFor(() => screen.getByText('Show repaid (2)'));
+        await user.click(screen.getByText('Show repaid (2)'));
+        const tildBadges = screen.getAllByText('tild');
+        expect(tildBadges.length).toBe(2); // Holiday + Dinner
+        expect(screen.getAllByText('keith').length).toBeGreaterThanOrEqual(2); // Frame TV + repayment
     });
 
-    it('crosses off items covered by net balance', async () => {
-        // net > 0 (Keith owes Tild): Frame TV (keith's item, £350) should be auto-crossed off
+    it('crosses off items covered by net balance (when shown)', async () => {
+        // net > 0 (Keith owes Tild): Frame TV (keith's item, £350) is paid off — hidden by default.
+        const user = userEvent.setup();
         render(<TabsPage showToast={showToast} />);
-        await waitFor(() => {
-            const frameTv = screen.getByText('Frame TV');
-            expect(frameTv.className).toContain('line-through');
-        });
+        await waitFor(() => screen.getByText('Show repaid (2)'));
+        await user.click(screen.getByText('Show repaid (2)'));
+        const frameTv = screen.getByText('Frame TV');
+        expect(frameTv.className).toContain('line-through');
     });
 
     it('does not cross off items not yet covered', async () => {
@@ -90,14 +102,15 @@ describe('TabsPage', () => {
         });
     });
 
-    it('crosses off tild items covered by repayments oldest first', async () => {
-        // Keith repaid 200 + Frame TV offset 350 = 550 pool for tild items
-        // Holiday (500) should be crossed off, Dinner (100) should NOT (550 - 500 = 50 < 100)
+    it('crosses off tild items covered by repayments oldest first (when shown)', async () => {
+        // Keith repaid 200 + Frame TV offset 350 = 550 pool for tild items.
+        // Holiday (500) is paid off — hidden by default; Dinner (100) is not.
+        const user = userEvent.setup();
         render(<TabsPage showToast={showToast} />);
-        await waitFor(() => {
-            const holiday = screen.getByText('Holiday');
-            expect(holiday.className).toContain('line-through');
-        });
+        await waitFor(() => screen.getByText('Show repaid (2)'));
+        await user.click(screen.getByText('Show repaid (2)'));
+        const holiday = screen.getByText('Holiday');
+        expect(holiday.className).toContain('line-through');
     });
 
     it('shows empty states', async () => {
@@ -133,7 +146,7 @@ describe('TabsPage', () => {
         expect(screen.getByPlaceholderText('Description')).toBeInTheDocument();
     });
 
-    it('all settled marks everything crossed off', async () => {
+    it('all settled marks everything crossed off (when shown)', async () => {
         apiService.getTabs.mockResolvedValue({
             items: [
                 { id: '1', description: 'A', paid_by: 'tild', total_cost: 200, amount_owed: 100, date_added: '2025-06-01' },
@@ -147,11 +160,12 @@ describe('TabsPage', () => {
             net_balance: 0,
             net_description: 'All settled up!',
         });
+        const user = userEvent.setup();
         render(<TabsPage showToast={showToast} />);
-        await waitFor(() => {
-            expect(screen.getByText('A').className).toContain('line-through');
-            expect(screen.getByText('B').className).toContain('line-through');
-        });
+        await waitFor(() => screen.getByText('Show repaid (2)'));
+        await user.click(screen.getByText('Show repaid (2)'));
+        expect(screen.getByText('A').className).toContain('line-through');
+        expect(screen.getByText('B').className).toContain('line-through');
     });
 
     it('shows Auto badge on auto-repayments', async () => {

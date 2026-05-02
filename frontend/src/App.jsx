@@ -320,7 +320,8 @@ const App = () => {
                         <Menu className="h-6 w-6" />
                     </button>
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center grow">
-                        <Wallet className="mr-3 h-7 w-7 md:h-8 md:w-8" /> Budgeter
+                        <Wallet className="mr-3 h-7 w-7 md:h-8 md:w-8" />
+                        {{ budget: 'Budget', tabs: 'Tabs', nursery: 'Cost calculator' }[activePage] || 'Budget'}
                     </h1>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
