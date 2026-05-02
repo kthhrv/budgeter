@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby } from 'lucide-react';
+import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Menu } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
 import apiService from './services/api';
 import Toast from './components/Toast';
@@ -85,6 +85,7 @@ const App = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [toast, setToast] = useState({ message: '', type: 'success', key: 0 });
     const [activePage, setActivePage] = useState('budget');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -290,21 +291,19 @@ const App = () => {
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
             <header className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white p-4 shadow-lg sticky top-0 z-40">
-                <div className="container mx-auto flex justify-between items-center max-w-7xl">
-                    <h1 className="text-2xl md:text-3xl font-bold flex items-center">
-                        <Wallet className="mr-3 h-8 w-8" /> Budgeter
+                <div className="container mx-auto flex justify-between items-center max-w-7xl gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setMobileMenuOpen(o => !o)}
+                        className="p-2 hover:bg-indigo-500 rounded-md transition-colors"
+                        aria-label="Toggle navigation"
+                        aria-expanded={mobileMenuOpen}
+                    >
+                        <Menu className="h-6 w-6" />
+                    </button>
+                    <h1 className="text-2xl md:text-3xl font-bold flex items-center grow">
+                        <Wallet className="mr-3 h-7 w-7 md:h-8 md:w-8" /> Budgeter
                     </h1>
-                    <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
-                        <button onClick={() => setActivePage('budget')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activePage === 'budget' ? 'bg-white text-indigo-700' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
-                            <LayoutDashboard className="h-4 w-4" /> Budget
-                        </button>
-                        <button onClick={() => setActivePage('tabs')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activePage === 'tabs' ? 'bg-white text-indigo-700' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
-                            <ArrowRightLeft className="h-4 w-4" /> Tabs
-                        </button>
-                        <button onClick={() => setActivePage('nursery')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activePage === 'nursery' ? 'bg-white text-indigo-700' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
-                            <Baby className="h-4 w-4" /> Nursery
-                        </button>
-                    </div>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
                         <button onClick={handleLogout} className="p-2 hover:bg-indigo-500 rounded-full transition-colors" title="Logout">
@@ -312,6 +311,23 @@ const App = () => {
                         </button>
                     </div>
                 </div>
+                {mobileMenuOpen && (
+                    <div className="mt-3 -mx-4 px-4 pt-3 border-t border-white/10 flex flex-col gap-1">
+                        {[
+                            { id: 'budget',  label: 'Budget',  Icon: LayoutDashboard },
+                            { id: 'tabs',    label: 'Tabs',    Icon: ArrowRightLeft },
+                            { id: 'nursery', label: 'Nursery', Icon: Baby },
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => { setActivePage(tab.id); setMobileMenuOpen(false); }}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${activePage === tab.id ? 'bg-white text-indigo-700' : 'text-white/90 hover:bg-white/10'}`}
+                            >
+                                <tab.Icon className="h-4 w-4" /> {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </header>
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
@@ -319,12 +335,12 @@ const App = () => {
                     <NurseryPage />
                 ) : activePage === 'budget' ? (
                     <>
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-                            <div className="hidden md:block md:w-24"></div>
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] md:items-center gap-3 mb-6">
+                            <div className="hidden md:block"></div>
                             <div className="flex justify-center">
                                 <MonthSelector currentDate={currentDate} isLoading={isLoading} />
                             </div>
-                            <div className="flex items-center gap-2 w-full md:w-auto">
+                            <div className="flex items-center gap-2 w-full md:w-auto md:justify-end">
                                 <div className="flex-1 md:flex-initial min-w-0">
                                     <SearchComponent
                                         searchTerm={searchTerm}
