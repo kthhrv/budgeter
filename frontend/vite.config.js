@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'vite.svg'],
+      includeAssets: ['favicon.svg', 'icon.svg'],
       workbox: {
         // Prevent the Service Worker from intercepting these paths so they reach the backend
         navigateFallbackDenylist: [/^\/accounts/, /^\/api/, /^\/admin/, /^\/static/],
@@ -19,19 +19,20 @@ export default defineConfig({
         name: 'Budgeter',
         short_name: 'Budgeter',
         description: 'A simple budgeting app.',
-        theme_color: '#ffffff',
+        theme_color: '#4f46e5',
+        background_color: '#4f46e5',
         start_url: '/',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         icons: [
           {
-            src: 'vite.svg',
+            src: 'icon.svg',
             sizes: '192x192',
             type: 'image/svg+xml'
           },
           {
-            src: 'vite.svg',
+            src: 'icon.svg',
             sizes: '512x512',
             type: 'image/svg+xml'
           }
