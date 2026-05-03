@@ -124,7 +124,9 @@ const App = () => {
     }, []);
 
     const nurseryAutoTFC = useMemo(() => {
-        if (!nurserySettings) return null;
+        // Settings can be `{}` for users who've never opened the Nursery tab —
+        // computeMonthSummary needs ellis/gaspard, so skip the sync until they exist.
+        if (!nurserySettings?.ellis || !nurserySettings?.gaspard) return null;
         return computeMonthSummary(nurserySettings, currentDate).totalTFC;
     }, [nurserySettings, currentDate]);
 
