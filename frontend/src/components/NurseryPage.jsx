@@ -354,20 +354,43 @@ const NurseryPage = ({ onSettingsChange }) => {
                 <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-xl p-5 shadow flex flex-col">
                     <div className="text-amber-50 text-lg font-semibold mb-2">Transfer to TFC</div>
                     {(() => {
-                        const ellisInvoiced   = calc.monthlyDaily.reduce((a, m) => a + m.eMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.eNet, 0);
-                        const gaspardInvoiced = calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0);
-                        const tfcMult = effTaxFree ? 0.80 : 1.00;
+                        const periodLabel = `${calc.tfc.periodMonths[0]} – ${calc.tfc.periodMonths[2]}`;
+                        const TFCAmount = ({ amount, saving, usedBefore, capped }) => {
+                            const periodTotal = usedBefore + saving;
+                            return (
+                                <div className="relative inline-block group">
+                                    <div className="text-2xl font-bold num cursor-help underline decoration-amber-50/40 decoration-dotted underline-offset-4">
+                                        {money(amount)}
+                                    </div>
+                                    <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-10 hidden group-hover:block whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs font-normal px-3 py-2 shadow-lg text-left">
+                                        <div>£{saving.toFixed(2)} saved this month</div>
+                                        <div className="text-gray-300">£{periodTotal.toFixed(2)} of £{calc.tfc.quarterlyCap} used ({periodLabel})</div>
+                                        {capped && <div className="text-amber-300 mt-1">cap reached</div>}
+                                    </div>
+                                </div>
+                            );
+                        };
                         return (
                             <div className="flex-1 grid grid-cols-2 gap-3 items-center">
                                 <div className="text-center">
                                     <div className="text-amber-50 text-sm">Ellis</div>
                                     <div className="text-amber-50/80 text-xs num" title="TFC reference">1100116981235</div>
-                                    <div className="text-2xl font-bold num mt-1">{money(ellisInvoiced * tfcMult)}</div>
+                                    <div className="mt-1">
+                                        <TFCAmount amount={calc.ellisTFC}
+                                                   saving={calc.tfc.ellisSaving}
+                                                   usedBefore={calc.tfc.ellisUsedBefore}
+                                                   capped={calc.tfc.ellisCapped} />
+                                    </div>
                                 </div>
                                 <div className="text-center">
                                     <div className="text-amber-50 text-sm">Gaspard</div>
                                     <div className="text-amber-50/80 text-xs num" title="TFC reference">1100067930356</div>
-                                    <div className="text-2xl font-bold num mt-1">{money(gaspardInvoiced * tfcMult)}</div>
+                                    <div className="mt-1">
+                                        <TFCAmount amount={calc.gaspardTFC}
+                                                   saving={calc.tfc.gaspardSaving}
+                                                   usedBefore={calc.tfc.gaspardUsedBefore}
+                                                   capped={calc.tfc.gaspardCapped} />
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -552,17 +575,18 @@ const NurseryPage = ({ onSettingsChange }) => {
                         <div className="bg-white border border-gray-200 rounded-xl p-4">
                             <div className="text-sm font-semibold text-gray-700 mb-3">Invoice from nursery</div>
                             {(() => {
-                                const milMult = effTaxFree ? 0.80 : 1.00;
-                                // Per-child MIL coverage = sum over days of (child's net cost that day × MIL%) × tax-free factor.
-                                const ellisMIL = (calc.monthlyDaily.reduce((a, m, i) => a + m.eMonthlyNet * (effMil[i] / 100), 0)
-                                    + calc.monthAdhocs.reduce((a, x) => a + x.eNet * (x.milPct / 100), 0)) * milMult;
-                                const gaspardMIL = (calc.monthlyDaily.reduce((a, m, i) => a + m.gMonthlyNet * (effMil[i] / 100), 0)
-                                    + calc.monthAdhocs.reduce((a, x) => a + x.gNet * (x.milPct / 100), 0)) * milMult;
-                                const ellisTotal   = calc.monthlyDaily.reduce((a, m) => a + m.eMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.eNet, 0);
-                                const gaspardTotal = calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0) + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0);
-                                const total        = ellisTotal + gaspardTotal;
+                                const eFactor = calc.tfc.ellisFactor;
+                                const gFactor = calc.tfc.gaspardFactor;
+                                // Per-child MIL coverage = MIL%-weighted child cost, after that
+                                // child's TFC factor (which already reflects the £500/quarter cap).
+                                const ellisMIL = calc.monthlyDaily.reduce((a, m, i) => a + m.eMonthlyNet * (effMil[i] / 100), 0) * eFactor
+                                    + calc.monthAdhocs.reduce((a, x) => a + x.eNet * (x.milPct / 100), 0) * eFactor;
+                                const gaspardMIL = calc.monthlyDaily.reduce((a, m, i) => a + m.gMonthlyNet * (effMil[i] / 100), 0) * gFactor
+                                    + calc.monthAdhocs.reduce((a, x) => a + x.gNet * (x.milPct / 100), 0) * gFactor;
+                                const ellisTotal   = calc.ellisInvoiced;
+                                const gaspardTotal = calc.gaspardInvoiced;
+                                const total        = calc.totalInvoiced;
                                 const totalMIL     = ellisMIL + gaspardMIL;
-                                const tfc          = (n) => n * (effTaxFree ? 0.80 : 1.00);
                                 return (
                                     <table className="w-full text-sm num">
                                         <thead>
@@ -575,16 +599,16 @@ const NurseryPage = ({ onSettingsChange }) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr><td className="py-1">Ellis</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-emerald-700">{money(tfc(ellisTotal))}</td><td className="text-right py-1 text-rose-600">{money(ellisMIL)}</td><td className="text-right py-1">{money(tfc(ellisTotal) - ellisMIL)}</td></tr>
-                                            <tr><td className="py-1">Gaspard</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-emerald-700">{money(tfc(gaspardTotal))}</td><td className="text-right py-1 text-rose-600">{money(gaspardMIL)}</td><td className="text-right py-1">{money(tfc(gaspardTotal) - gaspardMIL)}</td></tr>
+                                            <tr><td className="py-1">Ellis{calc.tfc.ellisCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.periodMonths[0]} – ${calc.tfc.periodMonths[2]})`}>· capped</span>}</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.ellisTFC)}</td><td className="text-right py-1 text-rose-600">{money(ellisMIL)}</td><td className="text-right py-1">{money(calc.ellisTFC - ellisMIL)}</td></tr>
+                                            <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.periodMonths[0]} – ${calc.tfc.periodMonths[2]})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-rose-600">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
                                         </tbody>
                                         <tfoot>
                                             <tr className="font-semibold border-t">
                                                 <td className="pt-1">Total</td>
                                                 <td className="text-right pt-1">{money(total)}</td>
-                                                <td className="text-right pt-1 text-emerald-700">{money(tfc(total))}</td>
+                                                <td className="text-right pt-1 text-emerald-700">{money(calc.totalTFC)}</td>
                                                 <td className="text-right pt-1 text-rose-600">{money(totalMIL)}</td>
-                                                <td className="text-right pt-1">{money(tfc(total) - totalMIL)}</td>
+                                                <td className="text-right pt-1">{money(calc.totalTFC - totalMIL)}</td>
                                             </tr>
                                         </tfoot>
                                     </table>
