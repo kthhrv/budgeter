@@ -153,18 +153,21 @@ export function effectiveForMonth(settings, monthKey) {
 // ------------------------- TFC entitlement period (£500 cap) -------------------------
 
 // HMRC Tax-Free Childcare adds a 20% top-up capped at £500 per child per
-// 3-month entitlement period. Both kids' periods reset on 1 May, so periods
-// are May–Jul, Aug–Oct, Nov–Jan, Feb–Apr.
+// 3-month entitlement period. Both kids' periods reset on 1 May (payment side).
+// Nursery is paid one month in advance, so the May payment buys June's
+// attendance — meaning the May–Jul payment quarter maps to attendance months
+// Jun–Aug. Attendance-aligned periods (used everywhere in this file) are:
+//   Mar–May, Jun–Aug, Sep–Nov, Dec–Feb.
 export const TFC_QUARTERLY_CAP = 500;
 
 export function tfcPeriodMonths(monthKey) {
     const [y, m] = monthKey.split('-').map(Number);
     let startY, startM;
-    if (m >= 5  && m <= 7)         { startY = y;     startM = 5;  }
-    else if (m >= 8  && m <= 10)   { startY = y;     startM = 8;  }
-    else if (m === 11 || m === 12) { startY = y;     startM = 11; }
-    else if (m === 1)              { startY = y - 1; startM = 11; }
-    else                           { startY = y;     startM = 2;  } // Feb-Apr
+    if (m >= 3  && m <= 5)        { startY = y;     startM = 3;  }
+    else if (m >= 6  && m <= 8)   { startY = y;     startM = 6;  }
+    else if (m >= 9  && m <= 11)  { startY = y;     startM = 9;  }
+    else if (m === 12)            { startY = y;     startM = 12; }
+    else /* Jan, Feb */           { startY = y - 1; startM = 12; }
     const months = [];
     for (let i = 0; i < 3; i++) {
         const mm = startM + i;

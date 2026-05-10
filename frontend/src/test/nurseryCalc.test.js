@@ -123,73 +123,86 @@ describe('applyNurseryLink', () => {
     });
 });
 
-describe('tfcPeriodMonths', () => {
-    it('groups May–Jul into one period', () => {
-        expect(tfcPeriodMonths('2026-05')).toEqual(['2026-05', '2026-06', '2026-07']);
-        expect(tfcPeriodMonths('2026-07')).toEqual(['2026-05', '2026-06', '2026-07']);
+describe('tfcPeriodMonths (attendance-aligned: payments are made one month ahead)', () => {
+    it('groups Jun–Aug attendance into one period (May–Jul payment quarter)', () => {
+        expect(tfcPeriodMonths('2026-06')).toEqual(['2026-06', '2026-07', '2026-08']);
+        expect(tfcPeriodMonths('2026-08')).toEqual(['2026-06', '2026-07', '2026-08']);
     });
-    it('groups Aug–Oct into one period', () => {
-        expect(tfcPeriodMonths('2026-09')).toEqual(['2026-08', '2026-09', '2026-10']);
+    it('groups Sep–Nov attendance into one period', () => {
+        expect(tfcPeriodMonths('2026-10')).toEqual(['2026-09', '2026-10', '2026-11']);
     });
-    it('Nov–Jan straddles the year boundary', () => {
-        expect(tfcPeriodMonths('2026-12')).toEqual(['2026-11', '2026-12', '2027-01']);
-        expect(tfcPeriodMonths('2027-01')).toEqual(['2026-11', '2026-12', '2027-01']);
+    it('Dec–Feb straddles the year boundary', () => {
+        expect(tfcPeriodMonths('2026-12')).toEqual(['2026-12', '2027-01', '2027-02']);
+        expect(tfcPeriodMonths('2027-02')).toEqual(['2026-12', '2027-01', '2027-02']);
     });
-    it('groups Feb–Apr into one period', () => {
-        expect(tfcPeriodMonths('2026-03')).toEqual(['2026-02', '2026-03', '2026-04']);
+    it('groups Mar–May attendance into one period (Feb–Apr payment quarter)', () => {
+        expect(tfcPeriodMonths('2026-04')).toEqual(['2026-03', '2026-04', '2026-05']);
+        expect(tfcPeriodMonths('2026-05')).toEqual(['2026-03', '2026-04', '2026-05']);
     });
 });
 
 describe('TFC quarterly cap', () => {
     it('caps the per-child saving at £500 within a single 3-month period', () => {
-        const may  = computeMonthSummary(baseSettings(), new Date(2026, 4, 1));
-        const june = computeMonthSummary(baseSettings(), new Date(2026, 5, 1));
-        const july = computeMonthSummary(baseSettings(), new Date(2026, 6, 1));
-        const ellisSavingTotal = may.tfc.ellisSaving + june.tfc.ellisSaving + july.tfc.ellisSaving;
-        const gaspardSavingTotal = may.tfc.gaspardSaving + june.tfc.gaspardSaving + july.tfc.gaspardSaving;
+        const jun = computeMonthSummary(baseSettings(), new Date(2026, 5, 1));
+        const jul = computeMonthSummary(baseSettings(), new Date(2026, 6, 1));
+        const aug = computeMonthSummary(baseSettings(), new Date(2026, 7, 1));
+        const ellisSavingTotal   = jun.tfc.ellisSaving   + jul.tfc.ellisSaving   + aug.tfc.ellisSaving;
+        const gaspardSavingTotal = jun.tfc.gaspardSaving + jul.tfc.gaspardSaving + aug.tfc.gaspardSaving;
         expect(ellisSavingTotal).toBeLessThanOrEqual(TFC_QUARTERLY_CAP + 1e-6);
         expect(gaspardSavingTotal).toBeLessThanOrEqual(TFC_QUARTERLY_CAP + 1e-6);
     });
 
     it('flags ellisCapped when the cap actually clipped the saving', () => {
-        // With full default schedule, by July 2026 the cap is reached for both kids.
-        const july = computeMonthSummary(baseSettings(), new Date(2026, 6, 1));
-        expect(july.tfc.ellisCapped).toBe(true);
-        expect(july.tfc.gaspardCapped).toBe(true);
+        // With full default schedule, by August attendance (3rd month of the
+        // Jun–Aug quarter) the cap is reached for both kids.
+        const aug = computeMonthSummary(baseSettings(), new Date(2026, 7, 1));
+        expect(aug.tfc.ellisCapped).toBe(true);
+        expect(aug.tfc.gaspardCapped).toBe(true);
     });
 
     it('totalTFC equals invoice minus capped saving (more than 80% of invoice once capped)', () => {
-        const july = computeMonthSummary(baseSettings(), new Date(2026, 6, 1));
-        expect(july.totalTFC).toBeCloseTo(july.totalInvoiced - july.tfc.ellisSaving - july.tfc.gaspardSaving, 2);
-        // Capped: parent transfers MORE than the uncapped 80% baseline.
-        expect(july.totalTFC).toBeGreaterThan(july.totalInvoiced * 0.80 - 1e-6);
-    });
-
-    it('resets at the start of the next period (Aug 2026 starts fresh)', () => {
         const aug = computeMonthSummary(baseSettings(), new Date(2026, 7, 1));
-        expect(aug.tfc.ellisUsedBefore).toBe(0);
-        expect(aug.tfc.gaspardUsedBefore).toBe(0);
-        expect(aug.tfc.ellisCapped).toBe(false);
+        expect(aug.totalTFC).toBeCloseTo(aug.totalInvoiced - aug.tfc.ellisSaving - aug.tfc.gaspardSaving, 2);
+        // Capped: parent transfers MORE than the uncapped 80% baseline.
+        expect(aug.totalTFC).toBeGreaterThan(aug.totalInvoiced * 0.80 - 1e-6);
     });
 
-    it('tfcSavingForMonth tracks consumed savings across the period', () => {
-        const may  = tfcSavingForMonth(baseSettings(), '2026-05');
-        const june = tfcSavingForMonth(baseSettings(), '2026-06');
-        const july = tfcSavingForMonth(baseSettings(), '2026-07');
-        expect(may.ellisUsedBefore).toBe(0);
-        expect(june.ellisUsedBefore).toBeCloseTo(may.ellisSaving, 2);
-        expect(july.ellisUsedBefore).toBeCloseTo(may.ellisSaving + june.ellisSaving, 2);
+    it('resets at the start of the next period (Sep 2026 attendance starts fresh)', () => {
+        const sep = computeMonthSummary(baseSettings(), new Date(2026, 8, 1));
+        expect(sep.tfc.ellisUsedBefore).toBe(0);
+        expect(sep.tfc.gaspardUsedBefore).toBe(0);
+        expect(sep.tfc.ellisCapped).toBe(false);
+    });
+
+    it('May 2026 attendance is the LAST month of the Mar–May period (paid Apr)', () => {
+        // Verifies the payment-shift: May invoice is paid in April, so it lives
+        // in the Feb–Apr payment quarter / Mar–May attendance period.
+        const may = tfcSavingForMonth(baseSettings(), '2026-05');
+        expect(may.period).toEqual(['2026-03', '2026-04', '2026-05']);
+        // Two prior months (Mar, Apr attendance) have already consumed cap.
+        const mar = tfcSavingForMonth(baseSettings(), '2026-03');
+        const apr = tfcSavingForMonth(baseSettings(), '2026-04');
+        expect(may.ellisUsedBefore).toBeCloseTo(mar.ellisSaving + apr.ellisSaving, 2);
+    });
+
+    it('tfcSavingForMonth tracks consumed savings across the period (Jun→Jul→Aug)', () => {
+        const jun = tfcSavingForMonth(baseSettings(), '2026-06');
+        const jul = tfcSavingForMonth(baseSettings(), '2026-07');
+        const aug = tfcSavingForMonth(baseSettings(), '2026-08');
+        expect(jun.ellisUsedBefore).toBe(0);
+        expect(jul.ellisUsedBefore).toBeCloseTo(jun.ellisSaving, 2);
+        expect(aug.ellisUsedBefore).toBeCloseTo(jun.ellisSaving + jul.ellisSaving, 2);
     });
 
     it('does not consume cap from months where taxFree was off', () => {
-        // Override taxFree off for May only, then re-enable from June onwards.
+        // Override taxFree off for June attendance only, then re-enable from July.
         const s = baseSettings();
         s.monthOverrides = {
-            '2026-05': { billing: { taxFree: false, fullWeekModel: true } },
-            '2026-06': { billing: { taxFree: true,  fullWeekModel: true } },
+            '2026-06': { billing: { taxFree: false, fullWeekModel: true } },
+            '2026-07': { billing: { taxFree: true,  fullWeekModel: true } },
         };
-        const june = tfcSavingForMonth(s, '2026-06');
-        expect(june.ellisUsedBefore).toBe(0); // May contributed nothing.
+        const jul = tfcSavingForMonth(s, '2026-07');
+        expect(jul.ellisUsedBefore).toBe(0); // June contributed nothing.
     });
 });
 
