@@ -104,6 +104,10 @@ class BudgetItem(models.Model):
         default=False,
         help_text="If true, this item's monthly value can be auto-synced from the Nursery cost calculator's Transfer to TFC total."
     )
+    is_auto_extra = models.BooleanField(
+        default=False,
+        help_text="If true, this Extra item's value auto-balances each month so the joint Remaining stays at the stored value (treated as the target buffer)."
+    )
     calculation_type = models.CharField(
         max_length=20,
         choices=CALCULATION_TYPE_CHOICES,

@@ -39,6 +39,7 @@ class BudgetItemSchema(Schema):
     is_tab_repayment: bool
     is_extra: bool
     is_nursery_linked: bool
+    is_auto_extra: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -55,6 +56,7 @@ class BudgetItemInputSchema(Schema):
     is_tab_repayment: bool = False
     is_extra: bool = False
     is_nursery_linked: bool = False
+    is_auto_extra: bool = False
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -69,6 +71,7 @@ class BudgetItemEditSchema(Schema):
     is_tab_repayment: Optional[bool] = None
     is_extra: Optional[bool] = None
     is_nursery_linked: Optional[bool] = None
+    is_auto_extra: Optional[bool] = None
     calculation_type: Optional[str] = None
     weekly_payment_day: Optional[int] = None
     last_payment_month_id: Optional[str] = None
@@ -82,6 +85,7 @@ class BudgetItemVersionSchema(Schema):
     is_tab_repayment: bool
     is_extra: bool
     is_nursery_linked: bool
+    is_auto_extra: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
     value: float
@@ -112,6 +116,7 @@ def _serialize_version(budget_item, effective_version, month_obj):
         is_tab_repayment=budget_item.is_tab_repayment,
         is_extra=budget_item.is_extra,
         is_nursery_linked=budget_item.is_nursery_linked,
+        is_auto_extra=budget_item.is_auto_extra,
         calculation_type=budget_item.calculation_type,
         weekly_payment_day=budget_item.weekly_payment_day,
         value=float(effective_version.value),
@@ -172,6 +177,7 @@ def create_month(request, payload: MonthInputSchema):
         month_id=month_id,
         defaults={'month_name': month_name, 'start_date': start_date, 'end_date': end_date}
     )
+    _ensure_auto_extra_singleton(month)
     return month
 
 @api.get("/auth/me", response=UserSchema)
@@ -182,6 +188,42 @@ def get_me(request):
 @api.get("/months/", response=List[MonthSchema])
 def list_all_months(request):
     return Month.objects.all().order_by('start_date')
+
+AUTO_EXTRA_DEFAULT_TARGET = 500
+
+
+def _ensure_auto_extra_singleton(month_obj):
+    """Create the singleton auto-balance Extra item on first encounter of a current/future month.
+
+    Skipped for past months so we don't backdate the buffer onto historical budgets.
+    """
+    if BudgetItem.objects.filter(is_auto_extra=True).exists():
+        return
+    today = datetime.date.today()
+    current_month_start = datetime.date(today.year, today.month, 1)
+    if month_obj.start_date < current_month_start:
+        return
+    with transaction.atomic():
+        # Re-check inside the transaction to avoid a race creating two singletons.
+        if BudgetItem.objects.filter(is_auto_extra=True).exists():
+            return
+        item = BudgetItem.objects.create(
+            item_name='Extra',
+            item_type='expense',
+            owner='shared',
+            expense_pot='',
+            is_extra=True,
+            is_auto_extra=True,
+            calculation_type='fixed',
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=item,
+            month=month_obj,
+            effective_from_month=month_obj,
+            value=AUTO_EXTRA_DEFAULT_TARGET,
+            is_one_off=False,
+        )
+
 
 @api.get("/months/{month_id}/items/", response=List[BudgetItemVersionSchema])
 def list_budget_items_for_month(request, month_id: str):
@@ -267,10 +309,13 @@ def delete_budget_item_from_month(request, month_id: str, budget_item_id: uuid.U
     return 204, None
 
 
-@api.post("/months/{month_id}/budgetitems/", response=BudgetItemSchema)
+@api.post("/months/{month_id}/budgetitems/", response={200: BudgetItemSchema, 409: dict})
 def create_budget_item(request, month_id: str, payload: BudgetItemInputSchema):
     month = get_object_or_404(Month, month_id=month_id)
-    
+
+    if payload.is_auto_extra and BudgetItem.objects.filter(is_auto_extra=True).exists():
+        return 409, {"detail": "An Auto-balance Extra item already exists. Edit it instead of creating a new one."}
+
     with transaction.atomic():
         budget_item_data = payload.dict(exclude={'value', 'is_one_off', 'last_payment_month_id'})
         if payload.last_payment_month_id:

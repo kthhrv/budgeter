@@ -590,3 +590,64 @@ class ExpensePotDefaultsTestCase(TestCase):
             self.assertEqual(resp.json()['expense_pot'], pot)
 
 
+class AutoExtraSingletonTestCase(TestCase):
+    """The auto-balance Extra item is auto-created once via create_month, and only
+    for current/future months. Duplicates are rejected."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='u', password='p')
+        self.client.login(username='u', password='p')
+        self.date_patcher = patch('budget.api.datetime.date', FakeDate)  # today = 2025-10-15
+        self.date_patcher.start()
+        self.addCleanup(self.date_patcher.stop)
+
+    def test_create_month_for_current_month_creates_auto_extra(self):
+        resp = self.client.post('/api/months/', json.dumps({'month': '2025-10'}), content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        autos = BudgetItem.objects.filter(is_auto_extra=True)
+        self.assertEqual(autos.count(), 1)
+        auto = autos.get()
+        self.assertEqual(auto.item_name, 'Extra')
+        self.assertTrue(auto.is_extra)
+        self.assertEqual(auto.owner, 'shared')
+        self.assertEqual(auto.item_type, 'expense')
+        # Default target is seeded as a BudgetItemVersion for the creating month.
+        v = BudgetItemVersion.objects.get(budget_item=auto)
+        self.assertEqual(float(v.value), 500.0)
+        self.assertEqual(v.month.month_id, '2025-10')
+
+    def test_create_month_for_past_month_does_not_create_auto_extra(self):
+        # FakeDate today = 2025-10-15, so 2025-09 is "past".
+        resp = self.client.post('/api/months/', json.dumps({'month': '2025-09'}), content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(BudgetItem.objects.filter(is_auto_extra=True).exists())
+
+    def test_singleton_not_recreated_when_already_exists(self):
+        # First call seeds the singleton.
+        self.client.post('/api/months/', json.dumps({'month': '2025-10'}), content_type='application/json')
+        # Second call (different future month) must not create another.
+        self.client.post('/api/months/', json.dumps({'month': '2025-12'}), content_type='application/json')
+        self.assertEqual(BudgetItem.objects.filter(is_auto_extra=True).count(), 1)
+
+    def test_create_budget_item_rejects_duplicate_auto_extra(self):
+        self.client.post('/api/months/', json.dumps({'month': '2025-10'}), content_type='application/json')
+        resp = self.client.post(
+            '/api/months/2025-10/budgetitems/',
+            json.dumps({
+                'item_name': 'Another Extra', 'item_type': 'expense', 'owner': 'shared',
+                'expense_pot': '', 'is_tab_repayment': False, 'is_extra': True,
+                'is_auto_extra': True,
+                'calculation_type': 'fixed', 'value': 200.0, 'is_one_off': False,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(BudgetItem.objects.filter(is_auto_extra=True).count(), 1)
+
+    def test_is_auto_extra_round_trips_through_schemas(self):
+        self.client.post('/api/months/', json.dumps({'month': '2025-10'}), content_type='application/json')
+        items = self.client.get('/api/months/2025-10/items/').json()
+        auto_items = [i for i in items if i.get('is_auto_extra')]
+        self.assertEqual(len(auto_items), 1)
+        self.assertTrue(auto_items[0]['is_extra'])

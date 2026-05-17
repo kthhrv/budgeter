@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Menu } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
 import { computeMonthSummary, applyNurseryLink } from './utils/nurseryCalc';
+import { applyAutoExtra } from './utils/autoExtra';
 import apiService from './services/api';
 import Toast from './components/Toast';
 import LoadingSkeleton from './components/LoadingSkeleton';
@@ -133,9 +134,10 @@ const App = () => {
     const processedBudgetItems = useMemo(() => {
         const currentMonthName = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
         const itemsWithNurserySub = applyNurseryLink(budgetItems, nurseryAutoTFC, currentMonthName);
+        const itemsWithAutoExtra = applyAutoExtra(itemsWithNurserySub, currentMonthName);
 
         const additionalIncomes = [];
-        for (const item of itemsWithNurserySub) {
+        for (const item of itemsWithAutoExtra) {
             const nameLower = item.item_name.toLowerCase().trim();
             if (item.item_type === 'expense') {
                 if (nameLower === 'tild repay') {
@@ -155,7 +157,7 @@ const App = () => {
                 }
             }
         }
-        return [...itemsWithNurserySub, ...additionalIncomes];
+        return [...itemsWithAutoExtra, ...additionalIncomes];
     }, [budgetItems, nurseryAutoTFC, currentDate]);
 
     useEffect(() => {
