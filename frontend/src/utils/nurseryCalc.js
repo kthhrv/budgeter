@@ -51,15 +51,16 @@ export function sessionCost(type, ageBracket, fundedHours, fullWeekModel) {
     const hrs = sessionHours(type);
     const stdPrice = rates[type];
 
-    if (!fundedHours || fundedHours <= 0) {
-        return { base: stdPrice, fc: 0, total: stdPrice };
-    }
-
+    // Stretched/full-week families pay the full-week hourly on every chargeable
+    // hour, including days that happen to receive no funding allocation (e.g.
+    // Thu/Fri when the 30-hour entitlement is consumed on earlier weekdays).
+    // Falling back to stdPrice on zero-funded days would overcount those days.
+    const funded = Math.max(0, fundedHours || 0);
     const hourly = fullWeekModel ? FULL_WEEK_HOURLY : stdPrice / hrs;
-    const nonFunded = hrs - fundedHours;
-    const frac = fundedHours / hrs;
+    const nonFunded = hrs - funded;
+    const frac = funded / hrs;
     const base = nonFunded * hourly;
-    const fcCost = fc.food * frac + fc.consumables * frac;
+    const fcCost = (fc.food + fc.consumables) * frac;
     return { base, fc: fcCost, total: base + fcCost };
 }
 
@@ -213,10 +214,12 @@ function rawInvoicedForMonth(settings, monthKey) {
         const nStandard = weekdayCounts.standard[i];
         const nBankHols = weekdayCounts.bankHols[i];
         const nFundNorm = Math.max(0, nFunded - nBankHols);
-        const eMonthlyGross = nFundNorm * ellisStretched.daily[i]   + nBankHols * ellisStretched.dailyNoFC[i]   + nStandard * ellisStandard.daily[i];
-        const gMonthlyGross = nFundNorm * gaspardStretched.daily[i] + nBankHols * gaspardStretched.dailyNoFC[i] + nStandard * gaspardStandard.daily[i];
-        ellisInvoiced   += eMonthlyGross * eSib;
-        gaspardInvoiced += gMonthlyGross * gSib;
+        const eBase = nFundNorm * ellisStretched.dailyNoFC[i]   + nBankHols * ellisStretched.dailyNoFC[i]   + nStandard * ellisStandard.daily[i];
+        const gBase = nFundNorm * gaspardStretched.dailyNoFC[i] + nBankHols * gaspardStretched.dailyNoFC[i] + nStandard * gaspardStandard.daily[i];
+        const eFC   = nFundNorm * ellisStretched.dailyFC[i];
+        const gFC   = nFundNorm * gaspardStretched.dailyFC[i];
+        ellisInvoiced   += eBase * eSib + eFC;
+        gaspardInvoiced += gBase * gSib + gFC;
     }
 
     for (const a of (settings.adhoc || [])) {
@@ -308,17 +311,23 @@ export function computeMonthSummary(settings, date) {
     const eSib = eff.ellis.siblingDiscount   ? 0.90 : 1.00;
     const gSib = eff.gaspard.siblingDiscount ? 0.90 : 1.00;
 
-    // Phase 1: per-day / per-adhoc raw amounts (gross + sibling discount only).
+    // Phase 1: per-day / per-adhoc raw amounts. The sibling discount applies
+    // only to the chargeable-hours portion (matching the nursery's invoices) —
+    // food and consumables are billed at full price regardless.
     const rawDaily = [0, 1, 2, 3, 4].map(i => {
         const nFunded   = weekdayCounts.funded[i];
         const nStandard = weekdayCounts.standard[i];
         const nBankHols = weekdayCounts.bankHols[i];
         const nFundNorm = Math.max(0, nFunded - nBankHols);
         const occurrences = nFunded + nStandard;
-        const eMonthlyGross = nFundNorm * ellisStretched.daily[i]   + nBankHols * ellisStretched.dailyNoFC[i]   + nStandard * ellisStandard.daily[i];
-        const gMonthlyGross = nFundNorm * gaspardStretched.daily[i] + nBankHols * gaspardStretched.dailyNoFC[i] + nStandard * gaspardStandard.daily[i];
-        const eMonthlyNet = eMonthlyGross * eSib;
-        const gMonthlyNet = gMonthlyGross * gSib;
+        const eBase = nFundNorm * ellisStretched.dailyNoFC[i]   + nBankHols * ellisStretched.dailyNoFC[i]   + nStandard * ellisStandard.daily[i];
+        const gBase = nFundNorm * gaspardStretched.dailyNoFC[i] + nBankHols * gaspardStretched.dailyNoFC[i] + nStandard * gaspardStandard.daily[i];
+        const eFC   = nFundNorm * ellisStretched.dailyFC[i];
+        const gFC   = nFundNorm * gaspardStretched.dailyFC[i];
+        const eMonthlyGross = eBase + eFC;
+        const gMonthlyGross = gBase + gFC;
+        const eMonthlyNet = eBase * eSib + eFC;
+        const gMonthlyNet = gBase * gSib + gFC;
         return {
             eFundedType: eff.ellisSchedule[i],
             gFundedType: eff.gaspardSchedule[i],

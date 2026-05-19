@@ -37,14 +37,23 @@ describe('computeMonthSummary', () => {
         expect(summary.totalTFC).toBeCloseTo(summary.totalInvoiced, 2);
     });
 
-    it('applies 10% sibling discount to Gaspard', () => {
+    it('applies 10% sibling discount to Gaspard (chargeable hours only)', () => {
         const s = baseSettings();
         s.gaspard.siblingDiscount = true;
         s.ellis.siblingDiscount = false;
-        const summary = computeMonthSummary(s, new Date(2026, 5, 1));
-        // Both kids have identical schedules and ages 2-3 vs 3-5 (same rates),
-        // so Gaspard should be ~90% of Ellis.
-        expect(summary.gaspardInvoiced).toBeCloseTo(summary.ellisInvoiced * 0.9, 1);
+        const onSibling  = computeMonthSummary(s, new Date(2026, 5, 1));
+        s.gaspard.siblingDiscount = false;
+        const offSibling = computeMonthSummary(s, new Date(2026, 5, 1));
+        // The nursery applies the 10% sibling discount to the chargeable-hours
+        // line only — not food/consumables. So the saving equals 10% of the
+        // pre-discount chargeable-hours portion (≈ invoice − food/cons).
+        const eFood = offSibling.ellisInvoiced - onSibling.ellisInvoiced; // 0 (no discount)
+        expect(eFood).toBeCloseTo(0, 6);
+        // Gaspard's saving = 10% of his chargeable-hours portion. With identical
+        // schedules the discount works out to ~£77.47 for June 2026.
+        const saving = offSibling.gaspardInvoiced - onSibling.gaspardInvoiced;
+        expect(saving).toBeGreaterThan(50);
+        expect(saving).toBeLessThan(offSibling.gaspardInvoiced * 0.10); // strictly less than 10% of total
     });
 
     it('includes ad-hoc days that fall in the month', () => {
