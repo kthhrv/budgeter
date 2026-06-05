@@ -158,9 +158,9 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
 
                     {/* Value */}
                     <div>
-                        <label htmlFor="value" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">{formData.is_auto_extra ? 'Target buffer' : 'Value'}</label>
+                        <label htmlFor="value" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">{formData.is_auto_extra ? 'Buffer amount' : 'Value'}</label>
                         {formData.is_auto_extra && (
-                            <p className="text-xs text-gray-500 mb-1.5">The joint Remaining will auto-balance to this amount each month.</p>
+                            <p className="text-xs text-gray-500 mb-1.5">Joint income is deducted from the bills first, so the joint Remaining stays at this buffer each month.</p>
                         )}
                         <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">£</span>
@@ -175,7 +175,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                         {/* Toggle Switches */}
                         <div className="mt-4 space-y-3">
                             <label htmlFor="is_one_off_new" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{formData.is_nursery_linked ? 'Override Nursery sync for this month' : formData.is_auto_extra ? 'Override Auto-balance for this month' : 'One-off for this month'}</span>
+                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{formData.is_nursery_linked ? 'Override Nursery sync for this month' : formData.is_auto_extra ? 'Override buffer for this month' : 'One-off for this month'}</span>
                                 <div className="relative">
                                     <input id="is_one_off_new" type="checkbox" name="is_one_off" checked={formData.is_one_off} onChange={handleChange} className="sr-only peer" />
                                     <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
@@ -211,7 +211,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                             })()}
                             {formData.item_type === 'expense' && formData.owner === 'shared' && !formData.is_tab_repayment && formData.is_extra && formData.expense_pot === '' && (
                                 <label htmlFor="is_auto_extra" className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Auto-balance joint Remaining to this target</span>
+                                    <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Auto-add this fixed buffer to the joint pot each month</span>
                                     <div className="relative">
                                         <input id="is_auto_extra" type="checkbox" name="is_auto_extra" checked={formData.is_auto_extra} onChange={handleChange} className="sr-only peer" />
                                         <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-amber-600 transition-colors"></div>

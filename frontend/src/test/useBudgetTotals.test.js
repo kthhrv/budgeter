@@ -193,6 +193,55 @@ describe('useBudgetTotals', () => {
         expect(result.current.tildShare).toBe(350);
     });
 
+    it('deducts joint income from contributions before splitting', () => {
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '3000' }),
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '1000' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '600' }),
+            makeItem({ item_name: 'Joint income', item_type: 'income', owner: 'shared', effective_value: '200' }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        // Joint income pays the bills first: funded shortfall = 600 - 200 = 400, split 75/25.
+        expect(result.current.sharedIncome).toBe(200);
+        expect(result.current.keithShare).toBeCloseTo(300);
+        expect(result.current.tildShare).toBeCloseTo(100);
+    });
+
+    it('clamps contributions at zero when joint income exceeds shared outgoings', () => {
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '2000' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '300' }),
+            makeItem({ item_name: 'Joint income', item_type: 'income', owner: 'shared', effective_value: '500' }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+
+        // 300 of outgoings fully covered by 500 joint income — no shortfall to split.
+        expect(result.current.keithShare).toBe(0);
+        expect(result.current.tildShare).toBe(0);
+    });
+
+    it('keeps the joint pot at the fixed buffer once income is deducted', () => {
+        // Mirrors the SharedCard formula: Remaining = sharedIncome + contributions
+        //                                            − sharedExpenseTotal − sharedSavings.
+        const items = [
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),
+            makeItem({ item_name: 'Salary', item_type: 'income', owner: 'tild', effective_value: '2000' }),
+            makeItem({ item_type: 'expense', owner: 'shared', effective_value: '600' }),
+            makeItem({ item_name: 'Extra', item_type: 'expense', owner: 'shared', effective_value: '500', is_extra: true, is_auto_extra: true }),
+            makeItem({ item_name: 'Joint income', item_type: 'income', owner: 'shared', effective_value: '300' }),
+        ];
+        const { result } = renderHook(() => useBudgetTotals(items));
+        const contributions = result.current.keithShare + result.current.tildShare;
+        const remaining = result.current.sharedIncome + contributions
+            - result.current.sharedExpenseTotal - result.current.sharedSavings;
+
+        // sharedTotal = 600 + 500 = 1100; funded = 1100 - 300 = 800; remaining lands on the £500 buffer.
+        expect(contributions).toBeCloseTo(800);
+        expect(remaining).toBeCloseTo(500);
+    });
+
     it('separates tab repayments from direct expenses', () => {
         const items = [
             makeItem({ item_name: 'Salary', item_type: 'income', owner: 'keith', effective_value: '2000' }),

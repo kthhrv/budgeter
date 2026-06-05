@@ -24,9 +24,13 @@ export const useBudgetTotals = (items) => {
         const sharedExpenseTotal = sharedTotal - extraTotal;
 
         const sharedSavings = sumValues(savingsItems.filter(i => i.owner === 'shared'));
+        const sharedIncome = sumValues(incomes.filter(i => i.owner === 'shared'));
 
-        // Contributions cover all shared outgoings: regular expenses, extras (buffer), and savings.
-        const sharedFundedTotal = sharedTotal + sharedSavings;
+        // Joint income pays the shared outgoings (regular expenses, the extra/buffer,
+        // and savings) first; contributions only cover the shortfall. Clamped at 0 so a
+        // large joint income never makes contributions negative — surplus income then
+        // simply lifts the joint Remaining above the buffer instead of flowing back out.
+        const sharedFundedTotal = Math.max(0, sharedTotal + sharedSavings - sharedIncome);
         const keithShare = sharedFundedTotal * keithProportion;
         const tildShare = sharedFundedTotal * tildProportion;
 
@@ -48,8 +52,6 @@ export const useBudgetTotals = (items) => {
 
         const billsPotTotal = sumValues(items.filter(item => item.expense_pot === 'bills'));
         const groceriesPotTotal = sumValues(items.filter(item => item.expense_pot === 'groceries'));
-
-        const sharedIncome = sumValues(incomes.filter(i => i.owner === 'shared'));
 
         return {
             keithShare, tildShare, keithProportion, tildProportion,
