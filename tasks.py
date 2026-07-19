@@ -12,6 +12,8 @@ Usage:
 """
 
 import io
+import os
+import tempfile
 
 from invoke import task
 
@@ -22,7 +24,16 @@ PROD_USER = "root"
 PROD_DIR_TEMPLATE = "/opt/stacks/budgeter-{env}"
 DEFAULT_ENV = "demo"
 TARGET_PLATFORM = "linux/amd64"
-BUILDX_BUILDER = "amd64builder"
+BUILDX_BUILDER = "budgeter-amd64"
+
+# The registry is plain HTTP. When the docker daemon uses the containerd image
+# store, `docker push` ignores daemon.json `insecure-registries` and forces
+# HTTPS (fails with EOF). So we push straight from BuildKit instead, with a
+# builder that's been told the registry is insecure HTTP via this config.
+BUILDKITD_CONFIG = f'''[registry."{REGISTRY}"]
+  http = true
+  insecure = true
+'''
 
 IMAGE = f"{REGISTRY}/{REPO}"
 
@@ -55,10 +66,34 @@ def _ssh(c, cmd, env=DEFAULT_ENV):
     c.run(f'ssh {remote} "cd {prod_dir} && {cmd}"')
 
 
+def _ensure_builder(c):
+    """Create the buildx builder (insecure-registry-aware) if it doesn't exist.
+
+    Idempotent and cheap — buildx persists the builder definition (incl. the
+    insecure-registry config) on the host, so this only does real work on first
+    run or after the builder is removed. The builder container itself is
+    auto-booted by buildx on use, so it survives a docker/colima restart.
+    """
+    if c.run(f"docker buildx inspect {BUILDX_BUILDER}", hide=True, warn=True).ok:
+        return
+    print(f"Creating buildx builder '{BUILDX_BUILDER}' (insecure registry: {REGISTRY})")
+    fd, config_path = tempfile.mkstemp(suffix=".toml")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(BUILDKITD_CONFIG)
+        c.run(
+            f"docker buildx create --name {BUILDX_BUILDER} --driver docker-container "
+            f"--platform {TARGET_PLATFORM} --config {config_path} --bootstrap"
+        )
+    finally:
+        os.remove(config_path)
+
+
 @task
 def build(c):
-    """Build Docker image tagged with git SHA and latest (linux/amd64 for the deploy host)."""
+    """Build Docker image tagged with git SHA and latest, loaded into the local daemon."""
     sha = _get_sha(c)
+    _ensure_builder(c)
     print(f"Building image — SHA: {sha} (platform: {TARGET_PLATFORM})")
     c.run(
         f"docker buildx build --builder {BUILDX_BUILDER} --platform {TARGET_PLATFORM} --load "
@@ -68,11 +103,16 @@ def build(c):
 
 @task
 def push(c):
-    """Push image to registry."""
+    """Push image to the registry straight from BuildKit (cache hit after build)."""
     sha = _get_sha(c)
+    _ensure_builder(c)
     print(f"Pushing {IMAGE}:{sha} and latest")
-    c.run(f"docker push {IMAGE}:{sha}")
-    c.run(f"docker push {IMAGE}:latest")
+    # Re-run the build with --push; the layers are already in the build cache
+    # from `build`, so this just exports + pushes them over HTTP.
+    c.run(
+        f"docker buildx build --builder {BUILDX_BUILDER} --platform {TARGET_PLATFORM} --push "
+        f"-t {IMAGE}:{sha} -t {IMAGE}:latest ."
+    )
 
 
 @task

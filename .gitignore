@@ -19,8 +19,14 @@ db.sqlite3
 .env
 .env.*
 
+# Node
+node_modules/
+
 # System files
 .DS_Store
+
+# Claude
+.claude/
 
 # Local spreadsheets
 *.xlsx
