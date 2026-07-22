@@ -354,8 +354,7 @@ const NurseryPage = ({ onSettingsChange }) => {
                 <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-xl p-5 shadow flex flex-col">
                     <div className="text-amber-50 text-lg font-semibold mb-2">Transfer to TFC</div>
                     {(() => {
-                        const periodLabel = `${calc.tfc.periodMonths[0]} – ${calc.tfc.periodMonths[2]}`;
-                        const TFCAmount = ({ amount, saving, usedBefore, capped }) => {
+                        const TFCAmount = ({ amount, saving, usedBefore, capped, periodLabel }) => {
                             const periodTotal = usedBefore + saving;
                             return (
                                 <div className="relative inline-block group">
@@ -379,7 +378,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                                         <TFCAmount amount={calc.ellisTFC}
                                                    saving={calc.tfc.ellisSaving}
                                                    usedBefore={calc.tfc.ellisUsedBefore}
-                                                   capped={calc.tfc.ellisCapped} />
+                                                   capped={calc.tfc.ellisCapped}
+                                                   periodLabel={calc.tfc.ellisPeriodLabel} />
                                     </div>
                                 </div>
                                 <div className="text-center">
@@ -389,7 +389,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                                         <TFCAmount amount={calc.gaspardTFC}
                                                    saving={calc.tfc.gaspardSaving}
                                                    usedBefore={calc.tfc.gaspardUsedBefore}
-                                                   capped={calc.tfc.gaspardCapped} />
+                                                   capped={calc.tfc.gaspardCapped}
+                                                   periodLabel={calc.tfc.gaspardPeriodLabel} />
                                     </div>
                                 </div>
                             </div>
@@ -599,8 +600,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr><td className="py-1">Ellis{calc.tfc.ellisCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.periodMonths[0]} – ${calc.tfc.periodMonths[2]})`}>· capped</span>}</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.ellisTFC)}</td><td className="text-right py-1 text-rose-600">{money(ellisMIL)}</td><td className="text-right py-1">{money(calc.ellisTFC - ellisMIL)}</td></tr>
-                                            <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.periodMonths[0]} – ${calc.tfc.periodMonths[2]})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-rose-600">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
+                                            <tr><td className="py-1">Ellis{calc.tfc.ellisCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.ellisPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.ellisTFC)}</td><td className="text-right py-1 text-rose-600">{money(ellisMIL)}</td><td className="text-right py-1">{money(calc.ellisTFC - ellisMIL)}</td></tr>
+                                            <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.gaspardPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-rose-600">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
                                         </tbody>
                                         <tfoot>
                                             <tr className="font-semibold border-t">

@@ -154,29 +154,74 @@ export function effectiveForMonth(settings, monthKey) {
 // ------------------------- TFC entitlement period (£500 cap) -------------------------
 
 // HMRC Tax-Free Childcare adds a 20% top-up capped at £500 per child per
-// 3-month entitlement period. Both kids' periods reset on 1 May (payment side).
-// Nursery is paid one month in advance, so the May payment buys June's
-// attendance — meaning the May–Jul payment quarter maps to attendance months
-// Jun–Aug. Attendance-aligned periods (used everywhere in this file) are:
-//   Mar–May, Jun–Aug, Sep–Nov, Dec–Feb.
+// 3-month entitlement period. Crucially, those periods are PERSONAL to each
+// child's account (keyed to their application / 3-monthly reconfirmation date)
+// and the cap is measured on the PAYMENT date, not attendance. The nursery
+// invoice is paid on the 30th of the month before attendance (the 30 Jul
+// payment funds August attendance), so we bucket each month's top-up by the
+// entitlement period its payment lands in.
+//
+// Anchors below are the day-of-month + phase each child's period recurs on.
+// Ellis reconfirms on the 31st in Jan/Apr/Jul/Oct; Gaspard on the 20th in
+// Feb/May/Aug/Nov. If HMRC ever shifts a period (e.g. a missed reconfirmation),
+// update the anchor here.
 export const TFC_QUARTERLY_CAP = 500;
+export const TFC_PAY_DAY = 30; // day of the prior month the invoice is paid
+export const TFC_ANCHORS = {
+    ellis:   { month: 1, day: 31 }, // 31 Jan → Jan/Apr/Jul/Oct
+    gaspard: { month: 5, day: 20 }, // 20 May → Feb/May/Aug/Nov
+};
 
-export function tfcPeriodMonths(monthKey) {
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const daysInMonth = (y, m1) => new Date(y, m1, 0).getDate(); // m1 is 1-12
+
+// Absolute month index (…, 24252 for 2021-01, …) and back again. We work in
+// whole months rather than calendar dates: an entitlement period is exactly 3
+// consecutive PAYMENT months, so month arithmetic avoids the day-clamping
+// ambiguity of a month-end anchor (e.g. the 31st) versus a mid-month pay day.
+const monthIndexOf = (monthKey) => {
     const [y, m] = monthKey.split('-').map(Number);
-    let startY, startM;
-    if (m >= 3  && m <= 5)        { startY = y;     startM = 3;  }
-    else if (m >= 6  && m <= 8)   { startY = y;     startM = 6;  }
-    else if (m >= 9  && m <= 11)  { startY = y;     startM = 9;  }
-    else if (m === 12)            { startY = y;     startM = 12; }
-    else /* Jan, Feb */           { startY = y - 1; startM = 12; }
-    const months = [];
-    for (let i = 0; i < 3; i++) {
-        const mm = startM + i;
-        const yy = startY + Math.floor((mm - 1) / 12);
-        const m2 = ((mm - 1) % 12) + 1;
-        months.push(`${yy}-${String(m2).padStart(2, '0')}`);
+    return y * 12 + (m - 1);
+};
+const monthKeyOf = (idx) => `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, '0')}`;
+
+// The payment for attendance month `attIdx` is made in the previous month.
+const payIndexOf = (attIdx) => attIdx - 1;
+
+// The payment-month index at which the entitlement period containing `payIdx`
+// begins, given an anchor month (1-12). Period starts recur every 3 months in
+// phase with the anchor.
+function periodStartPayIndex(payIdx, anchor) {
+    const payMonth1to12 = (payIdx % 12) + 1;
+    const offset = (((payMonth1to12 - anchor.month) % 3) + 3) % 3;
+    return payIdx - offset;
+}
+
+// Human label for the period a payment-month index falls in, formatted as the
+// HMRC-style entitlement window, e.g. "20 May – 19 Aug 2026".
+function periodLabelFor(payIdx, anchor) {
+    const startPay = periodStartPayIndex(payIdx, anchor);
+    const sy = Math.floor(startPay / 12), sm = (startPay % 12) + 1;
+    const sd = Math.min(anchor.day, daysInMonth(sy, sm));
+    const start = new Date(sy, sm - 1, sd);
+    const ny = Math.floor((startPay + 3) / 12), nm = ((startPay + 3) % 12) + 1;
+    const nd = Math.min(anchor.day, daysInMonth(ny, nm));
+    const last = new Date(ny, nm - 1, nd - 1); // day before the next period starts
+    const fmt = (d) => `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+    return `${fmt(start)} – ${fmt(last)} ${last.getFullYear()}`;
+}
+
+// Attendance months (before `monthKey`) whose payment lands in the SAME
+// entitlement period as monthKey's payment — i.e. the prior months that have
+// already consumed part of this period's £500 cap.
+function priorAttendanceMonths(monthKey, anchor) {
+    const payIdx = payIndexOf(monthIndexOf(monthKey));
+    const startPay = periodStartPayIndex(payIdx, anchor);
+    const prior = [];
+    for (let p = startPay; p < payIdx; p++) {
+        prior.push(monthKeyOf(p + 1)); // attendance month = payment month + 1
     }
-    return months;
+    return prior;
 }
 
 // Cheap per-child invoice computation for a single month (no MIL/TFC). Used
@@ -235,30 +280,48 @@ function rawInvoicedForMonth(settings, monthKey) {
     return { ellisInvoiced, gaspardInvoiced, taxFree: eff.taxFree };
 }
 
-// For the given month, walk prior months in the same TFC entitlement period
-// to determine how much of each child's £500 cap has already been consumed,
-// then compute the cap-aware saving for the current month.
-export function tfcSavingForMonth(settings, monthKey) {
-    const period = tfcPeriodMonths(monthKey);
-    const idx = period.indexOf(monthKey);
-    let ellisUsed = 0, gaspardUsed = 0;
+// For the given attendance month, walk the prior months whose payment shares
+// the same (per-child) entitlement period to determine how much of each
+// child's £500 cap has already been consumed, then compute the cap-aware
+// saving for the current month. Each child is evaluated on its own anchor, so
+// the two can be in different periods in the same calendar month.
+function childSavingForMonth(settings, childKey, monthKey) {
+    const anchor = TFC_ANCHORS[childKey];
+    const invKey = childKey === 'ellis' ? 'ellisInvoiced' : 'gaspardInvoiced';
+    const prior = priorAttendanceMonths(monthKey, anchor);
 
-    for (let i = 0; i < idx; i++) {
-        const raw = rawInvoicedForMonth(settings, period[i]);
+    let used = 0;
+    for (const pk of prior) {
+        const raw = rawInvoicedForMonth(settings, pk);
         if (!raw.taxFree) continue;
-        ellisUsed   += Math.max(0, Math.min(raw.ellisInvoiced   * 0.20, TFC_QUARTERLY_CAP - ellisUsed));
-        gaspardUsed += Math.max(0, Math.min(raw.gaspardInvoiced * 0.20, TFC_QUARTERLY_CAP - gaspardUsed));
+        used += Math.max(0, Math.min(raw[invKey] * 0.20, TFC_QUARTERLY_CAP - used));
     }
 
     const current = rawInvoicedForMonth(settings, monthKey);
-    const ellisSaving   = current.taxFree ? Math.max(0, Math.min(current.ellisInvoiced   * 0.20, TFC_QUARTERLY_CAP - ellisUsed))   : 0;
-    const gaspardSaving = current.taxFree ? Math.max(0, Math.min(current.gaspardInvoiced * 0.20, TFC_QUARTERLY_CAP - gaspardUsed)) : 0;
+    const saving = current.taxFree
+        ? Math.max(0, Math.min(current[invKey] * 0.20, TFC_QUARTERLY_CAP - used))
+        : 0;
 
     return {
-        ellisSaving, gaspardSaving,
-        ellisUsedBefore: ellisUsed,
-        gaspardUsedBefore: gaspardUsed,
-        period,
+        saving,
+        usedBefore: used,
+        periodLabel: periodLabelFor(payIndexOf(monthIndexOf(monthKey)), anchor),
+        periodMonths: [...prior, monthKey],
+    };
+}
+
+export function tfcSavingForMonth(settings, monthKey) {
+    const ellis   = childSavingForMonth(settings, 'ellis',   monthKey);
+    const gaspard = childSavingForMonth(settings, 'gaspard', monthKey);
+    return {
+        ellisSaving:        ellis.saving,
+        gaspardSaving:      gaspard.saving,
+        ellisUsedBefore:    ellis.usedBefore,
+        gaspardUsedBefore:  gaspard.usedBefore,
+        ellisPeriodLabel:   ellis.periodLabel,
+        gaspardPeriodLabel: gaspard.periodLabel,
+        ellisPeriodMonths:  ellis.periodMonths,
+        gaspardPeriodMonths: gaspard.periodMonths,
     };
 }
 
@@ -425,7 +488,8 @@ export function computeMonthSummary(settings, date) {
             ellisCapped:       eff.taxFree && cap.ellisSaving   < ellisInvoiced   * 0.20 - 1e-6,
             gaspardCapped:     eff.taxFree && cap.gaspardSaving < gaspardInvoiced * 0.20 - 1e-6,
             quarterlyCap:      TFC_QUARTERLY_CAP,
-            periodMonths:      cap.period,
+            ellisPeriodLabel:   cap.ellisPeriodLabel,
+            gaspardPeriodLabel: cap.gaspardPeriodLabel,
         },
     };
 }
