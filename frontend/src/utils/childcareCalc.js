@@ -60,12 +60,17 @@ function mondayIso(y, m0, d) {
 const emptyChildcare = () => ({
     startMonth: CHILDCARE_START_DEFAULT,
     nonTermDays: [],
-    // `schedule` is the recurring weekly pattern; `overrides` are per-date
-    // exceptions edited on the calendar (add an ad-hoc session, or remove a day
-    // from the recurring pattern). Overrides win over the weekly pattern.
+    // `schedule` is the baseline recurring weekly pattern; `overrides` are
+    // per-date exceptions edited on the calendar (add an ad-hoc session, or
+    // remove a day from the recurring pattern). Overrides win over the pattern.
     breakfast:   { tfc: true, schedule: [false, false, false, false, false], overrides: {} },
     afterSchool: { tfc: true, schedule: ['none', 'none', 'none', 'none', 'none'], overrides: {} },
     holidayClubs: [],
+    // Month-scoped weekly patterns. `patterns[YYYY-MM] = { breakfast:[...],
+    // afterSchool:[...] }` — the effective pattern for a month is the latest one
+    // set at or before it (forward-fill, like the Nursery tab). Falls back to
+    // the baseline `schedule` above for months before any pattern was set.
+    patterns: {},
 });
 
 export function getChildcare(settings) {
@@ -78,7 +83,20 @@ export function getChildcare(settings) {
         breakfast:    { ...d.breakfast, ...(c.breakfast || {}), overrides: (c.breakfast && c.breakfast.overrides) || {} },
         afterSchool:  { ...d.afterSchool, ...(c.afterSchool || {}), overrides: (c.afterSchool && c.afterSchool.overrides) || {} },
         holidayClubs: Array.isArray(c.holidayClubs) ? c.holidayClubs : [],
+        patterns:     (c.patterns && typeof c.patterns === 'object') ? c.patterns : {},
     };
+}
+
+// The effective weekly pattern for `concept` in `monthKey`: the latest
+// month-scoped pattern set at or before monthKey, else the baseline schedule.
+export function effectiveSchedule(childcare, monthKey, concept) {
+    const patterns = childcare.patterns || {};
+    const keys = Object.keys(patterns).filter(m => m <= monthKey).sort();
+    for (let i = keys.length - 1; i >= 0; i--) {
+        const v = patterns[keys[i]] && patterns[keys[i]][concept];
+        if (v != null) return v;
+    }
+    return childcare[concept].schedule;
 }
 
 // Per-date attendance map for the displayed month. Powers both the calendar
@@ -92,6 +110,8 @@ export function childcareDayMarkers(settings, monthKey) {
     const nonTerm = new Set(c.nonTermDays);
     const bOv = c.breakfast.overrides || {};
     const aOv = c.afterSchool.overrides || {};
+    const bSchedule = effectiveSchedule(c, monthKey, 'breakfast');
+    const aSchedule = effectiveSchedule(c, monthKey, 'afterSchool');
 
     const map = {};
     const dim = daysInMonth(y, m0);
@@ -110,8 +130,8 @@ export function childcareDayMarkers(settings, monthKey) {
         let afterSchool = null;
         let overridden = false;
         if (termWeekday) {
-            breakfast = iso in bOv ? !!bOv[iso] : c.breakfast.schedule[wd] === true;
-            const aRec = c.afterSchool.schedule[wd] !== 'none' ? c.afterSchool.schedule[wd] : 'none';
+            breakfast = iso in bOv ? !!bOv[iso] : bSchedule[wd] === true;
+            const aRec = aSchedule[wd] !== 'none' ? aSchedule[wd] : 'none';
             const aEff = iso in aOv ? aOv[iso] : aRec;
             afterSchool = aEff && aEff !== 'none' ? aEff : null;
             overridden = (iso in bOv) || (iso in aOv);

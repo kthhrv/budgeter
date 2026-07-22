@@ -39,6 +39,18 @@ describe('computeChildcare — breakfast', () => {
     });
 });
 
+describe('computeChildcare — month-scoped weekly pattern (forward-fill)', () => {
+    it('a pattern set for a later month applies from that month, not before', () => {
+        const s = cc({
+            breakfast: { tfc: false, schedule: ALL(true), overrides: {} }, // baseline: every weekday
+            patterns: { '2026-10': { breakfast: ALL(false) } },            // October onward: none
+        });
+        expect(computeChildcare(s, '2026-09').breakfast.cost).toBeGreaterThan(0); // baseline still applies in Sep
+        expect(computeChildcare(s, '2026-10').breakfast.cost).toBe(0);            // October uses its own pattern
+        expect(computeChildcare(s, '2026-11').breakfast.cost).toBe(0);            // and forward-fills to Nov
+    });
+});
+
 describe('computeChildcare — after-school', () => {
     it('long (3:15–6:30) is £24/day; Tuesdays only = 5 × £24', () => {
         const c = computeChildcare(cc({ afterSchool: { tfc: false, schedule: ['none', 'long', 'none', 'none', 'none'], adhoc: [] } }), MONTH);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import apiService from '../services/api';
 import { formatDate, getInitialDate } from '../utils/helpers';
 import MonthSelector from './MonthSelector';
-import { computeChildcare, childcareDayMarkers, getChildcare, CHILDCARE_RATES, SCHOOL_HOLIDAY_RANGES, expandDateRanges } from '../utils/childcareCalc';
+import { computeChildcare, childcareDayMarkers, getChildcare, effectiveSchedule, CHILDCARE_RATES, SCHOOL_HOLIDAY_RANGES, expandDateRanges } from '../utils/childcareCalc';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const WEEK_HEAD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -221,6 +221,10 @@ const ChildcarePage = ({ onSettingsChange }) => {
     const markers = useMemo(() => childcareDayMarkers({ childcare }, monthKey), [childcare, monthKey]);
     const calc = useMemo(() => computeChildcare({ childcare }, monthKey), [childcare, monthKey]);
 
+    // Weekly pattern effective for the displayed month (forward-filled).
+    const effBreakfast = effectiveSchedule(childcare, monthKey, 'breakfast');
+    const effAfterSchool = effectiveSchedule(childcare, monthKey, 'afterSchool');
+
     // ---- mutators ----
     const patchConcept = (concept, p) => setChildcare(c => ({ ...c, [concept]: { ...c[concept], ...p } }));
 
@@ -244,14 +248,15 @@ const ChildcarePage = ({ onSettingsChange }) => {
         }
     };
 
-    const setBreakfastDay = (i, on) => setChildcare(c => {
-        const s = [...c.breakfast.schedule]; s[i] = on;
-        return { ...c, breakfast: { ...c.breakfast, schedule: s } };
+    // Editing the weekly pattern writes a month-scoped pattern (seeded from the
+    // currently effective one) so it applies from this month forward until the
+    // next change — never backwards or onto an already-diverged later month.
+    const setPatternDay = (concept, i, value) => setChildcare(c => {
+        const s = [...effectiveSchedule(c, monthKey, concept)]; s[i] = value;
+        return { ...c, patterns: { ...c.patterns, [monthKey]: { ...(c.patterns?.[monthKey] || {}), [concept]: s } } };
     });
-    const setAfterSchoolDay = (i, opt) => setChildcare(c => {
-        const s = [...c.afterSchool.schedule]; s[i] = opt;
-        return { ...c, afterSchool: { ...c.afterSchool, schedule: s } };
-    });
+    const setBreakfastDay = (i, on) => setPatternDay('breakfast', i, on);
+    const setAfterSchoolDay = (i, opt) => setPatternDay('afterSchool', i, opt);
 
     // Per-date session overrides (edited on the calendar). Passing `undefined`
     // clears the override so the day reverts to the weekly pattern.
@@ -343,8 +348,8 @@ const ChildcarePage = ({ onSettingsChange }) => {
                             marker={mk}
                             bOverridden={selectedDay in (childcare.breakfast.overrides || {})}
                             aOverridden={selectedDay in (childcare.afterSchool.overrides || {})}
-                            weeklyBreakfast={wd <= 4 && childcare.breakfast.schedule[wd] === true}
-                            weeklyAfterSchool={wd <= 4 ? childcare.afterSchool.schedule[wd] : 'none'}
+                            weeklyBreakfast={wd <= 4 && effBreakfast[wd] === true}
+                            weeklyAfterSchool={wd <= 4 ? effAfterSchool[wd] : 'none'}
                             holidayClubs={childcare.holidayClubs}
                             onToggleClubDay={toggleClubDay}
                             onSetBreakfast={(v) => setOverride('breakfast', selectedDay, v)}
@@ -424,7 +429,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         {DAYS.map((d, i) => (
                             <label key={d} className="flex items-center justify-between text-sm">
                                 <span className="text-gray-600">{d}</span>
-                                <select value={childcare.breakfast.schedule[i] ? 'yes' : 'no'} onChange={e => setBreakfastDay(i, e.target.value === 'yes')}
+                                <select value={effBreakfast[i] ? 'yes' : 'no'} onChange={e => setBreakfastDay(i, e.target.value === 'yes')}
                                         className="rounded-lg border border-gray-200 px-2 py-1 bg-white text-sm">
                     <option value="no">Not attending</option>
                                     <option value="yes">Attending</option>
@@ -446,7 +451,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         {DAYS.map((d, i) => (
                             <label key={d} className="flex items-center justify-between text-sm gap-2">
                                 <span className="text-gray-600">{d}</span>
-                                <select value={childcare.afterSchool.schedule[i]} onChange={e => setAfterSchoolDay(i, e.target.value)}
+                                <select value={effAfterSchool[i]} onChange={e => setAfterSchoolDay(i, e.target.value)}
                                         className="rounded-lg border border-gray-200 px-2 py-1 bg-white text-sm">
                     <option value="none">Not attending</option>
                                     <option value="short">3:15–4:30 (£12)</option>
