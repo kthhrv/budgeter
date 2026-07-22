@@ -100,9 +100,20 @@ class BudgetItem(models.Model):
         default=False,
         help_text="If true, contributions still cover this item but it is treated as a buffer/savings line — excluded from the joint Expenses total and reflected in Remaining."
     )
-    is_nursery_linked = models.BooleanField(
-        default=False,
-        help_text="If true, this item's monthly value can be auto-synced from the Nursery cost calculator's Transfer to TFC total."
+    CHILDCARE_LINK_CHOICES = [
+        ('', '—'),
+        ('ellis_nursery', 'Ellis nursery'),
+        ('gaspard_care', 'Gaspard breakfast/after-school'),
+        ('gaspard_holiday', 'Gaspard holiday club'),
+    ]
+    childcare_link = models.CharField(
+        max_length=20,
+        choices=CHILDCARE_LINK_CHOICES,
+        blank=True,
+        default='',
+        help_text="If set, this item's monthly value is auto-synced from the childcare "
+                  "calculators: 'ellis_nursery' → Ellis's Transfer to TFC, 'gaspard_care' → "
+                  "Gaspard's breakfast + after-school net, 'gaspard_holiday' → his holiday-club net."
     )
     is_auto_extra = models.BooleanField(
         default=False,

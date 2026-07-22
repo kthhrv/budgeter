@@ -417,8 +417,8 @@ class BudgetAPITestCase(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class IsNurseryLinkedTestCase(TestCase):
-    """Round-trip the is_nursery_linked field through create + edit + listing."""
+class ChildcareLinkTestCase(TestCase):
+    """Round-trip the childcare_link field through create + edit + listing."""
 
     def setUp(self):
         from django.contrib.auth.models import User
@@ -430,11 +430,11 @@ class IsNurseryLinkedTestCase(TestCase):
             start_date=datetime.date(2026, 6, 1), end_date=datetime.date(2026, 6, 30),
         )
 
-    def test_create_and_list_round_trips_is_nursery_linked(self):
+    def test_create_and_list_round_trips_childcare_link(self):
         payload = {
             'item_name': 'Nursery', 'item_type': 'expense', 'owner': 'shared',
             'expense_pot': '', 'is_tab_repayment': False, 'is_extra': False,
-            'is_nursery_linked': True,
+            'childcare_link': 'ellis_nursery',
             'calculation_type': 'fixed', 'value': 100.0, 'is_one_off': False,
         }
         resp = self.client.post(
@@ -442,18 +442,18 @@ class IsNurseryLinkedTestCase(TestCase):
             json.dumps(payload), content_type='application/json',
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.json()['is_nursery_linked'])
+        self.assertEqual(resp.json()['childcare_link'], 'ellis_nursery')
 
         resp = self.client.get(f'/api/months/{self.month.month_id}/items/')
         items = resp.json()
         nursery_items = [i for i in items if i['item_name'] == 'Nursery']
         self.assertEqual(len(nursery_items), 1)
-        self.assertTrue(nursery_items[0]['is_nursery_linked'])
+        self.assertEqual(nursery_items[0]['childcare_link'], 'ellis_nursery')
 
-    def test_edit_can_toggle_off_is_nursery_linked(self):
+    def test_edit_can_change_and_clear_childcare_link(self):
         item = BudgetItem.objects.create(
-            item_name='Nursery', item_type='expense', owner='shared',
-            is_nursery_linked=True,
+            item_name='Childcare Gaspard', item_type='expense', owner='shared',
+            childcare_link='gaspard_care',
         )
         BudgetItemVersion.objects.create(
             budget_item=item, month=self.month, effective_from_month=self.month,
@@ -461,12 +461,12 @@ class IsNurseryLinkedTestCase(TestCase):
         )
         resp = self.client.put(
             f'/api/budgetitems/{item.budget_item_id}/',
-            json.dumps({'is_nursery_linked': False}),
+            json.dumps({'childcare_link': ''}),
             content_type='application/json',
         )
         self.assertEqual(resp.status_code, 200)
         item.refresh_from_db()
-        self.assertFalse(item.is_nursery_linked)
+        self.assertEqual(item.childcare_link, '')
 
 
 class OneOffRolloverTestCase(TestCase):

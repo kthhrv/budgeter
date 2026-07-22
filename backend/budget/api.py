@@ -38,7 +38,7 @@ class BudgetItemSchema(Schema):
     expense_pot: str
     is_tab_repayment: bool
     is_extra: bool
-    is_nursery_linked: bool
+    childcare_link: str
     is_auto_extra: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
@@ -55,7 +55,7 @@ class BudgetItemInputSchema(Schema):
     expense_pot: str = ''
     is_tab_repayment: bool = False
     is_extra: bool = False
-    is_nursery_linked: bool = False
+    childcare_link: str = ''
     is_auto_extra: bool = False
     calculation_type: str
     weekly_payment_day: Optional[int] = None
@@ -70,7 +70,7 @@ class BudgetItemEditSchema(Schema):
     expense_pot: Optional[str] = None
     is_tab_repayment: Optional[bool] = None
     is_extra: Optional[bool] = None
-    is_nursery_linked: Optional[bool] = None
+    childcare_link: Optional[str] = None
     is_auto_extra: Optional[bool] = None
     calculation_type: Optional[str] = None
     weekly_payment_day: Optional[int] = None
@@ -84,7 +84,7 @@ class BudgetItemVersionSchema(Schema):
     expense_pot: str
     is_tab_repayment: bool
     is_extra: bool
-    is_nursery_linked: bool
+    childcare_link: str
     is_auto_extra: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
@@ -115,7 +115,7 @@ def _serialize_version(budget_item, effective_version, month_obj):
         expense_pot=budget_item.expense_pot,
         is_tab_repayment=budget_item.is_tab_repayment,
         is_extra=budget_item.is_extra,
-        is_nursery_linked=budget_item.is_nursery_linked,
+        childcare_link=budget_item.childcare_link,
         is_auto_extra=budget_item.is_auto_extra,
         calculation_type=budget_item.calculation_type,
         weekly_payment_day=budget_item.weekly_payment_day,

@@ -4,7 +4,7 @@ import { formatDate, DAY_CHOICES } from '../utils/helpers';
 const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
     const isNew = !item?.budget_item_id;
     const [formData, setFormData] = useState({
-        item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, is_nursery_linked: false, is_auto_extra: false,
+        item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
         calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
         last_payment_month_id: ''
     });
@@ -14,7 +14,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
         if (isOpen) {
             if (isNew) {
                 setFormData({
-                    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, is_nursery_linked: false, is_auto_extra: false,
+                    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
                     calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
                     last_payment_month_id: ''
                 });
@@ -27,7 +27,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                     expense_pot: item.expense_pot || '',
                     is_tab_repayment: item.is_tab_repayment || false,
                     is_extra: item.is_extra || false,
-                    is_nursery_linked: item.is_nursery_linked || false,
+                    childcare_link: item.childcare_link || '',
                     is_auto_extra: item.is_auto_extra || false,
                     calculation_type: item.calculation_type || 'fixed',
                     weekly_payment_day: item.weekly_payment_day || '',
@@ -66,7 +66,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                 next.expense_pot = '';
                 next.is_tab_repayment = false;
                 next.is_extra = false;
-                next.is_nursery_linked = false;
+                next.childcare_link = '';
                 next.is_auto_extra = false;
             }
             if (name === 'expense_pot' && value !== '') {
@@ -78,7 +78,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
             }
             if (name === 'is_auto_extra' && checked) {
                 next.is_extra = true;
-                next.is_nursery_linked = false;
+                next.childcare_link = '';
                 next.expense_pot = '';
             }
             return next;
@@ -175,7 +175,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                         {/* Toggle Switches */}
                         <div className="mt-4 space-y-3">
                             <label htmlFor="is_one_off_new" className="flex items-center justify-between cursor-pointer group">
-                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{formData.is_nursery_linked ? 'Override Nursery sync for this month' : formData.is_auto_extra ? 'Override buffer for this month' : 'One-off for this month'}</span>
+                                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{formData.childcare_link ? 'Override Nursery sync for this month' : formData.is_auto_extra ? 'Override buffer for this month' : 'One-off for this month'}</span>
                                 <div className="relative">
                                     <input id="is_one_off_new" type="checkbox" name="is_one_off" checked={formData.is_one_off} onChange={handleChange} className="sr-only peer" />
                                     <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
@@ -232,14 +232,16 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                                     </label>
                                 );
                             })()}
-                            {formData.item_type === 'expense' && (
-                                <label htmlFor="is_nursery_linked" className="flex items-center justify-between cursor-pointer group">
-                                    <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Linked to Nursery (Sync from calculator)</span>
-                                    <div className="relative">
-                                        <input id="is_nursery_linked" type="checkbox" name="is_nursery_linked" checked={formData.is_nursery_linked} onChange={handleChange} className="sr-only peer" />
-                                        <div className="w-10 h-6 bg-gray-200 rounded-full peer-checked:bg-emerald-500 transition-colors"></div>
-                                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></div>
-                                    </div>
+                            {formData.item_type === 'expense' && !formData.is_auto_extra && (
+                                <label htmlFor="childcare_link" className="flex items-center justify-between gap-3 group">
+                                    <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Sync from Nursery calculator</span>
+                                    <select id="childcare_link" name="childcare_link" value={formData.childcare_link} onChange={handleChange}
+                                            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all">
+                                        <option value="">Not linked</option>
+                                        <option value="ellis_nursery">Ellis nursery</option>
+                                        <option value="gaspard_care">Gaspard breakfast/after-school</option>
+                                        <option value="gaspard_holiday">Gaspard holiday club</option>
+                                    </select>
                                 </label>
                             )}
                         </div>

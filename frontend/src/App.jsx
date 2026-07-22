@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Menu } from 'lucide-react';
+import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, CalendarDays, Menu } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
-import { computeMonthSummary, applyNurseryLink } from './utils/nurseryCalc';
+import { computeMonthSummary, applyChildcareLinks } from './utils/nurseryCalc';
 import apiService from './services/api';
 import Toast from './components/Toast';
 import LoadingSkeleton from './components/LoadingSkeleton';
@@ -13,6 +13,7 @@ import BudgetTable from './components/BudgetTable';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
 import NurseryPage from './components/NurseryPage';
+import ChildcarePage from './components/ChildcarePage';
 
 const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
     const totals = useBudgetTotals(items);
@@ -123,16 +124,21 @@ const App = () => {
         }
     }, []);
 
-    const nurseryAutoTFC = useMemo(() => {
+    const childcareNets = useMemo(() => {
         // Settings can be `{}` for users who've never opened the Nursery tab —
         // computeMonthSummary needs ellis/gaspard, so skip the sync until they exist.
         if (!nurserySettings?.ellis || !nurserySettings?.gaspard) return null;
-        return computeMonthSummary(nurserySettings, currentDate).totalTFC;
+        const summary = computeMonthSummary(nurserySettings, currentDate);
+        return {
+            ellis_nursery: summary.ellisNurseryNet,
+            gaspard_care: summary.gaspardCareNet,
+            gaspard_holiday: summary.gaspardHolidayNet,
+        };
     }, [nurserySettings, currentDate]);
 
     const processedBudgetItems = useMemo(() => {
         const currentMonthName = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
-        const itemsWithNurserySub = applyNurseryLink(budgetItems, nurseryAutoTFC, currentMonthName);
+        const itemsWithNurserySub = applyChildcareLinks(budgetItems, childcareNets, currentMonthName);
 
         const additionalIncomes = [];
         for (const item of itemsWithNurserySub) {
@@ -156,7 +162,7 @@ const App = () => {
             }
         }
         return [...itemsWithNurserySub, ...additionalIncomes];
-    }, [budgetItems, nurseryAutoTFC, currentDate]);
+    }, [budgetItems, childcareNets, currentDate]);
 
     useEffect(() => {
         const syncDateFromHash = () => {
@@ -313,7 +319,7 @@ const App = () => {
                     </button>
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center grow">
                         <Wallet className="mr-3 h-7 w-7 md:h-8 md:w-8" />
-                        {{ budget: 'Budget', tabs: 'Tabs', nursery: 'Cost calculator' }[activePage] || 'Budget'}
+                        {{ budget: 'Budget', tabs: 'Tabs', nursery: 'Cost calculator', childcare: 'Childcare' }[activePage] || 'Budget'}
                     </h1>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
@@ -328,6 +334,7 @@ const App = () => {
                             { id: 'budget',  label: 'Budget',  Icon: LayoutDashboard },
                             { id: 'tabs',    label: 'Tabs',    Icon: ArrowRightLeft },
                             { id: 'nursery', label: 'Nursery', Icon: Baby },
+                            { id: 'childcare', label: 'Childcare', Icon: CalendarDays },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -342,7 +349,9 @@ const App = () => {
             </header>
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
-                {activePage === 'nursery' ? (
+                {activePage === 'childcare' ? (
+                    <ChildcarePage onSettingsChange={setNurserySettings} />
+                ) : activePage === 'nursery' ? (
                     <NurseryPage onSettingsChange={setNurserySettings} />
                 ) : activePage === 'budget' ? (
                     <>

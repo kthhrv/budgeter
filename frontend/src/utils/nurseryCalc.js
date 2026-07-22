@@ -1,6 +1,8 @@
 // Pure helpers for the nursery cost calculator. Used by NurseryPage and by the
 // budget tab's "Sync from Nursery" button on linked items.
 
+import { computeChildcare } from './childcareCalc';
+
 // ------------------------- Fee data (Effective 1 Jan 2026) -------------------------
 
 export const STANDARD_RATES = {
@@ -16,6 +18,10 @@ export const FOOD_CONSUMABLES = {
     morning:   { food:  6.80, consumables: 0.75 },
     afternoon: { food:  3.70, consumables: 0.75 },
 };
+
+// Gaspard leaves nursery when his school-childcare model starts; from then his
+// costs are computed by childcareCalc.js and shown on the Childcare tab.
+export const GASPARD_CARE_START_DEFAULT = '2026-09';
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -134,17 +140,29 @@ export function findEffectiveOverride(monthOverrides, monthKey, section) {
 // Given the saved nursery settings blob and a month key (YYYY-MM), produce the
 // effective per-section values for that month (defaults overlaid by the latest
 // applicable override).
+const NO_SCHEDULE = ['none', 'none', 'none', 'none', 'none'];
+
 export function effectiveForMonth(settings, monthKey) {
     const overrides = settings.monthOverrides || {};
     const ellisOverride   = findEffectiveOverride(overrides, monthKey, 'ellis');
     const gaspardOverride = findEffectiveOverride(overrides, monthKey, 'gaspard');
     const milOverride     = findEffectiveOverride(overrides, monthKey, 'mil');
     const billingOverride = findEffectiveOverride(overrides, monthKey, 'billing');
+
+    // Gaspard leaves nursery when his school-childcare model kicks in. From
+    // startMonth his nursery schedule is forced empty so he drops out of the
+    // invoice, MIL, and the TFC cap engine everywhere at once; before it,
+    // nursery is unchanged. His post-switch costs live on the Childcare tab.
+    const startMonth = settings.childcare?.startMonth ?? GASPARD_CARE_START_DEFAULT;
+    const gaspardInNursery = monthKey < startMonth;
+    const rawGaspardSchedule = gaspardOverride?.schedule ?? settings.gaspard.schedule;
+
     return {
         ellis:           settings.ellis,
         gaspard:         settings.gaspard,
         ellisSchedule:   ellisOverride?.schedule   ?? settings.ellis.schedule,
-        gaspardSchedule: gaspardOverride?.schedule ?? settings.gaspard.schedule,
+        gaspardSchedule: gaspardInNursery ? rawGaspardSchedule : NO_SCHEDULE,
+        gaspardInNursery,
         mil:             milOverride               ?? settings.mil,
         taxFree:         billingOverride?.taxFree         ?? settings.taxFree,
         fullWeekModel:   billingOverride?.fullWeekModel   ?? settings.fullWeekModel,
@@ -464,6 +482,15 @@ export function computeMonthSummary(settings, date) {
     const parentOOP     = sumDaily('parentPay')   + sumAdhoc('parentPay');
     const tfSaving      = cap.ellisSaving + cap.gaspardSaving;
 
+    // Gaspard's childcare feeds two budget lines. Before the school switch he's
+    // in nursery, so his nursery net goes to the recurring line and holiday is 0.
+    // After, the recurring line = breakfast + after-school, holiday = its own line.
+    const ellisNurseryNet   = ellisInvoiced   - cap.ellisSaving;
+    const gaspardNurseryNet = gaspardInvoiced - cap.gaspardSaving;
+    const childcare         = eff.gaspardInNursery ? null : computeChildcare(settings, monthKey);
+    const gaspardCareNet    = eff.gaspardInNursery ? gaspardNurseryNet : childcare.termNet;
+    const gaspardHolidayNet = eff.gaspardInNursery ? 0 : childcare.holidayNet;
+
     return {
         year, monthIdx, monthLabel, daysInMonth, weekdayCounts,
         effective: eff,
@@ -475,9 +502,12 @@ export function computeMonthSummary(settings, date) {
             tfSaving, parentOOP,
         },
         ellisInvoiced, gaspardInvoiced, totalInvoiced,
-        ellisTFC:   ellisInvoiced   - cap.ellisSaving,
-        gaspardTFC: gaspardInvoiced - cap.gaspardSaving,
+        ellisTFC:   ellisNurseryNet,
+        gaspardTFC: gaspardNurseryNet,
         totalTFC:   totalInvoiced   - tfSaving,
+        ellisNurseryNet,
+        gaspardCareNet,
+        gaspardHolidayNet,
         tfc: {
             ellisFactor:       eEffMult,
             gaspardFactor:     gEffMult,
@@ -494,17 +524,21 @@ export function computeMonthSummary(settings, date) {
     };
 }
 
-// Substitute effective_value with the auto-computed Transfer-to-TFC for any
-// item flagged is_nursery_linked, unless that item has an explicit one-off
-// override pinned to the displayed month. Used by the budget tab to keep
-// linked items in sync with the Nursery calculator without a button press.
-export function applyNurseryLink(items, totalTFC, currentMonthName) {
-    if (totalTFC == null) return items;
+// Substitute effective_value with the auto-computed childcare figure for any
+// item whose `childcare_link` targets a computed value, unless that item has an
+// explicit one-off override pinned to the displayed month. Used by the budget
+// tab to keep linked items in sync with the Nursery calculator without a button
+// press. `nets` = { ellis_nursery, gaspard_care }.
+export function applyChildcareLinks(items, nets, currentMonthName) {
+    if (!nets) return items;
     return items.map(item => {
-        if (!item.is_nursery_linked) return item;
+        const target = item.childcare_link;
+        if (!target) return item;
+        const value = nets[target];
+        if (value == null) return item;
         const overriddenForMonth = item.is_one_off === true
             && item.effective_from_month_name === currentMonthName;
         if (overriddenForMonth) return item;
-        return { ...item, effective_value: totalTFC };
+        return { ...item, effective_value: value };
     });
 }

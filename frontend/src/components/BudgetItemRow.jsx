@@ -56,7 +56,9 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                                 {item.is_tab_repayment && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Tab Repayment</span>}
                                 {item.is_extra && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">Extra</span>}
                                 {item.is_auto_extra && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-200 text-amber-900">Monthly buffer</span>}
-                                {item.is_nursery_linked && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Linked: Nursery</span>}
+                                {item.childcare_link === 'ellis_nursery' && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Linked: Ellis nursery</span>}
+                                {item.childcare_link === 'gaspard_care' && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Linked: Gaspard clubs</span>}
+                                {item.childcare_link === 'gaspard_holiday' && <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Linked: Gaspard holiday</span>}
                                 {item.is_one_off && <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">One-off</span>}
                             </div>
                         </div>

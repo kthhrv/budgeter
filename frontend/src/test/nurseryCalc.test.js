@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    computeMonthSummary, effectiveForMonth, applyNurseryLink,
+    computeMonthSummary, effectiveForMonth, applyChildcareLinks,
     tfcSavingForMonth, TFC_QUARTERLY_CAP,
 } from '../utils/nurseryCalc';
 
@@ -78,56 +78,63 @@ describe('computeMonthSummary', () => {
     });
 });
 
-describe('applyNurseryLink', () => {
+describe('applyChildcareLinks', () => {
+    const NETS = { ellis_nursery: 250.50, gaspard_care: 111.11 };
     const baseItem = (overrides = {}) => ({
         budget_item_id: 'a',
         item_name: 'Nursery',
         item_type: 'expense',
         owner: 'shared',
         effective_value: 999,
-        is_nursery_linked: false,
+        childcare_link: '',
         is_one_off: false,
         effective_from_month_name: 'June 2026',
         ...overrides,
     });
 
-    it('does not modify items that are not nursery-linked', () => {
-        const items = [baseItem({ is_nursery_linked: false, effective_value: 50 })];
-        const out = applyNurseryLink(items, 200, 'June 2026');
+    it('does not modify items that are not linked', () => {
+        const items = [baseItem({ childcare_link: '', effective_value: 50 })];
+        const out = applyChildcareLinks(items, NETS, 'June 2026');
         expect(out[0].effective_value).toBe(50);
     });
 
-    it('substitutes effective_value with the auto TFC for linked items', () => {
-        const items = [baseItem({ is_nursery_linked: true, effective_value: 999 })];
-        const out = applyNurseryLink(items, 250.50, 'June 2026');
+    it('routes ellis_nursery items to the Ellis net', () => {
+        const items = [baseItem({ childcare_link: 'ellis_nursery', effective_value: 999 })];
+        const out = applyChildcareLinks(items, NETS, 'June 2026');
         expect(out[0].effective_value).toBe(250.50);
+    });
+
+    it('routes gaspard_care items to the Gaspard-care net', () => {
+        const items = [baseItem({ childcare_link: 'gaspard_care', effective_value: 999 })];
+        const out = applyChildcareLinks(items, NETS, 'June 2026');
+        expect(out[0].effective_value).toBe(111.11);
     });
 
     it('preserves a per-month one-off override (linked, is_one_off, month matches)', () => {
         const items = [baseItem({
-            is_nursery_linked: true,
+            childcare_link: 'ellis_nursery',
             is_one_off: true,
             effective_from_month_name: 'June 2026',
             effective_value: 100,
         })];
-        const out = applyNurseryLink(items, 250, 'June 2026');
+        const out = applyChildcareLinks(items, NETS, 'June 2026');
         expect(out[0].effective_value).toBe(100);
     });
 
-    it('still substitutes when is_one_off=true but month does not match (override is for a different month)', () => {
+    it('still substitutes when is_one_off=true but month does not match', () => {
         const items = [baseItem({
-            is_nursery_linked: true,
+            childcare_link: 'ellis_nursery',
             is_one_off: true,
             effective_from_month_name: 'May 2026',
             effective_value: 100,
         })];
-        const out = applyNurseryLink(items, 250, 'June 2026');
-        expect(out[0].effective_value).toBe(250);
+        const out = applyChildcareLinks(items, NETS, 'June 2026');
+        expect(out[0].effective_value).toBe(250.50);
     });
 
-    it('returns items unchanged when totalTFC is null (settings not yet loaded)', () => {
-        const items = [baseItem({ is_nursery_linked: true, effective_value: 999 })];
-        const out = applyNurseryLink(items, null, 'June 2026');
+    it('returns items unchanged when nets is null (settings not yet loaded)', () => {
+        const items = [baseItem({ childcare_link: 'ellis_nursery', effective_value: 999 })];
+        const out = applyChildcareLinks(items, null, 'June 2026');
         expect(out[0].effective_value).toBe(999);
     });
 });
@@ -240,5 +247,39 @@ describe('effectiveForMonth', () => {
         const aug  = effectiveForMonth(s, '2026-08');
         expect(july.mil).toEqual([0, 0, 0, 50, 50]);
         expect(aug.mil).toEqual([0, 0, 0, 100, 100]);
+    });
+});
+
+describe('nursery → childcare switchover at startMonth', () => {
+    // Full-time breakfast recurring so the childcare net is clearly non-zero.
+    const s = () => ({
+        ...baseSettings(),
+        childcare: {
+            startMonth: '2026-09',
+            nonTermDays: [],
+            breakfast:   { tfc: true, schedule: [true, true, true, true, true], adhoc: [] },
+            afterSchool: { tfc: true, schedule: ['none', 'none', 'none', 'none', 'none'], adhoc: [] },
+            holidayClubs: [{ id: 1, name: 'Camp', dayRate: 40, weekRate: 150, tfc: false, days: ['2026-09-05'] }],
+        },
+    });
+
+    it('Gaspard bills nursery in Aug 2026 but not from Sep 2026', () => {
+        const aug = computeMonthSummary(s(), new Date(2026, 7, 1));
+        const sep = computeMonthSummary(s(), new Date(2026, 8, 1));
+        expect(aug.gaspardInvoiced).toBeGreaterThan(0);
+        expect(sep.gaspardInvoiced).toBe(0);
+        // totalTFC (nursery) is Ellis-only from Sep.
+        expect(sep.totalTFC).toBeCloseTo(sep.ellisNurseryNet, 2);
+    });
+
+    it('routes the two childcare budget lines: nursery→care pre-Sep, split post-Sep', () => {
+        const aug = computeMonthSummary(s(), new Date(2026, 7, 1));
+        const sep = computeMonthSummary(s(), new Date(2026, 8, 1));
+        // Pre-switch: care line tracks his nursery net; holiday line is 0.
+        expect(aug.gaspardCareNet).toBeCloseTo(aug.gaspardTFC, 2);
+        expect(aug.gaspardHolidayNet).toBe(0);
+        // Post-switch: care line = breakfast/after-school net; holiday line separate.
+        expect(sep.gaspardCareNet).toBeGreaterThan(0);
+        expect(sep.gaspardHolidayNet).toBeGreaterThan(0); // one non-term Sat day @ £40
     });
 });

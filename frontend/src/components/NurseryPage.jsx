@@ -2,10 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import apiService from '../services/api';
 import { formatDate, getInitialDate } from '../utils/helpers';
 import MonthSelector from './MonthSelector';
-import {
-    STANDARD_RATES, DAYS, SESSION_OPTIONS,
-    ymd, computeMonthSummary, findEffectiveOverride,
-} from '../utils/nurseryCalc';
+import { DAYS, SESSION_OPTIONS, computeMonthSummary, findEffectiveOverride } from '../utils/nurseryCalc';
 
 // ------------------------- Persistent state -------------------------
 
@@ -70,40 +67,11 @@ function Toggle({ checked, onChange, label }) {
     );
 }
 
-function ChildCard({
-    title, accent, child, childKey, onUpdateChild, onSetSchedule, monthLabel,
-    currentDate, monthAdhocs, addAdHoc, removeAdHoc,
-}) {
+function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule }) {
     const update = (patch) => onUpdateChild(patch);
     const setDay = (i, v) => {
         const s = [...child.schedule]; s[i] = v;
         onSetSchedule(s);
-    };
-
-    const year = currentDate.getFullYear();
-    const monthIdx = currentDate.getMonth();
-    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-    const today = new Date();
-    const initialAdhocDate = (year === today.getFullYear() && monthIdx === today.getMonth())
-        ? ymd(year, monthIdx, today.getDate())
-        : ymd(year, monthIdx, 1);
-
-    const [adhocForm, setAdhocForm] = useState({ date: initialAdhocDate, type: 'fullDay' });
-    useEffect(() => {
-        setAdhocForm(prev => ({ ...prev, date: initialAdhocDate }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [year, monthIdx]);
-
-    const childAdhocs = monthAdhocs.filter(a => a.child === childKey);
-
-    const handleAdd = () => {
-        addAdHoc({
-            id: Date.now() + Math.random(),
-            child: childKey,
-            date: adhocForm.date,
-            type: adhocForm.type,
-            ageBracket: child.ageBracket,
-        });
     };
 
     return (
@@ -143,54 +111,22 @@ function ChildCard({
                             label="Apply 10% sibling discount" />
                 </div>
             )}
+        </div>
+    );
+}
 
-            <div className="border-t border-gray-100 pt-3 mt-3">
-                <div className="text-sm font-medium text-gray-600 mb-2">Ad-hoc days in {monthLabel}</div>
-                {childAdhocs.length > 0 && (
-                    <ul className="text-xs space-y-1 mb-2">
-                        {childAdhocs.slice().sort((a, b) => a.date.localeCompare(b.date)).map(a => {
-                            const cost = STANDARD_RATES[a.ageBracket][a.type === 'fullDay' ? 'fullDay' : 'morning'];
-                            const sessionLabel = a.type === 'fullDay' ? 'Full Day' : a.type === 'morning' ? 'Morning' : 'Afternoon';
-                            return (
-                                <li key={a.id}
-                                    className="flex items-center justify-between rounded-lg px-2 py-1.5 bg-amber-50">
-                                    <span className="flex-1">
-                                        <span className="font-medium">{a.date}</span>
-                                        <span className="text-gray-500"> · {sessionLabel}</span>
-                                    </span>
-                                    <span className="num font-medium mr-2">{money(cost)}</span>
-                                    <button type="button" onClick={() => removeAdHoc(a.id)}
-                                            className="text-rose-500 hover:text-rose-700 text-base leading-none">×</button>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                )}
-                <div className="flex items-end gap-2">
-                    <label className="text-xs flex-1">
-                        <span className="block text-gray-500 mb-1">Date</span>
-                        <input type="date" value={adhocForm.date}
-                            min={ymd(year, monthIdx, 1)}
-                            max={ymd(year, monthIdx, daysInMonth)}
-                            onChange={e => setAdhocForm(f => ({ ...f, date: e.target.value }))}
-                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm" />
-                    </label>
-                    <label className="text-xs flex-1">
-                        <span className="block text-gray-500 mb-1">Session</span>
-                        <select value={adhocForm.type}
-                            onChange={e => setAdhocForm(f => ({ ...f, type: e.target.value }))}
-                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm">
-                            <option value="fullDay">Full Day</option>
-                            <option value="morning">Morning</option>
-                            <option value="afternoon">Afternoon</option>
-                        </select>
-                    </label>
-                    <button type="button" onClick={handleAdd}
-                        className="text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg px-3 py-2 active:scale-[0.98] transition-all">
-                        + Add
-                    </button>
-                </div>
+// Placeholder shown in Gaspard's slot once he's left nursery for school.
+function GaspardMovedCard() {
+    return (
+        <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 border-t-4 border-t-sky-400">
+            <div className="flex items-baseline justify-between mb-3">
+                <h2 className="text-xl font-semibold text-gray-800">Gaspard</h2>
+                <span className="text-xs text-gray-400">At school</span>
             </div>
+            <p className="text-sm text-gray-500">
+                Gaspard has left nursery. His breakfast, after-school and holiday-club
+                costs are now on the <span className="font-medium text-indigo-600">Childcare</span> tab.
+            </p>
         </div>
     );
 }
@@ -234,6 +170,9 @@ const NurseryPage = ({ onSettingsChange }) => {
     const [showBreakdown, setShowBreakdown] = useState(DEFAULTS.showBreakdown);
     const [adhoc, setAdhoc]                 = useState(DEFAULTS.adhoc);
     const [monthOverrides, setMonthOverrides] = useState({});
+    // Non-nursery blob keys (e.g. `childcare`, owned by the Childcare tab) are
+    // preserved verbatim so saving the nursery settings never wipes them.
+    const [otherBlob, setOtherBlob]         = useState({});
     const [loaded, setLoaded]               = useState(false);
     const [currentDate, setCurrentDate]     = useState(() => getInitialDate());
 
@@ -249,9 +188,6 @@ const NurseryPage = ({ onSettingsChange }) => {
     }, []);
 
     const saveTimeout                       = useRef(null);
-
-    const addAdHoc    = (a) => setAdhoc(prev => [...prev, a]);
-    const removeAdHoc = (id) => setAdhoc(prev => prev.filter(a => a.id !== id));
 
     // Currently displayed month, as YYYY-MM
     const monthKey = useMemo(() => formatDate(currentDate, 'YYYY-MM'), [currentDate]);
@@ -275,8 +211,6 @@ const NurseryPage = ({ onSettingsChange }) => {
 
     // Dispatch handlers — every edit creates/updates an override at the current month
     // so the change applies from this month forward (until the next override).
-    // We seed each new override with the currently *effective* values so we don't
-    // accidentally drop other fields (e.g. taxFree set via an earlier override).
     const setEllisSchedule = (s) =>
         setOverride('ellis', { ...(effEllisOverride || {}), schedule: s });
     const setGaspardSchedule = (s) =>
@@ -301,6 +235,7 @@ const NurseryPage = ({ onSettingsChange }) => {
             if (typeof blob.showBreakdown === 'boolean') setShowBreakdown(blob.showBreakdown);
             if (Array.isArray(blob.adhoc))     setAdhoc(blob.adhoc);
             if (blob.monthOverrides && typeof blob.monthOverrides === 'object') setMonthOverrides(blob.monthOverrides);
+            setOtherBlob(blob); // keep the whole blob so we don't drop other tabs' keys
         };
 
         apiService.getNurserySettings().then(serverData => {
@@ -325,11 +260,12 @@ const NurseryPage = ({ onSettingsChange }) => {
     }, []);
 
     // Debounced save to the API + immediate notify of any parent (e.g. App.jsx)
-    // that needs the latest settings in memory (so is_nursery_linked budget items
-    // stay in sync without a round-trip through the API).
+    // that needs the latest settings in memory (so childcare-linked budget items
+    // stay in sync without a round-trip through the API). Spread otherBlob first
+    // so keys owned by other tabs (childcare) survive the save.
     useEffect(() => {
         if (!loaded) return;
-        const blob = { ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides };
+        const blob = { ...otherBlob, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides };
         if (onSettingsChange) onSettingsChange(blob);
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
         saveTimeout.current = setTimeout(() => {
@@ -337,12 +273,14 @@ const NurseryPage = ({ onSettingsChange }) => {
                 .catch(err => console.error('Nursery settings save failed', err));
         }, 500);
         return () => { if (saveTimeout.current) clearTimeout(saveTimeout.current); };
-    }, [loaded, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides, onSettingsChange]);
+    }, [loaded, otherBlob, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides, onSettingsChange]);
 
     const calc = useMemo(() => {
-        const settings = { ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides };
+        const settings = { ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides, childcare: otherBlob.childcare };
         return computeMonthSummary(settings, currentDate);
-    }, [ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides, currentDate]);
+    }, [ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides, otherBlob, currentDate]);
+
+    const gaspardInNursery = calc.effective.gaspardInNursery;
 
     return (
         <div>
@@ -370,7 +308,7 @@ const NurseryPage = ({ onSettingsChange }) => {
                             );
                         };
                         return (
-                            <div className="flex-1 grid grid-cols-2 gap-3 items-center">
+                            <div className={`flex-1 grid ${gaspardInNursery ? 'grid-cols-2' : 'grid-cols-1'} gap-3 items-center`}>
                                 <div className="text-center">
                                     <div className="text-amber-50 text-sm">Ellis</div>
                                     <div className="text-amber-50/80 text-xs num" title="TFC reference">1100116981235</div>
@@ -382,17 +320,19 @@ const NurseryPage = ({ onSettingsChange }) => {
                                                    periodLabel={calc.tfc.ellisPeriodLabel} />
                                     </div>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-amber-50 text-sm">Gaspard</div>
-                                    <div className="text-amber-50/80 text-xs num" title="TFC reference">1100067930356</div>
-                                    <div className="mt-1">
-                                        <TFCAmount amount={calc.gaspardTFC}
-                                                   saving={calc.tfc.gaspardSaving}
-                                                   usedBefore={calc.tfc.gaspardUsedBefore}
-                                                   capped={calc.tfc.gaspardCapped}
-                                                   periodLabel={calc.tfc.gaspardPeriodLabel} />
+                                {gaspardInNursery && (
+                                    <div className="text-center">
+                                        <div className="text-amber-50 text-sm">Gaspard</div>
+                                        <div className="text-amber-50/80 text-xs num" title="TFC reference">1100067930356</div>
+                                        <div className="mt-1">
+                                            <TFCAmount amount={calc.gaspardTFC}
+                                                       saving={calc.tfc.gaspardSaving}
+                                                       usedBefore={calc.tfc.gaspardUsedBefore}
+                                                       capped={calc.tfc.gaspardCapped}
+                                                       periodLabel={calc.tfc.gaspardPeriodLabel} />
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         );
                     })()}
@@ -411,29 +351,23 @@ const NurseryPage = ({ onSettingsChange }) => {
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <div className="grid md:grid-cols-2 gap-4 mb-4 items-start">
                 <ChildCard
-                    title="Ellis" accent="border-t-amber-400" childKey="ellis"
+                    title="Ellis" accent="border-t-amber-400"
                     child={{ ...ellis, schedule: effEllisSchedule }}
                     onUpdateChild={(patch) => setEllis(prev => ({ ...prev, ...patch }))}
                     onSetSchedule={setEllisSchedule}
-                    monthLabel={calc.monthLabel}
-                    currentDate={currentDate}
-                    monthAdhocs={calc.monthAdhocs}
-                    addAdHoc={addAdHoc}
-                    removeAdHoc={removeAdHoc}
                 />
-                <ChildCard
-                    title="Gaspard" accent="border-t-sky-400" childKey="gaspard"
-                    child={{ ...gaspard, schedule: effGaspardSchedule }}
-                    onUpdateChild={(patch) => setGaspard(prev => ({ ...prev, ...patch }))}
-                    onSetSchedule={setGaspardSchedule}
-                    monthLabel={calc.monthLabel}
-                    currentDate={currentDate}
-                    monthAdhocs={calc.monthAdhocs}
-                    addAdHoc={addAdHoc}
-                    removeAdHoc={removeAdHoc}
-                />
+                {gaspardInNursery ? (
+                    <ChildCard
+                        title="Gaspard" accent="border-t-sky-400"
+                        child={{ ...gaspard, schedule: effGaspardSchedule }}
+                        onUpdateChild={(patch) => setGaspard(prev => ({ ...prev, ...patch }))}
+                        onSetSchedule={setGaspardSchedule}
+                    />
+                ) : (
+                    <GaspardMovedCard />
+                )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -578,8 +512,6 @@ const NurseryPage = ({ onSettingsChange }) => {
                             {(() => {
                                 const eFactor = calc.tfc.ellisFactor;
                                 const gFactor = calc.tfc.gaspardFactor;
-                                // Per-child MIL coverage = MIL%-weighted child cost, after that
-                                // child's TFC factor (which already reflects the £500/quarter cap).
                                 const ellisMIL = calc.monthlyDaily.reduce((a, m, i) => a + m.eMonthlyNet * (effMil[i] / 100), 0) * eFactor
                                     + calc.monthAdhocs.reduce((a, x) => a + x.eNet * (x.milPct / 100), 0) * eFactor;
                                 const gaspardMIL = calc.monthlyDaily.reduce((a, m, i) => a + m.gMonthlyNet * (effMil[i] / 100), 0) * gFactor
@@ -601,7 +533,9 @@ const NurseryPage = ({ onSettingsChange }) => {
                                         </thead>
                                         <tbody>
                                             <tr><td className="py-1">Ellis{calc.tfc.ellisCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.ellisPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.ellisTFC)}</td><td className="text-right py-1 text-rose-600">{money(ellisMIL)}</td><td className="text-right py-1">{money(calc.ellisTFC - ellisMIL)}</td></tr>
-                                            <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.gaspardPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-rose-600">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
+                                            {gaspardInNursery && (
+                                                <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.gaspardPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-rose-600">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
+                                            )}
                                         </tbody>
                                         <tfoot>
                                             <tr className="font-semibold border-t">

@@ -143,7 +143,7 @@ describe('ItemCategoryModal', () => {
 
     describe('Nursery linking', () => {
         it('relabels the One-off toggle to "Override Nursery sync" when item is linked', () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, is_nursery_linked: true }} />);
+            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'ellis_nursery' }} />);
             expect(screen.getByText(/Override Nursery sync for this month/)).toBeInTheDocument();
             expect(screen.queryByText('One-off for this month')).not.toBeInTheDocument();
         });
@@ -153,16 +153,24 @@ describe('ItemCategoryModal', () => {
             expect(screen.getByText('One-off for this month')).toBeInTheDocument();
         });
 
-        it('shows the "Linked to Nursery" toggle for expense items', () => {
+        it('shows the childcare-link select with Ellis + Gaspard targets for expense items', () => {
             render(<ItemCategoryModal {...defaultProps} item={baseItem} />);
-            expect(getCheckbox('is_nursery_linked')).not.toBeNull();
+            const select = getSelect('childcare_link');
+            expect(select).not.toBeNull();
+            const values = Array.from(select.options).map(o => o.value);
+            expect(values).toEqual(['', 'ellis_nursery', 'gaspard_care', 'gaspard_holiday']);
         });
 
-        it('hides the "Linked to Nursery" toggle for non-expense items', async () => {
+        it('reflects an existing gaspard_care link', () => {
+            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'gaspard_care' }} />);
+            expect(getSelect('childcare_link').value).toBe('gaspard_care');
+        });
+
+        it('hides the childcare-link select for non-expense items', async () => {
             render(<ItemCategoryModal {...defaultProps} />);
             const user = userEvent.setup();
             await user.selectOptions(getSelect('item_type'), 'income');
-            expect(getCheckbox('is_nursery_linked')).toBeNull();
+            expect(getSelect('childcare_link')).toBeNull();
         });
     });
 
