@@ -16,172 +16,142 @@ const baseItem = {
     weekly_payment_day: null,
     last_payment_month_id: '',
     value: '15.00',
+    effective_value: 15,
+    effective_from_month_name: 'January 2026',
     is_one_off: false,
 };
 
-const defaultProps = {
-    isOpen: true,
-    onClose: vi.fn(),
-    onSave: vi.fn(),
-    item: null,
-};
+const defaultProps = { isOpen: true, onClose: vi.fn(), onSave: vi.fn(), onDelete: vi.fn(), item: null };
 
 const getSelect = (name) => document.querySelector(`select[name="${name}"]`);
 const getCheckbox = (name) => document.querySelector(`input[type="checkbox"][name="${name}"]`);
-const getCheckboxById = (id) => document.querySelector(`input[type="checkbox"]#${id}`);
+const btn = (name) => screen.queryByRole('button', { name });
+// Open the Advanced section (no-op if the target control is already present).
+const openAdvanced = async (user) => {
+    const b = screen.queryByRole('button', { name: /Advanced options/i });
+    if (b) await user.click(b);
+};
 
 describe('ItemCategoryModal', () => {
-    describe('Type dropdown', () => {
+    describe('Type', () => {
         it('offers Expense, Income, and Savings', () => {
             render(<ItemCategoryModal {...defaultProps} />);
-            const typeSelect = getSelect('item_type');
-            const optionValues = Array.from(typeSelect.options).map(o => o.value);
-            expect(optionValues).toEqual(['expense', 'income', 'savings']);
+            ['Expense', 'Income', 'Savings'].forEach(t => expect(btn(t)).toBeInTheDocument());
         });
 
-        it('hides the Pot dropdown when type is income', async () => {
-            render(<ItemCategoryModal {...defaultProps} />);
+        it('hides the Pot control when type is income', async () => {
             const user = userEvent.setup();
-            await user.selectOptions(getSelect('item_type'), 'income');
-            expect(getSelect('expense_pot')).toBeNull();
+            render(<ItemCategoryModal {...defaultProps} />);
+            await openAdvanced(user);
+            expect(btn('Bills')).toBeInTheDocument();       // pot visible for expense
+            await user.click(btn('Income'));
+            expect(btn('Bills')).not.toBeInTheDocument();    // advanced/pot gone for income
         });
 
-        it('hides the Pot dropdown when type is savings', async () => {
-            render(<ItemCategoryModal {...defaultProps} />);
+        it('shows the Pot control when type is expense', async () => {
             const user = userEvent.setup();
-            await user.selectOptions(getSelect('item_type'), 'savings');
-            expect(getSelect('expense_pot')).toBeNull();
-        });
-
-        it('shows the Pot dropdown when type is expense', () => {
             render(<ItemCategoryModal {...defaultProps} />);
-            expect(getSelect('expense_pot')).not.toBeNull();
+            await openAdvanced(user);
+            expect(btn('Bills')).toBeInTheDocument();
         });
     });
 
     describe('Pot ↔ Extra interaction', () => {
-        it('disables the Extra toggle when a pot is selected', async () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, owner: 'shared' }} />);
-            const user = userEvent.setup();
-            // Extra toggle is visible for shared expenses with no pot
-            expect(getCheckbox('is_extra')).not.toBeNull();
-            expect(getCheckbox('is_extra').disabled).toBe(false);
-
-            await user.selectOptions(getSelect('expense_pot'), 'bills');
-            expect(getCheckbox('is_extra').disabled).toBe(true);
-        });
-
-        it('clears is_extra when a pot is selected', async () => {
+        it('hides and clears Extra when a pot is selected', async () => {
             const onSave = vi.fn();
-            render(<ItemCategoryModal {...defaultProps} onSave={onSave} item={{ ...baseItem, owner: 'shared', is_extra: true }} />);
             const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} onSave={onSave} item={{ ...baseItem, owner: 'shared' }} />);
+            await openAdvanced(user);
+            // Extra visible for a shared expense with no pot; turn it on.
+            await user.click(getCheckbox('is_extra'));
             expect(getCheckbox('is_extra').checked).toBe(true);
-            await user.selectOptions(getSelect('expense_pot'), 'bills');
-            expect(getCheckbox('is_extra').checked).toBe(false);
+            // Selecting a pot hides Extra...
+            await user.click(btn('Bills'));
+            expect(getCheckbox('is_extra')).toBeNull();
+            // ...and clears it in the saved payload.
+            await user.click(btn('Save'));
+            const [, payload] = onSave.mock.calls[0];
+            expect(payload.expense_pot).toBe('bills');
+            expect(payload.is_extra).toBe(false);
         });
     });
 
     describe('Tab Repayment ↔ Owner interaction', () => {
-        it('disables the Tab Repayment toggle when owner is shared', () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, owner: 'shared' }} />);
-            expect(getCheckbox('is_tab_repayment').disabled).toBe(true);
-        });
-
-        it('enables the Tab Repayment toggle when owner is keith', () => {
-            render(<ItemCategoryModal {...defaultProps} item={baseItem} />);
-            expect(getCheckbox('is_tab_repayment').disabled).toBe(false);
-        });
-
-        it('removes Shared from the owner dropdown while tab repayment is checked', () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, is_tab_repayment: true }} />);
-            const ownerOptions = Array.from(getSelect('owner').options).map(o => o.value);
-            expect(ownerOptions).toEqual(['keith', 'tild']);
-        });
-
-        it('auto-switches owner to keith when tab repayment is turned on while shared', async () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, owner: 'tild' }} />);
+        it('auto-assigns to Keith when tab repayment is turned on while Joint', async () => {
+            const onSave = vi.fn();
             const user = userEvent.setup();
-            // Switch to keith so we can verify auto-switch logic on the toggle
-            await user.selectOptions(getSelect('owner'), 'keith');
+            render(<ItemCategoryModal {...defaultProps} onSave={onSave} item={{ ...baseItem, owner: 'shared' }} />);
+            await openAdvanced(user);
             await user.click(getCheckbox('is_tab_repayment'));
-            expect(getSelect('owner').value).toBe('keith');
-            expect(getCheckbox('is_tab_repayment').checked).toBe(true);
+            // Joint is removed from the owner choices once tab repayment is on.
+            expect(btn('Joint')).not.toBeInTheDocument();
+            await user.click(btn('Save'));
+            const [, payload] = onSave.mock.calls[0];
+            expect(payload.owner).toBe('keith');
+            expect(payload.is_tab_repayment).toBe(true);
         });
     });
 
-    describe('Expires toggle', () => {
-        it('does not show the date input by default for new items', () => {
-            render(<ItemCategoryModal {...defaultProps} />);
-            expect(document.querySelector('input[name="last_payment_month_id"]')).toBeNull();
-        });
-
+    describe('Expires', () => {
         it('reveals the date input when toggled on', async () => {
-            render(<ItemCategoryModal {...defaultProps} />);
             const user = userEvent.setup();
-            await user.click(getCheckboxById('has_expiry'));
+            render(<ItemCategoryModal {...defaultProps} />);
+            await openAdvanced(user);
+            expect(document.querySelector('input[name="last_payment_month_id"]')).toBeNull();
+            await user.click(getCheckbox('has_expiry'));
             expect(document.querySelector('input[name="last_payment_month_id"]')).not.toBeNull();
         });
 
-        it('hides and clears the date when toggled off', async () => {
+        it('pre-checks Expires (and opens Advanced) when editing an item with an expiry', () => {
             render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, last_payment_month_id: '2027-06' }} />);
-            const user = userEvent.setup();
-            // Pre-checked because item has expiry
-            const toggle = getCheckboxById('has_expiry');
-            expect(toggle.checked).toBe(true);
-            const dateInput = document.querySelector('input[name="last_payment_month_id"]');
-            expect(dateInput.value).toBe('2027-06');
-
-            await user.click(toggle);
-            expect(document.querySelector('input[name="last_payment_month_id"]')).toBeNull();
-        });
-
-        it('pre-checks Expires when editing an item with last_payment_month_id', () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, last_payment_month_id: '2027-06' }} />);
-            expect(getCheckboxById('has_expiry').checked).toBe(true);
+            expect(getCheckbox('has_expiry').checked).toBe(true);
+            expect(document.querySelector('input[name="last_payment_month_id"]').value).toBe('2027-06');
         });
     });
 
     describe('Nursery linking', () => {
-        it('relabels the One-off toggle to "Override Nursery sync" when item is linked', () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'ellis_nursery' }} />);
-            expect(screen.getByText(/Override Nursery sync for this month/)).toBeInTheDocument();
-            expect(screen.queryByText('One-off for this month')).not.toBeInTheDocument();
-        });
-
-        it('shows "One-off for this month" when item is not linked', () => {
-            render(<ItemCategoryModal {...defaultProps} item={baseItem} />);
-            expect(screen.getByText('One-off for this month')).toBeInTheDocument();
-        });
-
-        it('shows the childcare-link select with Ellis + Gaspard targets for expense items', () => {
-            render(<ItemCategoryModal {...defaultProps} item={baseItem} />);
-            const select = getSelect('childcare_link');
-            expect(select).not.toBeNull();
-            const values = Array.from(select.options).map(o => o.value);
-            expect(values).toEqual(['', 'ellis_nursery', 'gaspard_care', 'gaspard_holiday']);
-        });
-
-        it('reflects an existing gaspard_care link', () => {
+        it('shows the childcare-link select with Ellis + Gaspard targets, and reflects an existing link', () => {
             render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'gaspard_care' }} />);
-            expect(getSelect('childcare_link').value).toBe('gaspard_care');
-        });
-
-        it('hides the childcare-link select for non-expense items', async () => {
-            render(<ItemCategoryModal {...defaultProps} />);
-            const user = userEvent.setup();
-            await user.selectOptions(getSelect('item_type'), 'income');
-            expect(getSelect('childcare_link')).toBeNull();
+            const select = getSelect('childcare_link'); // Advanced auto-opens because a link is set
+            expect(select).not.toBeNull();
+            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'ellis_nursery', 'gaspard_care', 'gaspard_holiday']);
+            expect(select.value).toBe('gaspard_care');
         });
     });
 
-    describe('Submission', () => {
+    describe('Apply to (one-off)', () => {
+        it('is hidden for new items', () => {
+            render(<ItemCategoryModal {...defaultProps} />);
+            expect(btn('Just this month')).not.toBeInTheDocument();
+        });
+
+        it('is shown for existing items with current-value context', () => {
+            render(<ItemCategoryModal {...defaultProps} item={baseItem} />);
+            expect(btn('From this month on')).toBeInTheDocument();
+            expect(btn('Just this month')).toBeInTheDocument();
+            expect(screen.getByText(/set January 2026/)).toBeInTheDocument();
+        });
+    });
+
+    describe('Weekly preview', () => {
+        it('shows a live monthly estimate for weekly items', async () => {
+            const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} currentDate={new Date(2026, 0, 1)} />);
+            await user.click(btn('Weekly'));
+            await user.selectOptions(getSelect('weekly_payment_day'), '1'); // Monday
+            await user.type(document.querySelector('input[name="value"]'), '10');
+            expect(screen.getByText(/in January 2026/)).toBeInTheDocument();
+        });
+    });
+
+    describe('Submission & validation', () => {
         it('passes formData to onSave when creating a new item', async () => {
             const onSave = vi.fn();
-            render(<ItemCategoryModal {...defaultProps} onSave={onSave} />);
             const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} onSave={onSave} />);
             await user.type(document.querySelector('input[name="item_name"]'), 'Hosting');
             await user.type(document.querySelector('input[name="value"]'), '12.50');
-            await user.click(screen.getByRole('button', { name: /create item/i }));
+            await user.click(btn('Create'));
             expect(onSave).toHaveBeenCalledTimes(1);
             const [, payload] = onSave.mock.calls[0];
             expect(payload.item_name).toBe('Hosting');
@@ -189,17 +159,37 @@ describe('ItemCategoryModal', () => {
             expect(payload.item_type).toBe('expense');
         });
 
-        it('clears flags when type changes to non-expense', async () => {
+        it('blocks submit and shows an error when name or amount is missing', async () => {
             const onSave = vi.fn();
-            render(<ItemCategoryModal {...defaultProps} onSave={onSave} item={{ ...baseItem, owner: 'shared', is_extra: true, expense_pot: 'bills' }} />);
             const user = userEvent.setup();
-            await user.selectOptions(getSelect('item_type'), 'savings');
-            await user.click(screen.getByRole('button', { name: /save changes/i }));
+            render(<ItemCategoryModal {...defaultProps} onSave={onSave} />);
+            await user.click(btn('Create'));
+            expect(onSave).not.toHaveBeenCalled();
+            expect(screen.getByText('Give it a name.')).toBeInTheDocument();
+            expect(screen.getByText('Enter an amount.')).toBeInTheDocument();
+        });
+
+        it('clears expense flags when type changes to non-expense', async () => {
+            const onSave = vi.fn();
+            const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} onSave={onSave} item={{ ...baseItem, owner: 'shared', is_extra: true, expense_pot: 'bills' }} />);
+            await user.click(btn('Savings'));
+            await user.click(btn('Save'));
             const [, payload] = onSave.mock.calls[0];
             expect(payload.item_type).toBe('savings');
             expect(payload.expense_pot).toBe('');
             expect(payload.is_extra).toBe(false);
             expect(payload.is_tab_repayment).toBe(false);
+        });
+
+        it('calls onDelete after confirming delete', async () => {
+            const onDelete = vi.fn();
+            const onClose = vi.fn();
+            const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} onDelete={onDelete} onClose={onClose} item={baseItem} />);
+            await user.click(screen.getByRole('button', { name: 'Delete item' }));
+            await user.click(screen.getByRole('button', { name: 'Delete' })); // confirm
+            expect(onDelete).toHaveBeenCalledWith('abc');
         });
     });
 });

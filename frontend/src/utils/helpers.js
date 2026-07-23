@@ -36,6 +36,18 @@ export const isMonthInPast = (date) => {
     return targetMonthStart < currentMonthStart;
 };
 
+// Count how many times a given weekday falls in a month. dayOfWeek is 1=Mon..7=Sun
+// (matching DAY_CHOICES and the backend's calculate_weekly_occurrences).
+export const weekdayOccurrencesInMonth = (year, monthIdx, dayOfWeek) => {
+    const target = dayOfWeek === 7 ? 0 : dayOfWeek; // JS getDay(): 0=Sun..6=Sat
+    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+        if (new Date(year, monthIdx, d).getDay() === target) count++;
+    }
+    return count;
+};
+
 // Format a number as GBP with grouped thousands, e.g. -1234.5 -> "-£1,234.50".
 export const money = (n) => {
     const v = Number(n) || 0;

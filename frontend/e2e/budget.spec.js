@@ -35,8 +35,8 @@ test('opens the edit modal from a row and cancels without saving', async ({ page
     await expect(row).toBeVisible();
     await row.click();
 
-    // The edit modal shows the value field and Save Changes for an existing item.
-    const save = page.getByRole('button', { name: 'Save Changes' });
+    // The edit modal opens with a Save action for an existing item.
+    const save = page.getByRole('button', { name: 'Save' });
     await expect(save).toBeVisible();
 
     await page.getByRole('button', { name: 'Cancel' }).click();

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Delete' }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={onClose}>
@@ -22,7 +22,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
                         Cancel
                     </button>
                     <button type="button" onClick={onConfirm} className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-                        Delete
+                        {confirmText}
                     </button>
                 </div>
             </div>
