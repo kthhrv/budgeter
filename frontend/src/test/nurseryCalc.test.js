@@ -30,11 +30,13 @@ describe('computeMonthSummary', () => {
         expect(summary.totalTFC).toBeCloseTo(summary.totalInvoiced * 0.80, 2);
     });
 
-    it('totalTFC equals total invoiced when tax-free is off', () => {
+    it('always applies tax-free childcare, ignoring any stored taxFree=false flag', () => {
+        // The billing toggle was removed: tax-free is now always on regardless
+        // of what a legacy saved blob carries.
         const s = baseSettings();
         s.taxFree = false;
         const summary = computeMonthSummary(s, new Date(2026, 5, 1));
-        expect(summary.totalTFC).toBeCloseTo(summary.totalInvoiced, 2);
+        expect(summary.totalTFC).toBeCloseTo(summary.totalInvoiced * 0.80, 2);
     });
 
     it('applies 10% sibling discount to Gaspard (chargeable hours only)', () => {
@@ -203,15 +205,17 @@ describe('TFC quarterly cap', () => {
         expect(aug.gaspardUsedBefore).toBeCloseTo(jun.gaspardSaving + jul.gaspardSaving, 2);
     });
 
-    it('does not consume cap from months where taxFree was off', () => {
-        // Gaspard's Jun–Aug period: turn taxFree off for June only.
+    it('ignores legacy billing overrides — tax-free is always applied', () => {
+        // A stale `billing` override that tried to turn taxFree off for June is
+        // now inert, so June still consumes part of the cap.
         const s = baseSettings();
         s.monthOverrides = {
             '2026-06': { billing: { taxFree: false, fullWeekModel: true } },
-            '2026-07': { billing: { taxFree: true,  fullWeekModel: true } },
         };
+        const jun = tfcSavingForMonth(s, '2026-06');
         const jul = tfcSavingForMonth(s, '2026-07');
-        expect(jul.gaspardUsedBefore).toBe(0); // June contributed nothing.
+        expect(jun.gaspardSaving).toBeGreaterThan(0);
+        expect(jul.gaspardUsedBefore).toBeCloseTo(jun.gaspardSaving, 2);
     });
 });
 

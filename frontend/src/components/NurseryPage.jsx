@@ -165,10 +165,12 @@ const NurseryPage = ({ onSettingsChange }) => {
     const [ellis, setEllis]                 = useState(DEFAULTS.ellis);
     const [gaspard, setGaspard]             = useState(DEFAULTS.gaspard);
     const [mil, setMil]                     = useState(DEFAULTS.mil);
-    const [taxFree, setTaxFree]             = useState(DEFAULTS.taxFree);
-    const [fullWeekModel, setFullWeekModel] = useState(DEFAULTS.fullWeekModel);
-    const [showBreakdown, setShowBreakdown] = useState(DEFAULTS.showBreakdown);
     const [adhoc, setAdhoc]                 = useState(DEFAULTS.adhoc);
+    // Billing model is fixed: always full-week model + tax-free childcare, and
+    // the detailed monthly breakdown is always shown (the toggle panel was removed).
+    const taxFree = true;
+    const fullWeekModel = true;
+    const showBreakdown = true;
     const [monthOverrides, setMonthOverrides] = useState({});
     // Non-nursery blob keys (e.g. `childcare`, owned by the Childcare tab) are
     // preserved verbatim so saving the nursery settings never wipes them.
@@ -196,13 +198,10 @@ const NurseryPage = ({ onSettingsChange }) => {
     const effEllisOverride   = findEffectiveOverride(monthOverrides, monthKey, 'ellis');
     const effGaspardOverride = findEffectiveOverride(monthOverrides, monthKey, 'gaspard');
     const effMilOverride     = findEffectiveOverride(monthOverrides, monthKey, 'mil');
-    const effBillingOverride = findEffectiveOverride(monthOverrides, monthKey, 'billing');
 
     const effEllisSchedule   = effEllisOverride?.schedule   ?? ellis.schedule;
     const effGaspardSchedule = effGaspardOverride?.schedule ?? gaspard.schedule;
     const effMil             = effMilOverride               ?? mil;
-    const effTaxFree         = effBillingOverride?.taxFree         ?? taxFree;
-    const effFullWeekModel   = effBillingOverride?.fullWeekModel   ?? fullWeekModel;
 
     const setOverride = (key, value) => setMonthOverrides(prev => ({
         ...prev,
@@ -217,10 +216,6 @@ const NurseryPage = ({ onSettingsChange }) => {
         setOverride('gaspard', { ...(effGaspardOverride || {}), schedule: s });
     const setMilEffective = (m) =>
         setOverride('mil', m);
-    const setTaxFreeEffective = (v) =>
-        setOverride('billing', { taxFree: v, fullWeekModel: effFullWeekModel });
-    const setFullWeekModelEffective = (v) =>
-        setOverride('billing', { taxFree: effTaxFree, fullWeekModel: v });
 
     // Load from server on mount; migrate any localStorage values found.
     useEffect(() => {
@@ -230,9 +225,6 @@ const NurseryPage = ({ onSettingsChange }) => {
             if (blob.ellis)         setEllis(blob.ellis);
             if (blob.gaspard)       setGaspard(blob.gaspard);
             if (Array.isArray(blob.mil))       setMil(blob.mil);
-            if (typeof blob.taxFree === 'boolean')       setTaxFree(blob.taxFree);
-            if (typeof blob.fullWeekModel === 'boolean') setFullWeekModel(blob.fullWeekModel);
-            if (typeof blob.showBreakdown === 'boolean') setShowBreakdown(blob.showBreakdown);
             if (Array.isArray(blob.adhoc))     setAdhoc(blob.adhoc);
             if (blob.monthOverrides && typeof blob.monthOverrides === 'object') setMonthOverrides(blob.monthOverrides);
             setOtherBlob(blob); // keep the whole blob so we don't drop other tabs' keys
@@ -370,19 +362,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                 )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <div className="mb-4">
                 <MilPanel mil={effMil} setMil={setMilEffective} />
-                <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-3">Billing model & discounts</h2>
-                    <div className="space-y-2">
-                        <Toggle checked={effFullWeekModel} onChange={setFullWeekModelEffective}
-                                label="Full Week model (£356/wk → £7.12/hr on non-funded hours)" />
-                        <Toggle checked={effTaxFree} onChange={setTaxFreeEffective}
-                                label="Tax-free childcare (20% off the whole bill)" />
-                        <Toggle checked={showBreakdown} onChange={setShowBreakdown}
-                                label="Show detailed monthly breakdown" />
-                    </div>
-                </div>
             </div>
 
             {showBreakdown && (
@@ -396,8 +377,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                                     <th className="py-2 pr-3 text-right">× count</th>
                                     <th className="py-2 pr-3">Sessions</th>
                                     <th className="py-2 pr-3 text-right">Ellis</th>
-                                    <th className="py-2 pr-3 text-right">Gaspard</th>
-                                    <th className="py-2 pr-3 text-right">Combined</th>
+                                    {gaspardInNursery && <th className="py-2 pr-3 text-right">Gaspard</th>}
+                                    {gaspardInNursery && <th className="py-2 pr-3 text-right">Combined</th>}
                                     <th className="py-2 pr-3 text-right">MIL transfers</th>
                                     <th className="py-2 text-right">You pay</th>
                                 </tr>
@@ -447,14 +428,18 @@ const NurseryPage = ({ onSettingsChange }) => {
                                                         ? <span title={`Before 10% sibling discount: ${money(md.eMonthlyGross)}`}>{money(md.eMonthlyNet)}</span>
                                                         : money(md.eMonthlyGross)}
                                             </td>
-                                            <td className="py-2 pr-3 text-right num">
-                                                {md.gMonthlyGross === 0
-                                                    ? '–'
-                                                    : gaspard.siblingDiscount
-                                                        ? <span title={`Before 10% sibling discount: ${money(md.gMonthlyGross)}`}>{money(md.gMonthlyNet)}</span>
-                                                        : money(md.gMonthlyGross)}
-                                            </td>
-                                            <td className="py-2 pr-3 text-right num font-medium">{md.combined === 0 ? '–' : money(md.combined)}</td>
+                                            {gaspardInNursery && (
+                                                <td className="py-2 pr-3 text-right num">
+                                                    {md.gMonthlyGross === 0
+                                                        ? '–'
+                                                        : gaspard.siblingDiscount
+                                                            ? <span title={`Before 10% sibling discount: ${money(md.gMonthlyGross)}`}>{money(md.gMonthlyNet)}</span>
+                                                            : money(md.gMonthlyGross)}
+                                                </td>
+                                            )}
+                                            {gaspardInNursery && (
+                                                <td className="py-2 pr-3 text-right num font-medium">{md.combined === 0 ? '–' : money(md.combined)}</td>
+                                            )}
                                             <td className="py-2 pr-3 text-right num text-rose-600">{md.milPay > 0 ? `−${money(md.milPay)}` : '–'}</td>
                                             <td className="py-2 text-right num font-medium text-amber-700">{md.parentPay > 0 ? money(md.parentPay) : '–'}</td>
                                         </tr>
@@ -463,7 +448,7 @@ const NurseryPage = ({ onSettingsChange }) => {
 
                                 {calc.monthAdhocs.length > 0 && (
                                     <tr className="bg-amber-50">
-                                        <td colSpan="8" className="py-2 pr-3 text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                                        <td colSpan={gaspardInNursery ? 8 : 6} className="py-2 pr-3 text-xs font-semibold text-amber-700 uppercase tracking-wide">
                                             Ad-hoc days
                                         </td>
                                     </tr>
@@ -476,8 +461,12 @@ const NurseryPage = ({ onSettingsChange }) => {
                                             {a.child === 'ellis' ? 'E' : 'G'}: {a.type === 'fullDay' ? 'Full day' : a.type === 'morning' ? 'Morning' : 'Afternoon'} · ad-hoc · {a.ageBracket}
                                         </td>
                                         <td className="py-2 pr-3 text-right num">{a.eGross === 0 ? '–' : (ellis.siblingDiscount ? money(a.eNet) : money(a.eGross))}</td>
-                                        <td className="py-2 pr-3 text-right num">{a.gGross === 0 ? '–' : (gaspard.siblingDiscount ? money(a.gNet) : money(a.gGross))}</td>
-                                        <td className="py-2 pr-3 text-right num font-medium">{money(a.combined)}</td>
+                                        {gaspardInNursery && (
+                                            <td className="py-2 pr-3 text-right num">{a.gGross === 0 ? '–' : (gaspard.siblingDiscount ? money(a.gNet) : money(a.gGross))}</td>
+                                        )}
+                                        {gaspardInNursery && (
+                                            <td className="py-2 pr-3 text-right num font-medium">{money(a.combined)}</td>
+                                        )}
                                         <td className="py-2 pr-3 text-right num text-rose-600">{a.milPay > 0 ? `−${money(a.milPay)}` : '–'}</td>
                                         <td className="py-2 text-right num font-medium text-amber-700">{a.parentPay > 0 ? money(a.parentPay) : '–'}</td>
                                     </tr>
@@ -492,13 +481,17 @@ const NurseryPage = ({ onSettingsChange }) => {
                                             + calc.monthAdhocs.reduce((a, x) => a + x.eNet, 0)
                                         )}
                                     </td>
-                                    <td className="py-2 pr-3 text-right num">
-                                        {money(
-                                            calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0)
-                                            + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0)
-                                        )}
-                                    </td>
-                                    <td className="py-2 pr-3 text-right num">{money(calc.monthly.gross)}</td>
+                                    {gaspardInNursery && (
+                                        <td className="py-2 pr-3 text-right num">
+                                            {money(
+                                                calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0)
+                                                + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0)
+                                            )}
+                                        </td>
+                                    )}
+                                    {gaspardInNursery && (
+                                        <td className="py-2 pr-3 text-right num">{money(calc.monthly.gross)}</td>
+                                    )}
                                     <td className="py-2 pr-3 text-right num text-rose-600">−{money(calc.monthly.mil)}</td>
                                     <td className="py-2 text-right num text-amber-700">{money(calc.monthly.parentOOP)}</td>
                                 </tr>

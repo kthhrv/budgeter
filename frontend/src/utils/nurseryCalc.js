@@ -147,7 +147,6 @@ export function effectiveForMonth(settings, monthKey) {
     const ellisOverride   = findEffectiveOverride(overrides, monthKey, 'ellis');
     const gaspardOverride = findEffectiveOverride(overrides, monthKey, 'gaspard');
     const milOverride     = findEffectiveOverride(overrides, monthKey, 'mil');
-    const billingOverride = findEffectiveOverride(overrides, monthKey, 'billing');
 
     // Gaspard leaves nursery when his school-childcare model kicks in. From
     // startMonth his nursery schedule is forced empty so he drops out of the
@@ -164,8 +163,10 @@ export function effectiveForMonth(settings, monthKey) {
         gaspardSchedule: gaspardInNursery ? rawGaspardSchedule : NO_SCHEDULE,
         gaspardInNursery,
         mil:             milOverride               ?? settings.mil,
-        taxFree:         billingOverride?.taxFree         ?? settings.taxFree,
-        fullWeekModel:   billingOverride?.fullWeekModel   ?? settings.fullWeekModel,
+        // Billing model is fixed: always the full-week model with tax-free
+        // childcare applied (the per-month billing toggle was removed from the UI).
+        taxFree:         true,
+        fullWeekModel:   true,
     };
 }
 
