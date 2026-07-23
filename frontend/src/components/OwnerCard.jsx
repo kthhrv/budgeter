@@ -51,9 +51,10 @@ const OwnerCard = ({ config, items, searchTerm = '', currentDate, isEditingDisab
             <div className="flex items-start justify-between gap-3 p-4 pb-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                     <span className={`h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 ${a.avatar}`}><Icon className="h-4 w-4" /></span>
-                    <span className={`font-bold truncate ${a.name}`}>{config.name}
+                    <div className="min-w-0">
+                        <h3 className={`font-bold leading-tight truncate ${a.name}`}>{config.name}</h3>
                         <span className="block text-[11px] font-medium text-gray-400 truncate">{config.sub}</span>
-                    </span>
+                    </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{config.remainingLabel}</div>

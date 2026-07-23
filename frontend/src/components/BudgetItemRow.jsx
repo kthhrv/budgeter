@@ -39,6 +39,7 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                 message={`Are you sure you want to delete '${item.item_name}'? This action cannot be undone.`}
             />
             <div
+                data-testid={isClickable ? 'budget-row' : undefined}
                 className={`group flex items-start gap-3 py-2 border-t border-dashed border-gray-100 first:border-t-0 rounded-lg transition-colors ${isClickable ? 'cursor-pointer hover:bg-gray-50/80' : ''} ${isSynthetic ? 'text-gray-500' : ''}`}
                 onClick={handleRowClick}
                 onKeyDown={handleRowKeyDown}
