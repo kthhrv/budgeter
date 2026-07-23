@@ -92,14 +92,6 @@ class BudgetItem(models.Model):
         default='',
         help_text="Optional sub-classification for an expense: bills pot or groceries pot."
     )
-    bills_pot_owner = models.CharField(
-        max_length=50,
-        choices=OWNER_CHOICES,
-        blank=True,
-        default='',
-        help_text="For Bills Pot expenses, whose bills pot funds it. Overrides `owner` for "
-                  "attribution (whose card/total the item counts under). Empty for non-bills items."
-    )
     is_tab_repayment = models.BooleanField(
         default=False,
         help_text="If true, each month's value is automatically added as a tab repayment."

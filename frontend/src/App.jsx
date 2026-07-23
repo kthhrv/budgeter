@@ -122,16 +122,8 @@ const App = () => {
         const currentMonthName = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
         const itemsWithNurserySub = applyChildcareLinks(budgetItems, childcareNets, currentMonthName);
 
-        // A Bills Pot expense's chosen pot owner overrides its Owner: it counts under
-        // that person's card and Left over.
-        const effectiveItems = itemsWithNurserySub.map(item =>
-            (item.item_type === 'expense' && item.expense_pot === 'bills' && item.bills_pot_owner)
-                ? { ...item, owner: item.bills_pot_owner }
-                : item
-        );
-
         const additionalIncomes = [];
-        for (const item of effectiveItems) {
+        for (const item of itemsWithNurserySub) {
             const nameLower = item.item_name.toLowerCase().trim();
             if (item.item_type === 'expense') {
                 if (nameLower === 'tild repay') {
@@ -151,7 +143,7 @@ const App = () => {
                 }
             }
         }
-        return [...effectiveItems, ...additionalIncomes];
+        return [...itemsWithNurserySub, ...additionalIncomes];
     }, [budgetItems, childcareNets, currentDate]);
 
     useEffect(() => {

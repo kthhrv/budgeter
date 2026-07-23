@@ -4,7 +4,7 @@ import { formatDate, DAY_CHOICES } from '../utils/helpers';
 const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
     const isNew = !item?.budget_item_id;
     const [formData, setFormData] = useState({
-        item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', bills_pot_owner: '', is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
+        item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
         calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
         last_payment_month_id: ''
     });
@@ -14,7 +14,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
         if (isOpen) {
             if (isNew) {
                 setFormData({
-                    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', bills_pot_owner: '', is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
+                    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
                     calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
                     last_payment_month_id: ''
                 });
@@ -25,7 +25,6 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                     item_type: item.item_type || 'expense',
                     owner: item.owner || 'shared',
                     expense_pot: item.expense_pot || '',
-                    bills_pot_owner: item.bills_pot_owner || '',
                     is_tab_repayment: item.is_tab_repayment || false,
                     is_extra: item.is_extra || false,
                     childcare_link: item.childcare_link || '',
@@ -70,13 +69,9 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                 next.childcare_link = '';
                 next.is_auto_extra = false;
             }
-            if (name === 'expense_pot') {
-                if (value !== '') {
-                    next.is_extra = false;
-                    next.is_auto_extra = false;
-                }
-                // Bills Pot carries a pot owner (defaults to Shared); clear it otherwise.
-                next.bills_pot_owner = value === 'bills' ? (prev.bills_pot_owner || 'shared') : '';
+            if (name === 'expense_pot' && value !== '') {
+                next.is_extra = false;
+                next.is_auto_extra = false;
             }
             if (name === 'is_extra' && !checked) {
                 next.is_auto_extra = false;
@@ -93,11 +88,6 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         const payload = { ...formData };
-        if (payload.expense_pot !== 'bills') {
-            payload.bills_pot_owner = '';
-        } else if (!payload.bills_pot_owner) {
-            payload.bills_pot_owner = 'shared';
-        }
         if (isNew) {
             payload.value = parseFloat(payload.value) || 0;
         }
@@ -149,19 +139,6 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave }) => {
                                 <option value="bills">Bills Pot</option>
                                 <option value="groceries">Groceries Pot</option>
                             </select>
-                        </div>
-                    )}
-
-                    {/* Bills pot owner — which person's bills pot funds this expense (overrides Owner) */}
-                    {formData.item_type === 'expense' && formData.expense_pot === 'bills' && (
-                        <div>
-                            <label htmlFor="bills_pot_owner" className="block text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Bills pot for</label>
-                            <select id="bills_pot_owner" name="bills_pot_owner" value={formData.bills_pot_owner || 'shared'} onChange={handleChange} className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all">
-                                <option value="shared">Shared</option>
-                                <option value="keith">Keith</option>
-                                <option value="tild">Tild</option>
-                            </select>
-                            <p className="text-xs text-gray-400 mt-1">Counts under this person's card and Left over, regardless of Owner.</p>
                         </div>
                     )}
 

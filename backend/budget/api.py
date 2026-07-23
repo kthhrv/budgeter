@@ -36,7 +36,6 @@ class BudgetItemSchema(Schema):
     item_type: str
     owner: str
     expense_pot: str
-    bills_pot_owner: str
     is_tab_repayment: bool
     is_extra: bool
     childcare_link: str
@@ -54,7 +53,6 @@ class BudgetItemInputSchema(Schema):
     item_type: str
     owner: str
     expense_pot: str = ''
-    bills_pot_owner: str = ''
     is_tab_repayment: bool = False
     is_extra: bool = False
     childcare_link: str = ''
@@ -70,7 +68,6 @@ class BudgetItemEditSchema(Schema):
     item_type: Optional[str] = None
     owner: Optional[str] = None
     expense_pot: Optional[str] = None
-    bills_pot_owner: Optional[str] = None
     is_tab_repayment: Optional[bool] = None
     is_extra: Optional[bool] = None
     childcare_link: Optional[str] = None
@@ -85,7 +82,6 @@ class BudgetItemVersionSchema(Schema):
     item_type: str
     owner: str
     expense_pot: str
-    bills_pot_owner: str
     is_tab_repayment: bool
     is_extra: bool
     childcare_link: str
@@ -117,7 +113,6 @@ def _serialize_version(budget_item, effective_version, month_obj):
         item_type=budget_item.item_type,
         owner=budget_item.owner,
         expense_pot=budget_item.expense_pot,
-        bills_pot_owner=budget_item.bills_pot_owner,
         is_tab_repayment=budget_item.is_tab_repayment,
         is_extra=budget_item.is_extra,
         childcare_link=budget_item.childcare_link,
