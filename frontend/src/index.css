@@ -4,6 +4,9 @@
     --font-sans: 'DM Sans', sans-serif;
 }
 
+/* Line up digits wherever figures are stacked in columns. */
+.num { font-variant-numeric: tabular-nums; }
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

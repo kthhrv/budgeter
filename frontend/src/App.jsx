@@ -8,68 +8,41 @@ import LoadingSkeleton from './components/LoadingSkeleton';
 import SearchComponent from './components/SearchComponent';
 import MonthSelector from './components/MonthSelector';
 import { useBudgetTotals } from './hooks/useBudgetTotals';
-import { SharedCard, PersonCard } from './components/OwnerTotals';
-import BudgetTable from './components/BudgetTable';
+import HouseholdSummary from './components/HouseholdSummary';
+import OwnerCard from './components/OwnerCard';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
 import NurseryPage from './components/NurseryPage';
 import ChildcarePage from './components/ChildcarePage';
 
 const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
-    const totals = useBudgetTotals(items);
-    const tableProps = { items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled };
-    const hasSavings = (owner) => items.some(i => i.item_type === 'savings' && i.owner === owner);
+    const t = useBudgetTotals(items);
+
+    // Personal contributions fund the joint pot; they net out so the joint card
+    // "left over" and the three cards' left-overs sum to the household total.
+    const contributions = t.keithShare + t.tildShare;
+    const sharedRemaining = t.sharedIncome + contributions - t.sharedExpenseTotal - t.sharedSavings;
+
+    const hero = {
+        moneyIn: t.keithIncome + t.tildIncome + t.sharedIncome,
+        moneyOut: t.keithDirectExpenses + t.tildDirectExpenses + t.sharedExpenseTotal,
+        saved: t.keithSavings + t.tildSavings + t.sharedSavings,
+    };
+    hero.leftOver = hero.moneyIn - hero.moneyOut - hero.saved;
+
+    const owners = [
+        { key: 'shared', name: 'Joint', accent: 'joint', sub: 'Shared account', remainingLabel: 'Left over', remaining: sharedRemaining, contributions },
+        { key: 'keith', name: 'Keith', accent: 'keith', sub: `${(t.keithProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.keithRemaining, transfer: t.keithShare },
+        { key: 'tild', name: 'Tild', accent: 'tild', sub: `${(t.tildProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.tildRemaining, transfer: t.tildShare },
+    ];
+
+    const cardProps = { items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled };
 
     return (
         <div className="animate-fadeIn">
-            {/* Mobile: all breakdown cards first, then tables grouped per owner */}
-            <div className="xl:hidden space-y-6">
-                <div className="space-y-4">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} sharedSavings={totals.sharedSavings} totalContributions={totals.keithShare + totals.tildShare} />
-                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} savings={totals.keithSavings} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
-                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} savings={totals.tildSavings} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
-                </div>
-                <div className="space-y-4">
-                    <BudgetTable title="Joint Income" itemType="income" ownerFilter="shared" {...tableProps} />
-                    <BudgetTable title="Joint Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
-                    {hasSavings('shared') && <BudgetTable title="Joint Savings" itemType="savings" ownerFilter="shared" {...tableProps} />}
-                </div>
-                <div className="space-y-4">
-                    <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
-                    <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
-                    {hasSavings('keith') && <BudgetTable title="Keith's Savings" itemType="savings" ownerFilter="keith" {...tableProps} />}
-                </div>
-                <div className="space-y-4">
-                    <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
-                    <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
-                    {hasSavings('tild') && <BudgetTable title="Tild's Savings" itemType="savings" ownerFilter="tild" {...tableProps} />}
-                </div>
-            </div>
-
-            {/* Desktop: aligned 3-column grid */}
-            <div className="hidden xl:block space-y-6">
-                <div className="grid grid-cols-3 gap-6 items-stretch">
-                    <SharedCard billsPotTotal={totals.billsPotTotal} groceriesPotTotal={totals.groceriesPotTotal} sharedIncome={totals.sharedIncome} sharedExpenses={totals.sharedExpenseTotal} extraTotal={totals.extraTotal} sharedSavings={totals.sharedSavings} totalContributions={totals.keithShare + totals.tildShare} />
-                    <PersonCard name="Keith" color="blue" income={totals.keithIncome} directExpenses={totals.keithDirectExpenses} savings={totals.keithSavings} share={totals.keithShare} sharedTotal={totals.sharedTotal} proportion={totals.keithProportion} remaining={totals.keithRemaining} repaymentOut={totals.keithTabRepayment} repaymentIn={totals.tildTabRepayment} />
-                    <PersonCard name="Tild" color="pink" income={totals.tildIncome} directExpenses={totals.tildDirectExpenses} savings={totals.tildSavings} share={totals.tildShare} sharedTotal={totals.sharedTotal} proportion={totals.tildProportion} remaining={totals.tildRemaining} repaymentOut={totals.tildTabRepayment} repaymentIn={totals.keithTabRepayment} />
-                </div>
-                <div className="grid grid-cols-3 gap-6">
-                    <div className="space-y-4">
-                        <BudgetTable title="Joint Income" itemType="income" ownerFilter="shared" {...tableProps} />
-                        <BudgetTable title="Joint Expenses" itemType="expense" ownerFilter="shared" {...tableProps} />
-                        {hasSavings('shared') && <BudgetTable title="Joint Savings" itemType="savings" ownerFilter="shared" {...tableProps} />}
-                    </div>
-                    <div className="space-y-4">
-                        <BudgetTable title="Keith's Income" itemType="income" ownerFilter="keith" {...tableProps} />
-                        <BudgetTable title="Keith's Expenses" itemType="expense" ownerFilter="keith" {...tableProps} />
-                        {hasSavings('keith') && <BudgetTable title="Keith's Savings" itemType="savings" ownerFilter="keith" {...tableProps} />}
-                    </div>
-                    <div className="space-y-4">
-                        <BudgetTable title="Tild's Income" itemType="income" ownerFilter="tild" {...tableProps} />
-                        <BudgetTable title="Tild's Expenses" itemType="expense" ownerFilter="tild" {...tableProps} />
-                        {hasSavings('tild') && <BudgetTable title="Tild's Savings" itemType="savings" ownerFilter="tild" {...tableProps} />}
-                    </div>
-                </div>
+            <HouseholdSummary {...hero} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+                {owners.map(o => <OwnerCard key={o.key} config={o} {...cardProps} />)}
             </div>
         </div>
     );

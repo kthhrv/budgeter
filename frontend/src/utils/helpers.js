@@ -36,6 +36,13 @@ export const isMonthInPast = (date) => {
     return targetMonthStart < currentMonthStart;
 };
 
+// Format a number as GBP with grouped thousands, e.g. -1234.5 -> "-£1,234.50".
+export const money = (n) => {
+    const v = Number(n) || 0;
+    const body = Math.abs(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${v < 0 ? '-£' : '£'}${body}`;
+};
+
 export const getInitialDate = () => {
     const hash = window.location.hash;
     const match = hash.match(/^#(\d{4}-\d{2})$/);
