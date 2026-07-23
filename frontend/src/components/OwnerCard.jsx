@@ -70,10 +70,20 @@ const OwnerCard = ({ config, items, searchTerm = '', currentDate, isEditingDisab
                 </div>
             </div>
 
-            {config.transfer != null && (
-                <div className={`mx-4 mt-3 rounded-xl px-3 py-2.5 flex items-center justify-between text-sm ${a.foot}`}>
-                    <span className="text-gray-500">Transfer to joint</span>
-                    <b className="num text-gray-700">{money(config.transfer)}</b>
+            {(config.transfer != null || config.billsPot > 0) && (
+                <div className="mx-4 mt-3 space-y-1.5">
+                    {config.transfer != null && (
+                        <div className={`rounded-xl px-3 py-2.5 flex items-center justify-between text-sm ${a.foot}`}>
+                            <span className="text-gray-500">Transfer to joint</span>
+                            <b className="num text-gray-700">{money(config.transfer)}</b>
+                        </div>
+                    )}
+                    {config.billsPot > 0 && (
+                        <div className={`rounded-xl px-3 py-2.5 flex items-center justify-between text-sm ${a.foot}`}>
+                            <span className="text-gray-500">Transfer to Bills pot</span>
+                            <b className="num text-gray-700">{money(config.billsPot)}</b>
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -30,10 +30,19 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
     };
     hero.leftOver = hero.moneyIn - hero.moneyOut - hero.saved;
 
+    // How much each person moves into their Bills Pot this month (a labelled subtotal
+    // of expenses already counted under that owner).
+    const billsPot = { shared: 0, keith: 0, tild: 0 };
+    for (const i of items) {
+        if (i.item_type === 'expense' && i.expense_pot === 'bills' && billsPot[i.owner] !== undefined) {
+            billsPot[i.owner] += parseFloat(i.effective_value) || 0;
+        }
+    }
+
     const owners = [
-        { key: 'shared', name: 'Joint', accent: 'joint', sub: 'Shared account', remainingLabel: 'Left over', remaining: sharedRemaining, contributions },
-        { key: 'keith', name: 'Keith', accent: 'keith', sub: `${(t.keithProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.keithRemaining, transfer: t.keithShare },
-        { key: 'tild', name: 'Tild', accent: 'tild', sub: `${(t.tildProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.tildRemaining, transfer: t.tildShare },
+        { key: 'shared', name: 'Joint', accent: 'joint', sub: 'Shared account', remainingLabel: 'Left over', remaining: sharedRemaining, contributions, billsPot: billsPot.shared },
+        { key: 'keith', name: 'Keith', accent: 'keith', sub: `${(t.keithProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.keithRemaining, transfer: t.keithShare, billsPot: billsPot.keith },
+        { key: 'tild', name: 'Tild', accent: 'tild', sub: `${(t.tildProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.tildRemaining, transfer: t.tildShare, billsPot: billsPot.tild },
     ];
 
     const cardProps = { items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled };
@@ -113,8 +122,16 @@ const App = () => {
         const currentMonthName = currentDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
         const itemsWithNurserySub = applyChildcareLinks(budgetItems, childcareNets, currentMonthName);
 
+        // A Bills Pot expense's chosen pot owner overrides its Owner: it counts under
+        // that person's card and Left over.
+        const effectiveItems = itemsWithNurserySub.map(item =>
+            (item.item_type === 'expense' && item.expense_pot === 'bills' && item.bills_pot_owner)
+                ? { ...item, owner: item.bills_pot_owner }
+                : item
+        );
+
         const additionalIncomes = [];
-        for (const item of itemsWithNurserySub) {
+        for (const item of effectiveItems) {
             const nameLower = item.item_name.toLowerCase().trim();
             if (item.item_type === 'expense') {
                 if (nameLower === 'tild repay') {
@@ -134,7 +151,7 @@ const App = () => {
                 }
             }
         }
-        return [...itemsWithNurserySub, ...additionalIncomes];
+        return [...effectiveItems, ...additionalIncomes];
     }, [budgetItems, childcareNets, currentDate]);
 
     useEffect(() => {
