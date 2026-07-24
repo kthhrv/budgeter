@@ -8,12 +8,21 @@ from typing import List, Optional
 import datetime
 import uuid
 import calendar
+import os
 
 from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings
 from django.db.models import Prefetch
 from django.middleware.csrf import get_token
 
 api = NinjaAPI(auth=django_auth)
+
+
+# auth=None is REQUIRED: the deploy pipeline polls this unauthenticated to
+# decide whether a release is healthy or must be rolled back. Inheriting the
+# API-wide django_auth would return 401 and fail every deploy.
+@api.get("/health", auth=None)
+def health(request):
+    return {"status": "ok", "sha": os.environ.get("GIT_SHA", "unknown")}
 
 # --- Schemas ---
 
