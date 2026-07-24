@@ -109,14 +109,25 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
         else onClose();
     }, [dirty, onClose]);
 
-    // Esc to close + focus the name field on open.
+    // Esc to close.
     useEffect(() => {
         if (!isOpen) return;
         const onKey = (e) => { if (e.key === 'Escape' && !confirm) { e.preventDefault(); requestClose(); } };
         document.addEventListener('keydown', onKey);
-        const t = setTimeout(() => dialogRef.current?.querySelector('#item_name')?.focus(), 40);
-        return () => { document.removeEventListener('keydown', onKey); clearTimeout(t); };
+        return () => document.removeEventListener('keydown', onKey);
     }, [isOpen, confirm, requestClose]);
+
+    // Focus the name field once when the modal opens. Deliberately depends on
+    // [isOpen] only — requestClose is recreated on every keystroke (it closes
+    // over `dirty`), and including it here used to reschedule the old focus
+    // timer on each keystroke, stealing focus back to Name mid-type. The DOM
+    // is already committed by the time this effect runs, so focus() fires
+    // synchronously here rather than after an arbitrary delay — a delay of
+    // any length is itself racy against fast typing (real or simulated).
+    useEffect(() => {
+        if (!isOpen) return;
+        dialogRef.current?.querySelector('#item_name')?.focus();
+    }, [isOpen]);
 
     // Minimal focus trap within the dialog.
     const onDialogKeyDown = (e) => {
