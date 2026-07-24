@@ -32,3 +32,26 @@ test('new item: Advanced options, weekly monthly estimate, and confirmed discard
     await page.getByRole('button', { name: 'Discard' }).click();
     await expect(page.getByRole('heading', { name: 'New item' })).toBeHidden();
 });
+
+test('name field is focused when the modal opens', async ({ page }) => {
+    await page.getByRole('button', { name: 'Add New Item' }).click();
+    await expect(page.getByRole('heading', { name: 'New item' })).toBeVisible();
+    await expect(page.locator('#item_name')).toBeFocused();
+});
+
+test('typing a name then moving to Value does not steal a keystroke back into Name', async ({ page }) => {
+    await page.getByRole('button', { name: 'Add New Item' }).click();
+    await expect(page.getByRole('heading', { name: 'New item' })).toBeVisible();
+
+    const nameField = page.locator('#item_name');
+    const valueField = page.locator('input[name="value"]');
+
+    // Real per-character typing, like a user — this is what used to race
+    // against the old delayed refocus and teleport a digit into Name.
+    await nameField.pressSequentially('Hosting');
+    await valueField.click();
+    await valueField.pressSequentially('12.50');
+
+    await expect(nameField).toHaveValue('Hosting');
+    await expect(valueField).toHaveValue('12.50');
+});

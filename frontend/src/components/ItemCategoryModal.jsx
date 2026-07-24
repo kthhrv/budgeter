@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { formatDate, DAY_CHOICES, money, weekdayOccurrencesInMonth } from '../utils/helpers';
 import ConfirmationModal from './ConfirmationModal';
@@ -120,11 +120,12 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
     // Focus the name field once when the modal opens. Deliberately depends on
     // [isOpen] only — requestClose is recreated on every keystroke (it closes
     // over `dirty`), and including it here used to reschedule the old focus
-    // timer on each keystroke, stealing focus back to Name mid-type. The DOM
-    // is already committed by the time this effect runs, so focus() fires
-    // synchronously here rather than after an arbitrary delay — a delay of
-    // any length is itself racy against fast typing (real or simulated).
-    useEffect(() => {
+    // timer on each keystroke, stealing focus back to Name mid-type. useLayoutEffect
+    // runs synchronously after the DOM is committed but before the browser
+    // paints, so focus() fires deterministically pre-paint here rather than
+    // after an arbitrary delay — a delay of any length is itself racy against
+    // fast typing (real or simulated).
+    useLayoutEffect(() => {
         if (!isOpen) return;
         dialogRef.current?.querySelector('#item_name')?.focus();
     }, [isOpen]);
