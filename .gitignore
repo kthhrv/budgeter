@@ -9,8 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
-# sqlite
-db.sqlite3
+# sqlite — pattern must cover db-prod.sqlite3 and any other *.sqlite3
+# dump sitting in the tree. This repo is PUBLIC.
+*.sqlite3
 
 # Logs
 *.log
