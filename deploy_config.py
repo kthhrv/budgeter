@@ -37,14 +37,18 @@ def prod_host(environ=None):
 def is_local(environ=None):
     """True when the deploy runs on the target host itself (the CI runner on
     .137), so commands execute directly instead of over SSH. Avoids giving the
-    runner a root SSH key — it only needs docker-group membership."""
+    runner a root SSH key — it only needs docker-group membership. Only the
+    exact string "1" enables this; any other value (including "true") falls
+    back to the default of False."""
     return _env(environ).get("BUDGETER_DEPLOY_LOCAL", "") == "1"
 
 
 def use_buildx(environ=None):
-    """The laptop path cross-builds linux/amd64 via the `amd64builder` buildx
+    """The laptop path cross-builds linux/amd64 via the `budgeter-amd64` buildx
     builder. The .137 runner is native amd64 and has no such builder, so CI
-    sets BUDGETER_BUILDX=0 for a plain `docker build`."""
+    sets BUDGETER_BUILDX=0 for a plain `docker build`. Only the exact string
+    "0" disables this; any other value (including "false") falls back to the
+    default of True."""
     return _env(environ).get("BUDGETER_BUILDX", "1") != "0"
 
 

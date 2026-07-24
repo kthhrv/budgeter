@@ -47,8 +47,18 @@ class OverrideTests(unittest.TestCase):
         self.assertFalse(deploy_config.is_local({"BUDGETER_DEPLOY_LOCAL": "0"}))
         self.assertFalse(deploy_config.is_local({"BUDGETER_DEPLOY_LOCAL": ""}))
 
+    def test_local_mode_not_enabled_by_stray_truthy_string(self):
+        # Only the exact string "1" toggles local mode — a YAML author reaching
+        # for "true" must not silently enable it.
+        self.assertFalse(deploy_config.is_local({"BUDGETER_DEPLOY_LOCAL": "true"}))
+
     def test_buildx_disabled_by_zero(self):
         self.assertFalse(deploy_config.use_buildx({"BUDGETER_BUILDX": "0"}))
+
+    def test_buildx_not_disabled_by_stray_falsy_string(self):
+        # Only the exact string "0" disables buildx — "false" must fall back
+        # to the default of True.
+        self.assertTrue(deploy_config.use_buildx({"BUDGETER_BUILDX": "false"}))
 
 
 class StackDirTests(unittest.TestCase):
