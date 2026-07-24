@@ -1,14 +1,18 @@
 """Deployment tasks for budgeter.
 
 Usage:
-    inv build                Build image tagged with git SHA + latest
-    inv push                 Push image to registry
-    inv deploy               Deploy to demo (default)
-    inv deploy --env prod    Deploy to prod
-    inv release              Build, push, deploy (default: demo)
-    inv release --env prod   Full release to prod
-    inv logs                 Tail logs (default: demo)
-    inv status               Show running containers
+    inv build                     Build image tagged with git SHA + latest
+    inv push                      Push image to registry
+    inv deploy                    Deploy to demo (default)
+    inv deploy --env prod         Deploy to prod
+    inv deploy --env prod --tag <sha>   Redeploy a specific image tag (CI rollback)
+    inv release                   Build, push, deploy (default: demo)
+    inv release --env prod        Full release to prod
+    inv logs                      Tail logs (default: demo)
+    inv status                    Show running containers
+
+BUDGETER_REGISTRY / BUDGETER_PROD_HOST / BUDGETER_DEPLOY_LOCAL / BUDGETER_BUILDX
+override the defaults above for CI; see deploy_config.py.
 """
 
 import io
@@ -17,11 +21,14 @@ import tempfile
 
 from invoke import task
 
-REGISTRY = "192.168.0.191:5000"
+import deploy_config
+
+# Host, registry, stack dirs and compose vars all live in deploy_config so they
+# can be unit-tested without invoke installed, and overridden by env vars in CI.
+# Defaults reproduce today's .191 behaviour exactly.
+REGISTRY = deploy_config.registry()
 REPO = "budgeter"
-PROD_HOST = "192.168.0.191"
 PROD_USER = "root"
-PROD_DIR_TEMPLATE = "/opt/stacks/budgeter-{env}"
 DEFAULT_ENV = "demo"
 TARGET_PLATFORM = "linux/amd64"
 BUILDX_BUILDER = "budgeter-amd64"
@@ -37,17 +44,6 @@ BUILDKITD_CONFIG = f'''[registry."{REGISTRY}"]
 
 IMAGE = f"{REGISTRY}/{REPO}"
 
-ENV_COMPOSE_VARS = {
-    "demo": {
-        "BUDGETER_PORT": "8081",
-        "COMPOSE_PROJECT_NAME": "budgeter-demo",
-    },
-    "prod": {
-        "BUDGETER_PORT": "8080",
-        "COMPOSE_PROJECT_NAME": "budgeter",
-    },
-}
-
 
 def _get_sha(c):
     result = c.run("git rev-parse --short HEAD", hide=True)
@@ -55,14 +51,21 @@ def _get_sha(c):
 
 
 def _prod_dir(env):
-    if env == "prod":
-        return "/opt/stacks/budgeter"
-    return PROD_DIR_TEMPLATE.format(env=env)
+    return deploy_config.stack_dir(env)
 
 
 def _ssh(c, cmd, env=DEFAULT_ENV):
-    remote = f"{PROD_USER}@{PROD_HOST}"
+    """Run a command in the stack dir on the target host.
+
+    In local mode (the CI runner, which already lives on the target host)
+    commands run directly. SSH-to-localhost would mean giving the runner a root
+    SSH key — strictly more privilege than the docker-group membership it
+    already needs."""
     prod_dir = _prod_dir(env)
+    if deploy_config.is_local():
+        c.run(f"cd {prod_dir} && {cmd}")
+        return
+    remote = f"{PROD_USER}@{deploy_config.prod_host()}"
     c.run(f'ssh {remote} "cd {prod_dir} && {cmd}"')
 
 
@@ -91,56 +94,80 @@ def _ensure_builder(c):
 
 @task
 def build(c):
-    """Build Docker image tagged with git SHA and latest, loaded into the local daemon."""
+    """Build Docker image tagged with git SHA and latest, loaded into the local daemon.
+
+    Laptops cross-build linux/amd64 through the insecure-registry-aware buildx
+    builder. The .137 CI runner is native amd64 and pushes to localhost:5000,
+    which is TLS-exempt, so it sets BUDGETER_BUILDX=0 and takes a plain build.
+    """
     sha = _get_sha(c)
+    tags = f"-t {IMAGE}:{sha} -t {IMAGE}:latest -t budgeter:latest"
+    if not deploy_config.use_buildx():
+        print(f"Building image — SHA: {sha} (native)")
+        c.run(f"docker build --build-arg GIT_SHA={sha} {tags} .")
+        return
     _ensure_builder(c)
     print(f"Building image — SHA: {sha} (platform: {TARGET_PLATFORM})")
     c.run(
         f"docker buildx build --builder {BUILDX_BUILDER} --platform {TARGET_PLATFORM} --load "
-        f"-t {IMAGE}:{sha} -t {IMAGE}:latest -t budgeter:latest ."
+        f"--build-arg GIT_SHA={sha} {tags} ."
     )
 
 
 @task
 def push(c):
-    """Push image to the registry straight from BuildKit (cache hit after build)."""
+    """Push image to the registry.
+
+    Laptop path: straight from BuildKit (cache hit after `build`), because with
+    the containerd image store `docker push` ignores daemon.json
+    insecure-registries and forces HTTPS against the plain-HTTP registry on
+    .191. On the .137 runner the target is localhost:5000, which IS TLS-exempt,
+    so a plain docker push works and needs no builder.
+    """
     sha = _get_sha(c)
+    if not deploy_config.use_buildx():
+        print(f"Pushing {IMAGE}:{sha} and latest (native)")
+        c.run(f"docker push {IMAGE}:{sha}")
+        c.run(f"docker push {IMAGE}:latest")
+        return
     _ensure_builder(c)
     print(f"Pushing {IMAGE}:{sha} and latest")
     # Re-run the build with --push; the layers are already in the build cache
     # from `build`, so this just exports + pushes them over HTTP.
     c.run(
         f"docker buildx build --builder {BUILDX_BUILDER} --platform {TARGET_PLATFORM} --push "
-        f"-t {IMAGE}:{sha} -t {IMAGE}:latest ."
+        f"--build-arg GIT_SHA={sha} -t {IMAGE}:{sha} -t {IMAGE}:latest ."
     )
 
 
 @task
-def deploy(c, env=DEFAULT_ENV):
-    """Sync config, pull image, start container."""
-    sha = _get_sha(c)
-    remote = f"{PROD_USER}@{PROD_HOST}"
+def deploy(c, env=DEFAULT_ENV, tag=None):
+    """Sync config, pull image, start container.
+
+    `--tag` overrides the git SHA; the CI pipeline uses it to roll back to the
+    previously deployed image after a failed health check."""
+    sha = tag or _get_sha(c)
     prod_dir = _prod_dir(env)
 
-    # Ensure remote dir exists
-    c.run(f'ssh {remote} "mkdir -p {prod_dir}"')
+    # env_lines raises KeyError for an unknown env — do this BEFORE creating any
+    # directory, so a typo'd --env cannot mkdir a bogus stack dir.
+    env_content = "\n".join(deploy_config.env_lines(env, sha)) + "\n"
 
-    # Write .env for compose variable substitution. Pipe through stdin so we
-    # don't have to worry about quoting / shell-`echo -e` flag portability.
-    compose_vars = ENV_COMPOSE_VARS.get(env, {})
-    env_lines = [
-        f"APP_ENV={env}",
-        f"IMAGE_TAG={sha}",
-    ]
-    env_lines += [f"{k}={v}" for k, v in compose_vars.items()]
-    env_content = "\n".join(env_lines) + "\n"
-    c.run(f"ssh {remote} 'cat > {prod_dir}/.env'", in_stream=io.StringIO(env_content))
+    if deploy_config.is_local():
+        c.run(f"mkdir -p {prod_dir}")
+        with open(f"{prod_dir}/.env", "w") as fh:
+            fh.write(env_content)
+        print(f"Syncing compose.yml to {prod_dir}")
+        c.run(f"cp compose.yml {prod_dir}/compose.yml")
+    else:
+        remote = f"{PROD_USER}@{deploy_config.prod_host()}"
+        c.run(f'ssh {remote} "mkdir -p {prod_dir}"')
+        # Pipe through stdin so we don't have to worry about quoting /
+        # shell-`echo -e` flag portability.
+        c.run(f"ssh {remote} 'cat > {prod_dir}/.env'", in_stream=io.StringIO(env_content))
+        print(f"Syncing compose.yml to {remote}:{prod_dir}")
+        c.run(f"cat compose.yml | ssh {remote} 'cat > {prod_dir}/compose.yml'")
 
-    # Sync compose file
-    print(f"Syncing compose.yml to {remote}:{prod_dir}")
-    c.run(f"cat compose.yml | ssh {remote} 'cat > {prod_dir}/compose.yml'")
-
-    # Pull and start
     print("Pulling image...")
     _ssh(c, "docker compose pull", env)
     print(f"Starting ({env})...")

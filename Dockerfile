@@ -37,6 +37,9 @@ COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY run.sh /
 RUN chmod +x /run.sh
 
+ARG GIT_SHA
+ENV GIT_SHA=${GIT_SHA}
+
 EXPOSE 80
 
 CMD envars -f /app/envars.yml exec -e ${APP_ENV:-local} -- /run.sh
