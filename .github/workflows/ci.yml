@@ -9,6 +9,16 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Manual single-env deploy from any branch — this is how a big change gets
+  # tested on demo alone. Only users with write access can fire it, so a fork
+  # PR cannot reach the runner through this path.
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Environment to deploy
+        type: choice
+        options: [demo, prod]
+        default: demo
 
 permissions:
   contents: read
@@ -119,3 +129,102 @@ jobs:
       - name: Run end-to-end tests
         working-directory: frontend
         run: npm run test:e2e
+
+  deploy:
+    # `e2e` is intentionally NOT in needs: it is advisory (see Task 7), and a
+    # job that blocks deploys is required in all but name.
+    needs: [backend, frontend, image]
+    # Reachable ONLY from push-to-main and manual dispatch. Never from
+    # pull_request — see the header comment.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, homelab]
+    strategy:
+      fail-fast: false
+      # push to main fans out to both envs; a dispatch collapses to the one
+      # chosen, so testing a branch on demo never disturbs prod.
+      matrix:
+        env: ${{ fromJSON(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.env) || '["demo","prod"]') }}
+    concurrency:
+      group: deploy-budgeter-${{ matrix.env }}
+      cancel-in-progress: false
+    env:
+      BUDGETER_REGISTRY: localhost:5000
+      BUDGETER_PROD_HOST: 192.168.0.137
+      BUDGETER_DEPLOY_LOCAL: '1'
+      BUDGETER_BUILDX: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Put uv and inv on PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve SHAs
+        id: vars
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse --short HEAD)
+          DIR=$(python3 -c "import deploy_config; print(deploy_config.stack_dir('${{ matrix.env }}'))")
+          # Capture the currently deployed tag BEFORE anything overwrites it —
+          # this is the rollback target. Empty on a first-ever deploy.
+          PREV=$(grep '^IMAGE_TAG=' "$DIR/.env" 2>/dev/null | cut -d= -f2 || true)
+          PORT=$(python3 -c "import deploy_config; print(dict(l.split('=',1) for l in deploy_config.env_lines('${{ matrix.env }}','x'))['BUDGETER_PORT'])")
+          echo "sha=$SHA"   >> "$GITHUB_OUTPUT"
+          echo "dir=$DIR"   >> "$GITHUB_OUTPUT"
+          echo "prev=$PREV" >> "$GITHUB_OUTPUT"
+          echo "port=$PORT" >> "$GITHUB_OUTPUT"
+          echo "deploying $SHA to ${{ matrix.env }} ($DIR, port $PORT); previous tag: ${PREV:-<none>}"
+
+      - name: Build image
+        run: inv build
+
+      - name: Push to the local registry
+        run: inv push
+
+      - name: Deploy
+        run: inv deploy --env ${{ matrix.env }}
+
+      - name: Health check
+        id: health
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          for attempt in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              "http://localhost:${{ steps.vars.outputs.port }}/api/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "healthy after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::health check never returned 200 (last code: ${code:-none})"
+          exit 1
+
+      - name: Roll back on failed health check
+        if: steps.health.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          PREV='${{ steps.vars.outputs.prev }}'
+          if [ -z "$PREV" ]; then
+            echo "::error::no previous IMAGE_TAG recorded — nothing to roll back to (first deploy to this stack)"
+            exit 1
+          fi
+          echo "rolling back to $PREV"
+          inv deploy --env ${{ matrix.env }} --tag "$PREV"
+          for attempt in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              "http://localhost:${{ steps.vars.outputs.port }}/api/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "::error::deploy failed; rolled back to $PREV and it is healthy"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::deploy failed AND rollback to $PREV is unhealthy — manual intervention required"
+          exit 1
+
+      - name: Fail the job if the health check failed
+        if: steps.health.outcome == 'failure'
+        run: exit 1
