@@ -1,0 +1,121 @@
+# budgeter is a PUBLIC repo. Every job here runs on GitHub-hosted runners.
+# For `pull_request` events GitHub runs the workflow file FROM THE PR HEAD, so
+# a fork can rewrite `runs-on` — a self-hosted runner must never appear on a
+# pull_request-triggered job. Actions minutes are free and unlimited for
+# public repos, so this isolation costs nothing.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/0.7.14/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync
+
+      - name: Django tests
+        working-directory: backend
+        run: uv run manage.py test -v 2
+
+      - name: Deploy-config tests
+        if: ${{ !cancelled() }}
+        run: python3 -m unittest discover -s tests -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: frontend
+        run: npm run test
+
+      - name: Production build
+        working-directory: frontend
+        run: npm run build
+
+  image:
+    # Builds but never pushes. Catches a broken Dockerfile during review
+    # rather than on the homelab after merge.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build --build-arg GIT_SHA="${GITHUB_SHA::7}" -t budgeter:ci .
+
+  e2e:
+    # Full-stack Playwright run: the harness boots Django + Vite itself and
+    # global-setup.js seeds a real session, skipping the OAuth round-trip.
+    # DELIBERATELY NOT a required status check yet (see Task 7) — CI runs
+    # against an EMPTY database while local runs use a populated db.sqlite3,
+    # so any spec that implicitly depends on seeded data will fail here first.
+    # Promote to required once it has proven stable.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/0.7.14/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync
+
+      - name: Create the test database
+        # e2e_seed_session.py assumes the tables exist; backend/db.sqlite3 is
+        # gitignored, so a fresh runner has no database at all.
+        working-directory: backend
+        env:
+          DEBUG: 'true'
+          APP_ENV: local
+        run: uv run manage.py migrate --no-input
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium
+        # Both projects (Desktop Chrome, Pixel 5) are Chromium-based.
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        working-directory: frontend
+        run: npm run test:e2e
