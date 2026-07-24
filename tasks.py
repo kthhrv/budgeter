@@ -1,14 +1,18 @@
 """Deployment tasks for budgeter.
 
 Usage:
-    inv build                Build image tagged with git SHA + latest
-    inv push                 Push image to registry
-    inv deploy               Deploy to demo (default)
-    inv deploy --env prod    Deploy to prod
-    inv release              Build, push, deploy (default: demo)
-    inv release --env prod   Full release to prod
-    inv logs                 Tail logs (default: demo)
-    inv status               Show running containers
+    inv build                     Build image tagged with git SHA + latest
+    inv push                      Push image to registry
+    inv deploy                    Deploy to demo (default)
+    inv deploy --env prod         Deploy to prod
+    inv deploy --env prod --tag <sha>   Redeploy a specific image tag (CI rollback)
+    inv release                   Build, push, deploy (default: demo)
+    inv release --env prod        Full release to prod
+    inv logs                      Tail logs (default: demo)
+    inv status                    Show running containers
+
+BUDGETER_REGISTRY / BUDGETER_PROD_HOST / BUDGETER_DEPLOY_LOCAL / BUDGETER_BUILDX
+override the defaults above for CI; see deploy_config.py.
 """
 
 import io
@@ -144,7 +148,6 @@ def deploy(c, env=DEFAULT_ENV, tag=None):
     previously deployed image after a failed health check."""
     sha = tag or _get_sha(c)
     prod_dir = _prod_dir(env)
-    remote = f"{PROD_USER}@{deploy_config.prod_host()}"
 
     # env_lines raises KeyError for an unknown env — do this BEFORE creating any
     # directory, so a typo'd --env cannot mkdir a bogus stack dir.
@@ -157,6 +160,7 @@ def deploy(c, env=DEFAULT_ENV, tag=None):
         print(f"Syncing compose.yml to {prod_dir}")
         c.run(f"cp compose.yml {prod_dir}/compose.yml")
     else:
+        remote = f"{PROD_USER}@{deploy_config.prod_host()}"
         c.run(f'ssh {remote} "mkdir -p {prod_dir}"')
         # Pipe through stdin so we don't have to worry about quoting /
         # shell-`echo -e` flag portability.
