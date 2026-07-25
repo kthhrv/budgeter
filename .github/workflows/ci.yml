@@ -8,9 +8,12 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Manual single-env deploy from any branch — this is how a big change gets
-  # tested on demo alone. Firing a workflow_dispatch requires write access to
-  # the repo, so a fork PR cannot reach the runner through this path.
+  # Manual single-env deploy. `env=demo` runs from ANY branch — that is the
+  # escape hatch for trying a big change on demo alone. `env=prod` is further
+  # restricted to `main` by deploy-prod's own guard, so a dispatch cannot put an
+  # arbitrary branch in front of real data with no demo gate. Firing a
+  # workflow_dispatch requires write access to the repo, so a fork PR cannot
+  # reach the runner through this path.
   workflow_dispatch:
     inputs:
       env:
@@ -167,7 +170,11 @@ jobs:
     runs-on: [self-hosted, homelab]
     # One non-ephemeral runner + cancel-in-progress: false means a wedged step
     # queues every later deploy behind it. Without this the ceiling is 6 hours.
-    timeout-minutes: 15
+    # Sized for the whole worst-case path, rollback included: build (<=10) +
+    # push (<=3) + deploy + 120s health poll + rollback deploy + 120s rollback
+    # poll. A cap that only covers the happy path is a cap that kills the
+    # rollback, which is when the budget matters most.
+    timeout-minutes: 25
     concurrency:
       group: deploy-budgeter-demo
       cancel-in-progress: false
@@ -201,9 +208,14 @@ jobs:
           echo "deploying $SHA to demo ($DIR, port $PORT); previous tag: ${PREV:-<none>}"
 
       - name: Build image
+        # Step-level cap, not just the job-level one: an unbounded build that
+        # ran until the job timeout would consume the budget the rollback path
+        # needs, so a wedged build would also mean no rollback.
+        timeout-minutes: 10
         run: inv build
 
       - name: Push to the local registry
+        timeout-minutes: 3
         run: inv push
 
       - name: Deploy
@@ -219,10 +231,16 @@ jobs:
         id: health
         if: steps.deploy.outcome == 'success'
         continue-on-error: true
+        # Step outputs reach the script as environment variables, never as
+        # `${{ }}` text pasted into it. Interpolation happens before bash sees
+        # the script, so a value containing shell syntax would BE shell syntax;
+        # an env var is inert data no matter what it holds.
+        env:
+          PORT: ${{ steps.vars.outputs.port }}
+          WANT: ${{ steps.vars.outputs.sha }}
         run: |
           set -uo pipefail
-          URL="http://localhost:${{ steps.vars.outputs.port }}/api/health"
-          WANT='${{ steps.vars.outputs.sha }}'
+          URL="http://localhost:${PORT}/api/health"
           # 60 x 2s ~= 120s. The container runs migrate, setup_oauth and
           # collectstatic before gunicorn binds, so a cold start is genuinely
           # slow; a tighter budget makes a slow release look like a broken one
@@ -249,19 +267,41 @@ jobs:
       - name: Roll back
         # Fires for EITHER failure mode: `inv deploy` blowing up, or a deploy
         # that landed but never became healthy.
+        #
+        # `cancelled` is checked alongside `failure` because a step that hits
+        # its own timeout-minutes, or whose runner drops mid-step, ends with
+        # outcome `cancelled` — not `failure`. Keying on `failure` alone would
+        # leave a half-deployed release live and the stack unrolled-back.
+        # `!cancelled()` (the RUN-level check) is untouched: a human cancelling
+        # the whole run should still stop everything, including this.
         if: >-
           !cancelled()
-          && (steps.deploy.outcome == 'failure' || steps.health.outcome == 'failure')
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
         # continue-on-error so this step's own exit code never decides the job:
         # the step below does that, unconditionally, in every failure path.
         continue-on-error: true
+        # Passed as env, not interpolated into the script — `prev` is read out
+        # of a file on disk, so its contents must never become shell syntax.
+        env:
+          PREV: ${{ steps.vars.outputs.prev }}
+          NEW: ${{ steps.vars.outputs.sha }}
+          PORT: ${{ steps.vars.outputs.port }}
         run: |
           set -uo pipefail
-          PREV='${{ steps.vars.outputs.prev }}'
-          NEW='${{ steps.vars.outputs.sha }}'
-          URL="http://localhost:${{ steps.vars.outputs.port }}/api/health"
+          URL="http://localhost:${PORT}/api/health"
           if [ -z "$PREV" ]; then
             echo "::error::no previous IMAGE_TAG recorded — nothing to roll back to (first deploy to this stack)"
+            exit 1
+          fi
+          if [ "$PREV" = "$NEW" ]; then
+            # `inv deploy` writes .env BEFORE `docker compose pull`, so a deploy
+            # that died at the pull leaves IMAGE_TAG already naming the build
+            # that failed. On a re-run PREV is then that same sha, and the loop
+            # below — which passes only when something OTHER than NEW is being
+            # served — can never succeed: it would redeploy the broken build and
+            # burn the full ~120s poll before reporting failure. Bail now.
+            echo "::error::recorded previous IMAGE_TAG ($PREV) is the build being deployed — there is no distinct previous build to roll back to (a prior deploy of this sha most likely failed after writing .env). Redeploy a known-good tag by hand: inv deploy --env demo --tag <sha>"
             exit 1
           fi
           echo "rolling back to $PREV"
@@ -277,36 +317,50 @@ jobs:
             # `inv deploy --tag latest` would break an equality test and block
             # a rollback that actually worked.
             if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ]; then
-              echo "::error::deploy failed; rolled back to $PREV (serving $got) and it is healthy"
+              # Says only what the test proves. `got != NEW` shows the failing
+              # build is gone and something healthy took over; it does NOT show
+              # that something is $PREV (any third build would pass too), so
+              # report what is actually serving and what was aimed for.
+              echo "::error::deploy of $NEW failed; it is no longer being served — $got is now serving and healthy (rollback targeted $PREV)"
               exit 1
             fi
             sleep 2
           done
-          echo "::error::deploy failed AND rollback to $PREV is unhealthy — manual intervention required"
+          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy build other than $NEW within ~120s — manual intervention required"
           exit 1
 
       - name: Fail the job if the deploy or health check failed
         # This is what turns the job red, in every failure path — including a
         # rollback that succeeded. `!cancelled()` is required: it disables the
         # implicit `success()` gate, which would otherwise skip this step after
-        # a failed rollback.
+        # a failed rollback. `cancelled` outcomes are caught here for the same
+        # reason as in Roll back: a step timeout must not pass as green.
         if: >-
           !cancelled()
-          && (steps.deploy.outcome == 'failure' || steps.health.outcome == 'failure')
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
         run: exit 1
 
   deploy-prod:
     # Depends on deploy-demo so a build that fails demo's health check can
-    # never reach real data. `e2e` is still advisory — see deploy-demo.
+    # never reach real data — and, on the push-to-main path, so this job can
+    # promote demo's already-validated image rather than build its own (see the
+    # Build image step). `e2e` is still advisory — see deploy-demo.
     needs: [backend, frontend, image, deploy-demo]
     # `!cancelled()` is load-bearing twice over: it disables the implicit
     # `success()` gate (hence the explicit needs.*.result checks), and that is
     # exactly what lets a manual `env=prod` dispatch run while deploy-demo sits
     # skipped — a skipped dependency would otherwise skip this job too.
-    #   push to main       -> requires deploy-demo to have succeeded
-    #   dispatch env=prod  -> runs with deploy-demo skipped
-    #   dispatch env=demo  -> does not run
-    #   pull_request       -> does not run
+    #
+    # The dispatch arm is pinned to `main` as well. Without that, the only
+    # requirement for putting an arbitrary branch in front of real data was
+    # write access: no demo gate, no review, no merge. Demo has no such
+    # restriction on purpose — deploying a feature branch to demo is the point.
+    #   push to main             -> requires deploy-demo to have succeeded
+    #   dispatch env=prod, main  -> runs with deploy-demo skipped
+    #   dispatch env=prod, other -> does not run
+    #   dispatch env=demo        -> does not run
+    #   pull_request             -> does not run
     if: >-
       !cancelled()
       && needs.backend.result == 'success'
@@ -314,9 +368,12 @@ jobs:
       && needs.image.result == 'success'
       && ((github.event_name == 'push' && github.ref == 'refs/heads/main'
            && needs.deploy-demo.result == 'success')
-          || (github.event_name == 'workflow_dispatch' && inputs.env == 'prod'))
+          || (github.event_name == 'workflow_dispatch' && inputs.env == 'prod'
+              && github.ref == 'refs/heads/main'))
     runs-on: [self-hosted, homelab]
-    timeout-minutes: 15
+    # See deploy-demo: sized so the full failure path (build, deploy, 120s
+    # health poll, rollback deploy, 120s rollback poll) fits inside the cap.
+    timeout-minutes: 25
     concurrency:
       group: deploy-budgeter-prod
       cancel-in-progress: false
@@ -349,14 +406,34 @@ jobs:
           echo "port=$PORT" >> "$GITHUB_OUTPUT"
           echo "deploying $SHA to prod ($DIR, port $PORT); previous tag: ${PREV:-<none>}"
 
+      # PROMOTE, don't rebuild. On a push to main deploy-demo has already
+      # built, pushed and health-checked localhost:5000/budgeter:<sha>; prod
+      # deploys that exact artifact. Rebuilding it would overwrite <sha> (and
+      # :latest) with a *different* image: the Dockerfile's bases
+      # (node:22-alpine, python:3.13-alpine) and its `apk add` are unpinned, so
+      # the same commit does not produce the same image twice. The gate would
+      # then be validating one artifact and shipping another.
+      #
+      # `workflow_dispatch env=prod` has no demo run at all — deploy-demo is
+      # `skipped`, not `success` — and nothing may have pushed this sha to the
+      # registry, so there the build and push must still happen. A step-level
+      # `if` that names no status function keeps its implicit `success()`, and a
+      # skipped step is not a failed one, so `Deploy` below runs either way.
       - name: Build image
+        if: needs.deploy-demo.result != 'success'
+        # Bounded so a wedged build cannot eat the budget the rollback needs.
+        timeout-minutes: 10
         run: inv build
 
       - name: Push to the local registry
+        if: needs.deploy-demo.result != 'success'
+        timeout-minutes: 3
         run: inv push
 
       - name: Deploy
         id: deploy
+        # Runs unconditionally — on the promotion path the two steps above are
+        # skipped, and `success()` (implicit here) ignores skipped steps.
         # See deploy-demo: continue-on-error keeps a failed `inv deploy` on the
         # rollback path instead of exiting the job with a stale .env.
         continue-on-error: true
@@ -366,10 +443,13 @@ jobs:
         id: health
         if: steps.deploy.outcome == 'success'
         continue-on-error: true
+        # Env, not interpolation — see deploy-demo.
+        env:
+          PORT: ${{ steps.vars.outputs.port }}
+          WANT: ${{ steps.vars.outputs.sha }}
         run: |
           set -uo pipefail
-          URL="http://localhost:${{ steps.vars.outputs.port }}/api/health"
-          WANT='${{ steps.vars.outputs.sha }}'
+          URL="http://localhost:${PORT}/api/health"
           # 60 x 2s ~= 120s — migrate + setup_oauth + collectstatic run before
           # gunicorn binds; see deploy-demo.
           for attempt in $(seq 1 60); do
@@ -389,17 +469,30 @@ jobs:
           exit 1
 
       - name: Roll back
+        # `cancelled` as well as `failure` — a step timeout or a dropped runner
+        # ends `cancelled`, and that must still roll back. See deploy-demo.
         if: >-
           !cancelled()
-          && (steps.deploy.outcome == 'failure' || steps.health.outcome == 'failure')
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
         continue-on-error: true
+        env:
+          PREV: ${{ steps.vars.outputs.prev }}
+          NEW: ${{ steps.vars.outputs.sha }}
+          PORT: ${{ steps.vars.outputs.port }}
         run: |
           set -uo pipefail
-          PREV='${{ steps.vars.outputs.prev }}'
-          NEW='${{ steps.vars.outputs.sha }}'
-          URL="http://localhost:${{ steps.vars.outputs.port }}/api/health"
+          URL="http://localhost:${PORT}/api/health"
           if [ -z "$PREV" ]; then
             echo "::error::no previous IMAGE_TAG recorded — nothing to roll back to (first deploy to this stack)"
+            exit 1
+          fi
+          if [ "$PREV" = "$NEW" ]; then
+            # A prior deploy of this sha died after `inv deploy` wrote .env but
+            # before the container came up, so IMAGE_TAG already names the
+            # failing build. Rolling "back" to it would redeploy the breakage
+            # and the loop below could never pass. See deploy-demo.
+            echo "::error::recorded previous IMAGE_TAG ($PREV) is the build being deployed — there is no distinct previous build to roll back to (a prior deploy of this sha most likely failed after writing .env). Redeploy a known-good tag by hand: inv deploy --env prod --tag <sha>"
             exit 1
           fi
           echo "rolling back to $PREV"
@@ -409,18 +502,21 @@ jobs:
             code=${resp##*$'\n'}
             body=${resp%$'\n'*}
             got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
-            # Looser than the forward check on purpose — see deploy-demo.
+            # Looser than the forward check on purpose — see deploy-demo. The
+            # message claims only what this proves: the failing build is gone
+            # and $got is serving, not that $got is $PREV.
             if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ]; then
-              echo "::error::deploy failed; rolled back to $PREV (serving $got) and it is healthy"
+              echo "::error::deploy of $NEW failed; it is no longer being served — $got is now serving and healthy (rollback targeted $PREV)"
               exit 1
             fi
             sleep 2
           done
-          echo "::error::deploy failed AND rollback to $PREV is unhealthy — manual intervention required"
+          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy build other than $NEW within ~120s — manual intervention required"
           exit 1
 
       - name: Fail the job if the deploy or health check failed
         if: >-
           !cancelled()
-          && (steps.deploy.outcome == 'failure' || steps.health.outcome == 'failure')
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
         run: exit 1
