@@ -28,6 +28,13 @@ import deploy_config
 # Defaults reproduce today's .191 behaviour exactly.
 REGISTRY = deploy_config.registry()
 REPO = "budgeter"
+# Always name the compose file explicitly. Bare `docker compose` picks the
+# first match of compose.yaml, compose.yml, docker-compose.yaml,
+# docker-compose.yml — and compose.yaml WINS over the compose.yml the deploy
+# writes. Dockge manages /opt/stacks and writes compose.yaml, so one Save in
+# its UI would silently shadow this file: deploys would keep reporting green
+# while compose read a file the repo no longer controls.
+COMPOSE = "docker compose -f compose.yml"
 PROD_USER = "root"
 DEFAULT_ENV = "demo"
 TARGET_PLATFORM = "linux/amd64"
@@ -169,9 +176,9 @@ def deploy(c, env=DEFAULT_ENV, tag=None):
         c.run(f"cat compose.yml | ssh {remote} 'cat > {prod_dir}/compose.yml'")
 
     print("Pulling image...")
-    _ssh(c, "docker compose pull", env)
+    _ssh(c, f"{COMPOSE} pull", env)
     print(f"Starting ({env})...")
-    _ssh(c, "docker compose up -d", env)
+    _ssh(c, f"{COMPOSE} up -d", env)
 
     print(f"\nDeployed {sha} to {env}")
 
@@ -189,16 +196,16 @@ def release(c, env=DEFAULT_ENV):
 @task
 def logs(c, env=DEFAULT_ENV):
     """Tail logs."""
-    _ssh(c, "docker compose logs -f --tail=50", env)
+    _ssh(c, f"{COMPOSE} logs -f --tail=50", env)
 
 
 @task
 def status(c, env=DEFAULT_ENV):
     """Show running containers."""
-    _ssh(c, "docker compose ps", env)
+    _ssh(c, f"{COMPOSE} ps", env)
 
 
 @task
 def stop(c, env=DEFAULT_ENV):
     """Stop the stack."""
-    _ssh(c, "docker compose down", env)
+    _ssh(c, f"{COMPOSE} down", env)
