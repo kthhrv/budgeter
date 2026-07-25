@@ -183,6 +183,12 @@ jobs:
       BUDGETER_PROD_HOST: 192.168.0.137
       BUDGETER_DEPLOY_LOCAL: '1'
       BUDGETER_BUILDX: '0'
+      # compose.yml sets container_name: ${COMPOSE_PROJECT_NAME:-budgeter},
+      # and ENV_COMPOSE_VARS in deploy_config.py pins COMPOSE_PROJECT_NAME to
+      # budgeter-demo for this env — so the running container is always named
+      # this. Used by the health-check and rollback loops below to read
+      # ADDON_DOMAIN out of the container (see those steps for why).
+      CONTAINER: budgeter-demo
     steps:
       - uses: actions/checkout@v4
 
@@ -241,13 +247,36 @@ jobs:
         run: |
           set -uo pipefail
           URL="http://localhost:${PORT}/api/health"
+          # DEBUG=false means Django enforces ALLOWED_HOSTS=[ADDON_DOMAIN]
+          # (see backend/budgeter/settings.py); a request with any other Host
+          # header — including plain "localhost", which is what curl sends by
+          # default — gets rejected with 400 DisallowedHost before the view
+          # ever runs, indistinguishable here from a real failure unless we
+          # send the right header. In normal operation Nginx Proxy Manager
+          # supplies that header; this loop has to fake it.
+          #
+          # ADDON_DOMAIN is a decrypted secret the image's `envars ... exec`
+          # wrapper injects into PID 1 only — it is NOT part of the
+          # container's own configured environment (`docker exec <c> printenv
+          # ADDON_DOMAIN` returns nothing), so it has to be read out of
+          # /proc/1/environ instead. That means `docker exec` against a
+          # container that is still starting (right after `docker compose up
+          # -d`) can legitimately fail — that is "not healthy yet", not a
+          # reason to abort the step, so resolution happens inside the loop
+          # and a miss just falls through to the next attempt.
+          #
           # 60 x 2s ~= 120s. The container runs migrate, setup_oauth and
           # collectstatic before gunicorn binds, so a cold start is genuinely
           # slow; a tighter budget makes a slow release look like a broken one
           # and triggers a needless rollback.
           for attempt in $(seq 1 60); do
+            domain=$(docker exec "$CONTAINER" sh -c "tr '\0' '\n' < /proc/1/environ | grep '^ADDON_DOMAIN=' | cut -d= -f2-" 2>/dev/null || true)
+            if [ -z "$domain" ]; then
+              sleep 2
+              continue
+            fi
             # --connect-timeout/--max-time: never let one poll wedge the job.
-            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -H "Host: ${domain}" -w $'\n%{http_code}' "$URL" || true)
             code=${resp##*$'\n'}   # last line: the status code
             body=${resp%$'\n'*}    # everything before it: the JSON body
             # /api/health reports the GIT_SHA baked into the image, so this
@@ -256,12 +285,12 @@ jobs:
             # "not healthy yet": keep polling instead of crashing the step.
             got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
             if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ]; then
-              echo "healthy after ${attempt} attempt(s) — serving $got"
+              echo "healthy after ${attempt} attempt(s) — serving $got (Host: $domain)"
               exit 0
             fi
             sleep 2
           done
-          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none})"
+          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none}, last domain: ${domain:-none})"
           exit 1
 
       - name: Roll back
@@ -306,8 +335,17 @@ jobs:
           fi
           echo "rolling back to $PREV"
           inv deploy --env demo --tag "$PREV" || echo "::error::rollback deploy command itself failed"
+          # Same ADDON_DOMAIN-from-PID-1 dance as the health-check step above —
+          # a rolled-back container is starting up too, so `docker exec` can
+          # fail early; resolve inside the loop and treat a miss as "not
+          # healthy yet" rather than aborting.
           for attempt in $(seq 1 60); do
-            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            domain=$(docker exec "$CONTAINER" sh -c "tr '\0' '\n' < /proc/1/environ | grep '^ADDON_DOMAIN=' | cut -d= -f2-" 2>/dev/null || true)
+            if [ -z "$domain" ]; then
+              sleep 2
+              continue
+            fi
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -H "Host: ${domain}" -w $'\n%{http_code}' "$URL" || true)
             code=${resp##*$'\n'}
             body=${resp%$'\n'*}
             got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
@@ -382,6 +420,9 @@ jobs:
       BUDGETER_PROD_HOST: 192.168.0.137
       BUDGETER_DEPLOY_LOCAL: '1'
       BUDGETER_BUILDX: '0'
+      # See deploy-demo: COMPOSE_PROJECT_NAME for prod is pinned to
+      # "budgeter" in deploy_config.py, so that's always the container name.
+      CONTAINER: budgeter
     steps:
       - uses: actions/checkout@v4
 
@@ -450,22 +491,34 @@ jobs:
         run: |
           set -uo pipefail
           URL="http://localhost:${PORT}/api/health"
+          # ADDON_DOMAIN-from-PID-1 resolved fresh inside the loop — see
+          # deploy-demo's Health check step for the full explanation (Django
+          # ALLOWED_HOSTS rejects a bare "localhost" Host header with 400, and
+          # the secret only lives in PID 1's environment, not the container's
+          # configured one, so a `docker exec` early in start-up can fail and
+          # must just mean "not healthy yet").
+          #
           # 60 x 2s ~= 120s — migrate + setup_oauth + collectstatic run before
           # gunicorn binds; see deploy-demo.
           for attempt in $(seq 1 60); do
-            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            domain=$(docker exec "$CONTAINER" sh -c "tr '\0' '\n' < /proc/1/environ | grep '^ADDON_DOMAIN=' | cut -d= -f2-" 2>/dev/null || true)
+            if [ -z "$domain" ]; then
+              sleep 2
+              continue
+            fi
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -H "Host: ${domain}" -w $'\n%{http_code}' "$URL" || true)
             code=${resp##*$'\n'}
             body=${resp%$'\n'*}
             # Assert the sha the container reports is the build we deployed; a
             # stale container also returns 200. Unparseable => keep polling.
             got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
             if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ]; then
-              echo "healthy after ${attempt} attempt(s) — serving $got"
+              echo "healthy after ${attempt} attempt(s) — serving $got (Host: $domain)"
               exit 0
             fi
             sleep 2
           done
-          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none})"
+          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none}, last domain: ${domain:-none})"
           exit 1
 
       - name: Roll back
@@ -497,8 +550,14 @@ jobs:
           fi
           echo "rolling back to $PREV"
           inv deploy --env prod --tag "$PREV" || echo "::error::rollback deploy command itself failed"
+          # ADDON_DOMAIN resolved fresh inside the loop — see deploy-demo.
           for attempt in $(seq 1 60); do
-            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            domain=$(docker exec "$CONTAINER" sh -c "tr '\0' '\n' < /proc/1/environ | grep '^ADDON_DOMAIN=' | cut -d= -f2-" 2>/dev/null || true)
+            if [ -z "$domain" ]; then
+              sleep 2
+              continue
+            fi
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -H "Host: ${domain}" -w $'\n%{http_code}' "$URL" || true)
             code=${resp##*$'\n'}
             body=${resp%$'\n'*}
             got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
