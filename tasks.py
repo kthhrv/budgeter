@@ -1,4 +1,13 @@
-"""Deployment tasks for budgeter.
+"""Deployment tasks for budgeter — the FALLBACK deploy path.
+
+Normal deploys happen by merging to `main`: CI runs the tests, deploys demo,
+health-checks it, and promotes to prod behind a required approval, rolling
+back automatically if the health check fails.
+
+These tasks bypass all of that. They exist for when the pipeline is broken or
+GitHub is unreachable. The mutating ones (deploy / release / stop) ask for a
+typed confirmation; pass `--yes` to skip it, and CI skips it automatically.
+
 
 Usage:
     inv build                     Build image tagged with git SHA + latest
@@ -17,9 +26,10 @@ override the defaults above for CI; see deploy_config.py.
 
 import io
 import os
+import sys
 import tempfile
 
-from invoke import task
+from invoke import Exit, task
 
 import deploy_config
 
@@ -50,6 +60,53 @@ BUILDKITD_CONFIG = f'''[registry."{REGISTRY}"]
 '''
 
 IMAGE = f"{REGISTRY}/{REPO}"
+
+
+def _confirm_manual(action, env, yes=False):
+    """Gate the mutating tasks behind a typed confirmation.
+
+    Deploys normally happen by merging to `main`: CI builds, deploys demo,
+    health-checks it and only then promotes to prod behind an approval. This
+    path bypasses all of that — no tests, no health check, no rollback, no
+    record of who deployed what. It exists as the fallback for when the
+    pipeline itself is broken or unavailable.
+
+    Never prompts in CI (the pipeline drives these same tasks, and hanging a
+    deploy on input nobody can give would be worse than not asking). With no
+    terminal and no CI marker it refuses outright rather than proceeding —
+    a script must say --yes.
+    """
+    if yes or os.environ.get("GITHUB_ACTIONS") or os.environ.get("CI"):
+        return
+    if not sys.stdin.isatty():
+        # Fail closed. Skipping the prompt here would let a script or cron
+        # deploy prod silently, which is exactly what this guard is for.
+        raise Exit(
+            f"Refusing to {action} {env} non-interactively.\n"
+            f"There is no terminal to confirm on. If you really mean it, be "
+            f"explicit:\n\n    inv {action} --env {env} --yes\n"
+        )
+
+    host = deploy_config.prod_host()
+    print(
+        f"\n{'=' * 70}\n"
+        f"  MANUAL {action.upper()} — this is the fallback path, not the normal one.\n"
+        f"{'=' * 70}\n"
+        f"  Target:  {env} on {host}  ({deploy_config.stack_dir(env)})\n"
+        f"\n"
+        f"  The normal path is: open a PR, merge it to main. CI then runs the\n"
+        f"  tests, deploys demo, health-checks it, and promotes to prod only\n"
+        f"  after an approval — rolling back automatically if anything fails.\n"
+        f"\n"
+        f"  Running this instead means: no tests, no health check, no automatic\n"
+        f"  rollback, and no deployment record. CI will also not know this\n"
+        f"  happened, so the next merge will overwrite it.\n"
+        f"\n"
+        f"  Use it when the pipeline is broken or GitHub is unreachable.\n"
+        f"{'=' * 70}"
+    )
+    if input(f'  Type "{env}" to continue, anything else to abort: ').strip() != env:
+        raise Exit("Aborted.")
 
 
 def _get_sha(c):
@@ -148,11 +205,14 @@ def push(c):
 
 
 @task
-def deploy(c, env=DEFAULT_ENV, tag=None):
+def deploy(c, env=DEFAULT_ENV, tag=None, yes=False):
     """Sync config, pull image, start container.
 
     `--tag` overrides the git SHA; the CI pipeline uses it to roll back to the
-    previously deployed image after a failed health check."""
+    previously deployed image after a failed health check.
+
+    `--yes` skips the manual-deploy confirmation (also skipped in CI)."""
+    _confirm_manual("deploy", env, yes)
     sha = tag or _get_sha(c)
     prod_dir = _prod_dir(env)
 
@@ -184,12 +244,16 @@ def deploy(c, env=DEFAULT_ENV, tag=None):
 
 
 @task
-def release(c, env=DEFAULT_ENV):
-    """Build, push, and deploy."""
+def release(c, env=DEFAULT_ENV, yes=False):
+    """Build, push, and deploy.
+
+    `--yes` skips the manual-deploy confirmation (also skipped in CI)."""
+    _confirm_manual("release", env, yes)
     sha = _get_sha(c)
     build(c)
     push(c)
-    deploy(c, env=env)
+    # already confirmed above — don't ask twice
+    deploy(c, env=env, yes=True)
     print(f"\nRelease complete — SHA: {sha}")
 
 
@@ -206,6 +270,7 @@ def status(c, env=DEFAULT_ENV):
 
 
 @task
-def stop(c, env=DEFAULT_ENV):
+def stop(c, env=DEFAULT_ENV, yes=False):
     """Stop the stack."""
+    _confirm_manual("stop", env, yes)
     _ssh(c, f"{COMPOSE} down", env)

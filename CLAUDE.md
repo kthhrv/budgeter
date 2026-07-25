@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Budgeter is a full-stack budgeting app deployed via Dockge on 192.168.0.191. It tracks shared and individual budgets for multiple users with temporal versioning of budget values.
+Budgeter is a full-stack budgeting app. It is deployed by CI (GitHub Actions) to 192.168.0.137 on every merge to `main`; the live instance still runs on 192.168.0.191 until the data is migrated. See README.md for the deploy flow. It tracks shared and individual budgets for multiple users with temporal versioning of budget values.
 
 ## Commands
 
@@ -28,16 +28,18 @@ cd backend && uv run manage.py test budget.tests.TestClassName.test_method
 # Frontend linting
 cd frontend && npm run lint
 
-# Deploy (via invoke)
+# Deploy — NORMAL PATH: merge a PR to main. CI builds, deploys demo,
+# health-checks it, then promotes to prod after a human approval.
+#
+# The invoke tasks below are the FALLBACK for when the pipeline is broken.
+# They bypass tests, health checks and rollback. deploy/release/stop ask for
+# a typed confirmation (--yes skips it; CI skips it automatically).
 inv build                # Build Docker image (SHA + latest)
-inv push                 # Push to 192.168.0.191:5000 registry
-inv deploy               # Deploy to demo (default)
-inv deploy --env prod    # Deploy to prod
-inv release              # Build + push + deploy (demo)
-inv release --env prod   # Full release to prod
-inv logs                 # Tail logs (demo)
-inv logs --env prod      # Tail logs (prod)
-inv status               # Show containers
+inv push                 # Push to the registry
+inv deploy --env prod    # Deploy to prod  (confirmation required)
+inv release --env prod   # Build + push + deploy (confirmation required)
+inv logs --env prod      # Tail logs
+inv status --env prod    # Show containers
 ```
 
 All `uv run manage.py` commands must be run from the `backend/` directory.
@@ -61,11 +63,20 @@ Client → Nginx Proxy Manager (HA) → Docker container on 191
 
 ### Deploy Flow
 ```
-inv release --env demo
-  1. docker build (tagged with git SHA + latest)
-  2. docker push to 192.168.0.191:5000
-  3. SSH to 191: write .env, sync compose.yml, pull, up -d
+merge to main
+  1. PR checks (Django, vitest+lint+build, docker build, Playwright e2e) — all required
+  2. deploy-demo   on a self-hosted runner ON 192.168.0.137:
+       build -> push to localhost:5000 -> write .env + compose.yml -> up -d
+       -> poll /api/health (200 + status:ok + matching sha)
+       -> on failure, redeploy the previous IMAGE_TAG and fail the run
+  3. deploy-prod   same host, PROMOTES demo's exact image (no rebuild),
+       gated on the `prod` environment: waits for a reviewer to approve
 ```
+Fallback (`inv release --env prod`) still does build -> push -> SSH -> up -d
+against 192.168.0.191, with no health check or rollback.
+
+`deploy_config.py` holds the host/registry/stack-dir values so they can be
+unit-tested and overridden by `BUDGETER_*` env vars in CI; `tasks.py` consumes it.
 
 Remote directory structure:
 - Demo: `/opt/stacks/budgeter-demo/`
@@ -75,7 +86,10 @@ Remote directory structure:
 - `budget/models.py` — Three models: `Month`, `BudgetItem`, `BudgetItemVersion`
 - `budget/api.py` — All REST endpoints under `/api/`
 - `budgeter/adapters.py` — OAuth email whitelist
-- `budgeter/settings.py` — Django config (loads envars at startup)
+- `budgeter/settings.py` — Django config. Reads plain env vars; it does NOT load
+  envars itself. The Dockerfile's `CMD envars -f /app/envars.yml exec -e $APP_ENV`
+  decrypts them at container start and injects them into PID 1. So
+  `docker exec <c> env` will NOT show them — read `/proc/1/environ` instead.
 - `envars.yml` — Vault-backed secrets per environment
 
 ### Data Model Concepts
@@ -85,7 +99,7 @@ Remote directory structure:
 - **Soft deletion**: Items expire via `last_payment_month` rather than being deleted
 
 ### Frontend
-The frontend is a monolithic `App.jsx` containing all components, state management, and an `apiService` object for API calls. It's a PWA with a service worker that excludes `/api/`, `/accounts/`, `/admin/`, `/static/` routes.
+`App.jsx` (~390 lines) holds routing and top-level state; components live in `src/components/`, with `src/hooks/`, `src/services/api.js` and `src/utils/` alongside. It's a PWA with a service worker that excludes `/api/`, `/accounts/`, `/admin/`, `/static/` routes.
 
 ### Auth
 Google OAuth with a hardcoded email whitelist in `adapters.py`. In local dev, authentication is bypassed/simplified. CSRF tokens are required for state-changing API calls.
