@@ -1,14 +1,26 @@
-# budgeter is a PUBLIC repo. Every job here runs on GitHub-hosted runners.
-# For `pull_request` events GitHub runs the workflow file FROM THE PR HEAD, so
-# a fork can rewrite `runs-on` — a self-hosted runner must never appear on a
-# pull_request-triggered job. Actions minutes are free and unlimited for
-# public repos, so this isolation costs nothing.
+# budgeter is a PUBLIC repo. `backend`, `frontend`, `image` and `e2e` run on
+# GitHub-hosted runners (free and unlimited for public repos). Only
+# `deploy-demo` and `deploy-prod` touch the self-hosted homelab runner — read
+# the security block above those two jobs before changing anything there.
 name: CI
 
 on:
   pull_request:
   push:
     branches: [main]
+  # Manual single-env deploy. `env=demo` runs from ANY branch — that is the
+  # escape hatch for trying a big change on demo alone. `env=prod` is further
+  # restricted to `main` by deploy-prod's own guard, so a dispatch cannot put an
+  # arbitrary branch in front of real data with no demo gate. Firing a
+  # workflow_dispatch requires write access to the repo, so a fork PR cannot
+  # reach the runner through this path.
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Environment to deploy
+        type: choice
+        options: [demo, prod]
+        default: demo
 
 permissions:
   contents: read
@@ -119,3 +131,392 @@ jobs:
       - name: Run end-to-end tests
         working-directory: frontend
         run: npm run test:e2e
+
+  # ===========================================================================
+  # SECURITY — the two jobs below are the only ones that run on the self-hosted
+  # homelab runner. That runner is NON-EPHEMERAL and its user is in the
+  # `docker` group, which is root-equivalent on that host: anything that
+  # executes here owns the box and persists into later jobs.
+  #
+  # The `if:` guards below are NOT the security control. For `pull_request`
+  # events GitHub runs the workflow file FROM THE PR HEAD, so a fork PR can
+  # rewrite both the guards and `runs-on`. What actually holds is:
+  #   1. Settings -> Actions -> General -> "Fork pull request workflows from
+  #      outside collaborators" = "Require approval for all external
+  #      contributors" (currently set). No workflow runs at all for a fork PR
+  #      until someone with write access approves that specific run.
+  #   2. A human declining to approve a fork PR that touches
+  #      .github/workflows/ or otherwise reaches for the runner.
+  # So: never add `pull_request_target`, never give this workflow secrets, and
+  # treat "approve and run" on a fork PR as granting root on the homelab host.
+  # ===========================================================================
+
+  deploy-demo:
+    # `e2e` is intentionally NOT in needs: it is advisory (see Task 7), and a
+    # job that blocks deploys is required in all but name.
+    needs: [backend, frontend, image]
+    # The needs.*.result checks are explicit on purpose: this expression uses a
+    # status function (`!cancelled()`), which switches OFF the implicit
+    # `success()` gate that would otherwise skip the job when a dependency
+    # failed. With a status function present, unsuccessful dependencies must be
+    # rejected by hand.
+    if: >-
+      !cancelled()
+      && needs.backend.result == 'success'
+      && needs.frontend.result == 'success'
+      && needs.image.result == 'success'
+      && ((github.event_name == 'push' && github.ref == 'refs/heads/main')
+          || (github.event_name == 'workflow_dispatch' && inputs.env == 'demo'))
+    runs-on: [self-hosted, homelab]
+    # One non-ephemeral runner + cancel-in-progress: false means a wedged step
+    # queues every later deploy behind it. Without this the ceiling is 6 hours.
+    # Sized for the whole worst-case path, rollback included: build (<=10) +
+    # push (<=3) + deploy + 120s health poll + rollback deploy + 120s rollback
+    # poll. A cap that only covers the happy path is a cap that kills the
+    # rollback, which is when the budget matters most.
+    timeout-minutes: 25
+    concurrency:
+      group: deploy-budgeter-demo
+      cancel-in-progress: false
+    env:
+      BUDGETER_REGISTRY: localhost:5000
+      BUDGETER_PROD_HOST: 192.168.0.137
+      BUDGETER_DEPLOY_LOCAL: '1'
+      BUDGETER_BUILDX: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Put uv and inv on PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve SHAs
+        id: vars
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse --short HEAD)
+          DIR=$(python3 -c "import deploy_config; print(deploy_config.stack_dir('demo'))")
+          # Capture the currently deployed tag BEFORE anything overwrites it —
+          # this is the rollback target. Empty on a first-ever deploy.
+          # head -n1 so a duplicated line cannot emit a multi-line
+          # $GITHUB_OUTPUT value; -f2- so a value containing '=' survives whole.
+          PREV=$(grep '^IMAGE_TAG=' "$DIR/.env" 2>/dev/null | head -n1 | cut -d= -f2- || true)
+          PORT=$(python3 -c "import deploy_config; print(dict(l.split('=',1) for l in deploy_config.env_lines('demo','x'))['BUDGETER_PORT'])")
+          echo "sha=$SHA"   >> "$GITHUB_OUTPUT"
+          echo "dir=$DIR"   >> "$GITHUB_OUTPUT"
+          echo "prev=$PREV" >> "$GITHUB_OUTPUT"
+          echo "port=$PORT" >> "$GITHUB_OUTPUT"
+          echo "deploying $SHA to demo ($DIR, port $PORT); previous tag: ${PREV:-<none>}"
+
+      - name: Build image
+        # Step-level cap, not just the job-level one: an unbounded build that
+        # ran until the job timeout would consume the budget the rollback path
+        # needs, so a wedged build would also mean no rollback.
+        timeout-minutes: 10
+        run: inv build
+
+      - name: Push to the local registry
+        timeout-minutes: 3
+        run: inv push
+
+      - name: Deploy
+        id: deploy
+        # continue-on-error so a failing `inv deploy` (a missing image, a
+        # compose error) still reaches the rollback step below. Without it the
+        # job would stop here having already rewritten .env to name an image
+        # that is not running. The final step re-fails the job.
+        continue-on-error: true
+        run: inv deploy --env demo
+
+      - name: Health check
+        id: health
+        if: steps.deploy.outcome == 'success'
+        continue-on-error: true
+        # Step outputs reach the script as environment variables, never as
+        # `${{ }}` text pasted into it. Interpolation happens before bash sees
+        # the script, so a value containing shell syntax would BE shell syntax;
+        # an env var is inert data no matter what it holds.
+        env:
+          PORT: ${{ steps.vars.outputs.port }}
+          WANT: ${{ steps.vars.outputs.sha }}
+        run: |
+          set -uo pipefail
+          URL="http://localhost:${PORT}/api/health"
+          # 60 x 2s ~= 120s. The container runs migrate, setup_oauth and
+          # collectstatic before gunicorn binds, so a cold start is genuinely
+          # slow; a tighter budget makes a slow release look like a broken one
+          # and triggers a needless rollback.
+          for attempt in $(seq 1 60); do
+            # --connect-timeout/--max-time: never let one poll wedge the job.
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            code=${resp##*$'\n'}   # last line: the status code
+            body=${resp%$'\n'*}    # everything before it: the JSON body
+            # /api/health reports the GIT_SHA baked into the image, so this
+            # proves the build we just deployed is the one serving — a stale
+            # container answers 200 just as happily. An unparseable body is
+            # "not healthy yet": keep polling instead of crashing the step.
+            got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ]; then
+              echo "healthy after ${attempt} attempt(s) — serving $got"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none})"
+          exit 1
+
+      - name: Roll back
+        # Fires for EITHER failure mode: `inv deploy` blowing up, or a deploy
+        # that landed but never became healthy.
+        #
+        # `cancelled` is checked alongside `failure` because a step that hits
+        # its own timeout-minutes, or whose runner drops mid-step, ends with
+        # outcome `cancelled` — not `failure`. Keying on `failure` alone would
+        # leave a half-deployed release live and the stack unrolled-back.
+        # `!cancelled()` (the RUN-level check) is untouched: a human cancelling
+        # the whole run should still stop everything, including this.
+        if: >-
+          !cancelled()
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
+        # continue-on-error so this step's own exit code never decides the job:
+        # the step below does that, unconditionally, in every failure path.
+        continue-on-error: true
+        # Passed as env, not interpolated into the script — `prev` is read out
+        # of a file on disk, so its contents must never become shell syntax.
+        env:
+          PREV: ${{ steps.vars.outputs.prev }}
+          NEW: ${{ steps.vars.outputs.sha }}
+          PORT: ${{ steps.vars.outputs.port }}
+        run: |
+          set -uo pipefail
+          URL="http://localhost:${PORT}/api/health"
+          if [ -z "$PREV" ]; then
+            echo "::error::no previous IMAGE_TAG recorded — nothing to roll back to (first deploy to this stack)"
+            exit 1
+          fi
+          if [ "$PREV" = "$NEW" ]; then
+            # `inv deploy` writes .env BEFORE `docker compose pull`, so a deploy
+            # that died at the pull leaves IMAGE_TAG already naming the build
+            # that failed. On a re-run PREV is then that same sha, and the loop
+            # below — which passes only when something OTHER than NEW is being
+            # served — can never succeed: it would redeploy the broken build and
+            # burn the full ~120s poll before reporting failure. Bail now.
+            echo "::error::recorded previous IMAGE_TAG ($PREV) is the build being deployed — there is no distinct previous build to roll back to (a prior deploy of this sha most likely failed after writing .env). Redeploy a known-good tag by hand: inv deploy --env demo --tag <sha>"
+            exit 1
+          fi
+          echo "rolling back to $PREV"
+          inv deploy --env demo --tag "$PREV" || echo "::error::rollback deploy command itself failed"
+          for attempt in $(seq 1 60); do
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            code=${resp##*$'\n'}
+            body=${resp%$'\n'*}
+            got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
+            # Deliberately looser than the forward check: assert the failing
+            # build is gone and something answers, rather than pinning an exact
+            # sha. IMAGE_TAG is normally the git sha, but a hand-run
+            # `inv deploy --tag latest` would break an equality test and block
+            # a rollback that actually worked.
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ]; then
+              # Says only what the test proves. `got != NEW` shows the failing
+              # build is gone and something healthy took over; it does NOT show
+              # that something is $PREV (any third build would pass too), so
+              # report what is actually serving and what was aimed for.
+              echo "::error::deploy of $NEW failed; it is no longer being served — $got is now serving and healthy (rollback targeted $PREV)"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy build other than $NEW within ~120s — manual intervention required"
+          exit 1
+
+      - name: Fail the job if the deploy or health check failed
+        # This is what turns the job red, in every failure path — including a
+        # rollback that succeeded. `!cancelled()` is required: it disables the
+        # implicit `success()` gate, which would otherwise skip this step after
+        # a failed rollback. `cancelled` outcomes are caught here for the same
+        # reason as in Roll back: a step timeout must not pass as green.
+        if: >-
+          !cancelled()
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
+        run: exit 1
+
+  deploy-prod:
+    # Depends on deploy-demo so a build that fails demo's health check can
+    # never reach real data — and, on the push-to-main path, so this job can
+    # promote demo's already-validated image rather than build its own (see the
+    # Build image step). `e2e` is still advisory — see deploy-demo.
+    needs: [backend, frontend, image, deploy-demo]
+    # `!cancelled()` is load-bearing twice over: it disables the implicit
+    # `success()` gate (hence the explicit needs.*.result checks), and that is
+    # exactly what lets a manual `env=prod` dispatch run while deploy-demo sits
+    # skipped — a skipped dependency would otherwise skip this job too.
+    #
+    # The dispatch arm is pinned to `main` as well. Without that, the only
+    # requirement for putting an arbitrary branch in front of real data was
+    # write access: no demo gate, no review, no merge. Demo has no such
+    # restriction on purpose — deploying a feature branch to demo is the point.
+    #   push to main             -> requires deploy-demo to have succeeded
+    #   dispatch env=prod, main  -> runs with deploy-demo skipped
+    #   dispatch env=prod, other -> does not run
+    #   dispatch env=demo        -> does not run
+    #   pull_request             -> does not run
+    if: >-
+      !cancelled()
+      && needs.backend.result == 'success'
+      && needs.frontend.result == 'success'
+      && needs.image.result == 'success'
+      && ((github.event_name == 'push' && github.ref == 'refs/heads/main'
+           && needs.deploy-demo.result == 'success')
+          || (github.event_name == 'workflow_dispatch' && inputs.env == 'prod'
+              && github.ref == 'refs/heads/main'))
+    runs-on: [self-hosted, homelab]
+    # See deploy-demo: sized so the full failure path (build, deploy, 120s
+    # health poll, rollback deploy, 120s rollback poll) fits inside the cap.
+    timeout-minutes: 25
+    concurrency:
+      group: deploy-budgeter-prod
+      cancel-in-progress: false
+    env:
+      BUDGETER_REGISTRY: localhost:5000
+      BUDGETER_PROD_HOST: 192.168.0.137
+      BUDGETER_DEPLOY_LOCAL: '1'
+      BUDGETER_BUILDX: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Put uv and inv on PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve SHAs
+        id: vars
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse --short HEAD)
+          DIR=$(python3 -c "import deploy_config; print(deploy_config.stack_dir('prod'))")
+          # Capture the currently deployed tag BEFORE anything overwrites it —
+          # this is the rollback target. Empty on a first-ever deploy.
+          # head -n1 so a duplicated line cannot emit a multi-line
+          # $GITHUB_OUTPUT value; -f2- so a value containing '=' survives whole.
+          PREV=$(grep '^IMAGE_TAG=' "$DIR/.env" 2>/dev/null | head -n1 | cut -d= -f2- || true)
+          PORT=$(python3 -c "import deploy_config; print(dict(l.split('=',1) for l in deploy_config.env_lines('prod','x'))['BUDGETER_PORT'])")
+          echo "sha=$SHA"   >> "$GITHUB_OUTPUT"
+          echo "dir=$DIR"   >> "$GITHUB_OUTPUT"
+          echo "prev=$PREV" >> "$GITHUB_OUTPUT"
+          echo "port=$PORT" >> "$GITHUB_OUTPUT"
+          echo "deploying $SHA to prod ($DIR, port $PORT); previous tag: ${PREV:-<none>}"
+
+      # PROMOTE, don't rebuild. On a push to main deploy-demo has already
+      # built, pushed and health-checked localhost:5000/budgeter:<sha>; prod
+      # deploys that exact artifact. Rebuilding it would overwrite <sha> (and
+      # :latest) with a *different* image: the Dockerfile's bases
+      # (node:22-alpine, python:3.13-alpine) and its `apk add` are unpinned, so
+      # the same commit does not produce the same image twice. The gate would
+      # then be validating one artifact and shipping another.
+      #
+      # `workflow_dispatch env=prod` has no demo run at all — deploy-demo is
+      # `skipped`, not `success` — and nothing may have pushed this sha to the
+      # registry, so there the build and push must still happen. A step-level
+      # `if` that names no status function keeps its implicit `success()`, and a
+      # skipped step is not a failed one, so `Deploy` below runs either way.
+      - name: Build image
+        if: needs.deploy-demo.result != 'success'
+        # Bounded so a wedged build cannot eat the budget the rollback needs.
+        timeout-minutes: 10
+        run: inv build
+
+      - name: Push to the local registry
+        if: needs.deploy-demo.result != 'success'
+        timeout-minutes: 3
+        run: inv push
+
+      - name: Deploy
+        id: deploy
+        # Runs unconditionally — on the promotion path the two steps above are
+        # skipped, and `success()` (implicit here) ignores skipped steps.
+        # See deploy-demo: continue-on-error keeps a failed `inv deploy` on the
+        # rollback path instead of exiting the job with a stale .env.
+        continue-on-error: true
+        run: inv deploy --env prod
+
+      - name: Health check
+        id: health
+        if: steps.deploy.outcome == 'success'
+        continue-on-error: true
+        # Env, not interpolation — see deploy-demo.
+        env:
+          PORT: ${{ steps.vars.outputs.port }}
+          WANT: ${{ steps.vars.outputs.sha }}
+        run: |
+          set -uo pipefail
+          URL="http://localhost:${PORT}/api/health"
+          # 60 x 2s ~= 120s — migrate + setup_oauth + collectstatic run before
+          # gunicorn binds; see deploy-demo.
+          for attempt in $(seq 1 60); do
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            code=${resp##*$'\n'}
+            body=${resp%$'\n'*}
+            # Assert the sha the container reports is the build we deployed; a
+            # stale container also returns 200. Unparseable => keep polling.
+            got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ]; then
+              echo "healthy after ${attempt} attempt(s) — serving $got"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none})"
+          exit 1
+
+      - name: Roll back
+        # `cancelled` as well as `failure` — a step timeout or a dropped runner
+        # ends `cancelled`, and that must still roll back. See deploy-demo.
+        if: >-
+          !cancelled()
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
+        continue-on-error: true
+        env:
+          PREV: ${{ steps.vars.outputs.prev }}
+          NEW: ${{ steps.vars.outputs.sha }}
+          PORT: ${{ steps.vars.outputs.port }}
+        run: |
+          set -uo pipefail
+          URL="http://localhost:${PORT}/api/health"
+          if [ -z "$PREV" ]; then
+            echo "::error::no previous IMAGE_TAG recorded — nothing to roll back to (first deploy to this stack)"
+            exit 1
+          fi
+          if [ "$PREV" = "$NEW" ]; then
+            # A prior deploy of this sha died after `inv deploy` wrote .env but
+            # before the container came up, so IMAGE_TAG already names the
+            # failing build. Rolling "back" to it would redeploy the breakage
+            # and the loop below could never pass. See deploy-demo.
+            echo "::error::recorded previous IMAGE_TAG ($PREV) is the build being deployed — there is no distinct previous build to roll back to (a prior deploy of this sha most likely failed after writing .env). Redeploy a known-good tag by hand: inv deploy --env prod --tag <sha>"
+            exit 1
+          fi
+          echo "rolling back to $PREV"
+          inv deploy --env prod --tag "$PREV" || echo "::error::rollback deploy command itself failed"
+          for attempt in $(seq 1 60); do
+            resp=$(curl -s --max-time 5 --connect-timeout 2 -w $'\n%{http_code}' "$URL" || true)
+            code=${resp##*$'\n'}
+            body=${resp%$'\n'*}
+            got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
+            # Looser than the forward check on purpose — see deploy-demo. The
+            # message claims only what this proves: the failing build is gone
+            # and $got is serving, not that $got is $PREV.
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ]; then
+              echo "::error::deploy of $NEW failed; it is no longer being served — $got is now serving and healthy (rollback targeted $PREV)"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy build other than $NEW within ~120s — manual intervention required"
+          exit 1
+
+      - name: Fail the job if the deploy or health check failed
+        if: >-
+          !cancelled()
+          && (steps.deploy.outcome == 'failure' || steps.deploy.outcome == 'cancelled'
+              || steps.health.outcome == 'failure' || steps.health.outcome == 'cancelled')
+        run: exit 1
