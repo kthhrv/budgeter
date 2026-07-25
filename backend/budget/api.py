@@ -20,9 +20,26 @@ api = NinjaAPI(auth=django_auth)
 # auth=None is REQUIRED: the deploy pipeline polls this unauthenticated to
 # decide whether a release is healthy or must be rolled back. Inheriting the
 # API-wide django_auth would return 401 and fail every deploy.
-@api.get("/health", auth=None)
+@api.get("/health", auth=None, response={200: dict, 503: dict})
 def health(request):
-    return {"status": "ok", "sha": os.environ.get("GIT_SHA", "unknown")}
+    # `os.environ.get("GIT_SHA") or "unknown"`, NOT the two-arg form: the
+    # Dockerfile's `ARG GIT_SHA` / `ENV GIT_SHA=${GIT_SHA}` bakes an EMPTY
+    # STRING into the image (not an absent var) when a build omits
+    # --build-arg, and .get(key, default) only substitutes on a missing key.
+    sha = os.environ.get("GIT_SHA") or "unknown"
+    try:
+        # BudgetItem.objects.first() is the probe, deliberately not
+        # .exists(): .exists() compiles to `SELECT 1`, which is satisfied by
+        # any schema at all, while .first() SELECTs every column the model
+        # declares — a removed/renamed column (see ee4ce43's bare
+        # RemoveField) raises here instead of only on a real user request.
+        BudgetItem.objects.first()
+    except Exception as e:
+        # Broad by design: this endpoint's job is to report, never to raise.
+        # Only the exception class name goes out — no message, no SQL — this
+        # is unauthenticated on a public-facing app.
+        return 503, {"status": "degraded", "sha": sha, "error": type(e).__name__}
+    return {"status": "ok", "sha": sha}
 
 # --- Schemas ---
 

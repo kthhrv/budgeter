@@ -284,13 +284,19 @@ jobs:
             # container answers 200 just as happily. An unparseable body is
             # "not healthy yet": keep polling instead of crashing the step.
             got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
-            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ]; then
+            # /api/health also runs a real query (BudgetItem.objects.first())
+            # against the schema and reports "degraded" (HTTP 503) if it
+            # raises — a schema/code mismatch after a bad migration. A 200
+            # with the right sha is not enough; status must be "ok" too, or a
+            # broken-schema release would be waved through as healthy.
+            status=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' 2>/dev/null || true)
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ] && [ "$status" = "ok" ]; then
               echo "healthy after ${attempt} attempt(s) — serving $got (Host: $domain)"
               exit 0
             fi
             sleep 2
           done
-          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none}, last domain: ${domain:-none})"
+          echo "::error::health check never reported sha=$WANT status=ok within ~120s (last code: ${code:-none}, last sha: ${got:-none}, last status: ${status:-none}, last domain: ${domain:-none})"
           exit 1
 
       - name: Roll back
@@ -354,7 +360,13 @@ jobs:
             # sha. IMAGE_TAG is normally the git sha, but a hand-run
             # `inv deploy --tag latest` would break an equality test and block
             # a rollback that actually worked.
-            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ]; then
+            #
+            # status must also be "ok": the rolled-back image's code could
+            # itself be running against a schema a later, since-reverted
+            # migration already moved forward (migrations have no down path)
+            # — a 503/degraded rollback target is not a successful rollback.
+            status=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' 2>/dev/null || true)
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ] && [ "$status" = "ok" ]; then
               # Says only what the test proves. `got != NEW` shows the failing
               # build is gone and something healthy took over; it does NOT show
               # that something is $PREV (any third build would pass too), so
@@ -364,7 +376,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy build other than $NEW within ~120s — manual intervention required"
+          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy (status=ok) build other than $NEW within ~120s (last status: ${status:-none}) — manual intervention required"
           exit 1
 
       - name: Fail the job if the deploy or health check failed
@@ -512,13 +524,16 @@ jobs:
             # Assert the sha the container reports is the build we deployed; a
             # stale container also returns 200. Unparseable => keep polling.
             got=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha",""))' 2>/dev/null || true)
-            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ]; then
+            # See deploy-demo: status must also be "ok" — a 503/degraded body
+            # (schema/code mismatch) must not be accepted as healthy.
+            status=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' 2>/dev/null || true)
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" = "$WANT" ] && [ "$status" = "ok" ]; then
               echo "healthy after ${attempt} attempt(s) — serving $got (Host: $domain)"
               exit 0
             fi
             sleep 2
           done
-          echo "::error::health check never reported sha=$WANT within ~120s (last code: ${code:-none}, last sha: ${got:-none}, last domain: ${domain:-none})"
+          echo "::error::health check never reported sha=$WANT status=ok within ~120s (last code: ${code:-none}, last sha: ${got:-none}, last status: ${status:-none}, last domain: ${domain:-none})"
           exit 1
 
       - name: Roll back
@@ -564,13 +579,16 @@ jobs:
             # Looser than the forward check on purpose — see deploy-demo. The
             # message claims only what this proves: the failing build is gone
             # and $got is serving, not that $got is $PREV.
-            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ]; then
+            #
+            # status must also be "ok" — see deploy-demo's rollback loop.
+            status=$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' 2>/dev/null || true)
+            if [ "$code" = "200" ] && [ -n "$got" ] && [ "$got" != "$NEW" ] && [ "$status" = "ok" ]; then
               echo "::error::deploy of $NEW failed; it is no longer being served — $got is now serving and healthy (rollback targeted $PREV)"
               exit 1
             fi
             sleep 2
           done
-          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy build other than $NEW within ~120s — manual intervention required"
+          echo "::error::deploy of $NEW failed AND the rollback to $PREV never produced a healthy (status=ok) build other than $NEW within ~120s (last status: ${status:-none}) — manual intervention required"
           exit 1
 
       - name: Fail the job if the deploy or health check failed
