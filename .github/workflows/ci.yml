@@ -392,6 +392,14 @@ jobs:
         run: exit 1
 
   deploy-prod:
+    # Requires a human approval before anything runs. The `prod` environment
+    # carries a required-reviewers rule (Keith + Tild), so on a merge this job
+    # QUEUES and waits: demo has already deployed automatically, prod does not
+    # start until someone clicks Approve in the Actions UI. The runner is not
+    # occupied while it waits, and the same gate applies to a manual
+    # `workflow_dispatch env=prod`. The environment is also pinned to protected
+    # branches, so only `main` can deploy through it.
+    environment: prod
     # Depends on deploy-demo so a build that fails demo's health check can
     # never reach real data — and, on the push-to-main path, so this job can
     # promote demo's already-validated image rather than build its own (see the
