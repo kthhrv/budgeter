@@ -34,10 +34,33 @@ inv stop --env prod       # stop the stack (confirmation required)
 and it never prompts in CI. With no terminal and no `--yes` it **refuses**
 rather than proceeding, so a cron job or script can't deploy prod silently.
 
-Today it is also the **only** way to update the live app, because
-`budgeter.ddns.net` still points at the old host (`192.168.0.191`). Once that
-moves to `.137`, merging to `main` becomes the way real releases happen and
-`inv` is purely the emergency exit.
+Both demo and prod now run on `192.168.0.137`, and `budgeter.ddns.net` (via the
+Nginx Proxy Manager on `192.168.0.207`) points there — so merging to `main` is
+how real releases ship, and `inv` is purely the emergency exit.
+
+### Logs and status
+
+Both stacks run on `192.168.0.137`; the containers are named `budgeter` (prod)
+and `budgeter-demo` (demo). Straight to the host:
+
+```bash
+ssh root@192.168.0.137 'docker logs -f --tail=50 budgeter'        # prod
+ssh root@192.168.0.137 'docker logs -f --tail=50 budgeter-demo'   # demo
+ssh root@192.168.0.137 'docker ps'                                # what's running
+```
+
+`inv logs` / `inv status` work too, but `inv` talks to a **single** host that
+still defaults to the old `.191`, so point it at `.137` (the `--env` flag
+selects the stack, not the host — both stacks live on the same host):
+
+```bash
+BUDGETER_PROD_HOST=192.168.0.137 inv logs   --env demo
+BUDGETER_PROD_HOST=192.168.0.137 inv status --env prod
+```
+
+The app's *decrypted* secrets don't show up in `docker exec <c> env` — they're
+injected into PID 1 only. Read `/proc/1/environ` in the container instead (see
+CLAUDE.md's Gotchas).
 
 ## Building and running locally
 

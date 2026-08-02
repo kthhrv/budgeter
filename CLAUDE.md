@@ -17,10 +17,12 @@ individual budgets with temporal versioning of budget values, plus a shared
 vault-backed in `envars.yml`. `.gitignore` blocks `*.sqlite3` and `.env*` for
 this reason; do not weaken it, and do not commit a database dump.
 
-**Where it runs.** CI deploys demo to `192.168.0.137` on every merge to `main`.
-Prod is still `192.168.0.191` — `budgeter.ddns.net` points there, so `.191` is
-the instance real data lives on. The cutover to `.137` is in progress. Until it
-lands, a merge to `main` does *not* update the live app.
+**Where it runs.** Both demo and prod run on `192.168.0.137`, deployed by CI on
+merge to `main` (prod only after a human approves it — see README).
+`budgeter.ddns.net` points there via the Nginx Proxy Manager on `192.168.0.207`.
+To reach a running container, `ssh root@192.168.0.137` then `docker logs` /
+`docker exec` on `budgeter` (prod) or `budgeter-demo` (demo). `.191` is being
+decommissioned.
 
 ## Gotchas
 
@@ -49,7 +51,7 @@ Places where the obvious action is the wrong one.
 **Frontend**: React 19 + Vite 7 + Tailwind CSS 4
 **Database**: SQLite (volume-mounted at `/data/db.sqlite3`)
 **Deployment**: Docker multi-stage build → Nginx serves static + proxies to Gunicorn
-**Secrets**: `envars.yml` with Openbao vault (`http://192.168.0.191:8200`)
+**Secrets**: `envars.yml` with Openbao vault (`http://192.168.0.137:8200`)
 
 ### Request flow (production)
 ```
