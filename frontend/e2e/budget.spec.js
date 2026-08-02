@@ -44,6 +44,11 @@ test('opens the edit modal from a row and cancels without saving', async ({ page
 });
 
 test('month selector navigates between months', async ({ page }) => {
+    // Pin the starting month via the URL hash (getInitialDate reads #YYYY-MM) so this
+    // test asserts fixed labels regardless of the real calendar month. Without this it
+    // is a time-bomb: it breaks on every month rollover (e.g. it went red on 2026-08-01
+    // because it hardcoded "July 2026" as "the current month").
+    await page.goto('/#2026-07');
     await expect(page.getByRole('heading', { name: 'July 2026' })).toBeVisible();
     await page.getByRole('button', { name: 'Previous month' }).click();
     await expect(page.getByRole('heading', { name: 'June 2026' })).toBeVisible();
