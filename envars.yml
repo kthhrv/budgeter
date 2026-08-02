@@ -1,6 +1,6 @@
 configuration:
   app: budgeter
-  kms_key: openbao:http://192.168.0.191:8200:budgeter
+  kms_key: openbao:http://192.168.0.137:8200:budgeter
   description_mandatory: false
   environments:
   - demo
