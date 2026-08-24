@@ -68,6 +68,7 @@ class BudgetItem(models.Model):
         ('groceries', 'Groceries'),
         ('subscriptions', 'Subscriptions'),
         ('car', 'Car'),
+        ('children', 'Children'),
     ]
 
     budget_item_id = models.UUIDField(

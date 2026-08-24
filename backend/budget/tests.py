@@ -683,13 +683,13 @@ class CategoryTestCase(TestCase):
         self.assertEqual(resp.json()['category'], '')
 
     def test_create_accepts_each_category_and_lists_it(self):
-        for cat in ('house', 'groceries', 'subscriptions', 'car'):
+        for cat in ('house', 'groceries', 'subscriptions', 'car', 'children'):
             resp = self._create(item_name=f'C{cat}', category=cat)
             self.assertEqual(resp.status_code, 200, resp.content)
             self.assertEqual(resp.json()['category'], cat)
         listed = {i['item_name']: i['category']
                   for i in self.client.get(f'/api/months/{self.month.month_id}/items/').json()}
-        for cat in ('house', 'groceries', 'subscriptions', 'car'):
+        for cat in ('house', 'groceries', 'subscriptions', 'car', 'children'):
             self.assertEqual(listed[f'C{cat}'], cat)
 
     def test_edit_can_change_and_clear_category(self):

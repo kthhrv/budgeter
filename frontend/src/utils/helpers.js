@@ -9,6 +9,7 @@ export const BILL_CATEGORIES = [
     { value: 'groceries', label: 'Groceries' },
     { value: 'subscriptions', label: 'Subscriptions' },
     { value: 'car', label: 'Car' },
+    { value: 'children', label: 'Children' },
 ];
 
 export const formatDate = (date, format = 'YYYY-MM') => {
