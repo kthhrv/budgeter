@@ -176,7 +176,7 @@ export function effectiveForMonth(settings, monthKey) {
 // 3-month entitlement period. Crucially, those periods are PERSONAL to each
 // child's account (keyed to their application / 3-monthly reconfirmation date)
 // and the cap is measured on the PAYMENT date, not attendance. The nursery
-// invoice is paid on the 30th of the month before attendance (the 30 Jul
+// invoice is paid on the 28th of the month before attendance (the 28 Jul
 // payment funds August attendance), so we bucket each month's top-up by the
 // entitlement period its payment lands in.
 //
@@ -184,8 +184,14 @@ export function effectiveForMonth(settings, monthKey) {
 // Ellis reconfirms on the 31st in Jan/Apr/Jul/Oct; Gaspard on the 20th in
 // Feb/May/Aug/Nov. If HMRC ever shifts a period (e.g. a missed reconfirmation),
 // update the anchor here.
+//
+// Because the invoice is paid on the 28th — BEFORE Ellis's 31st reset — a
+// payment made in one of his anchor months still draws on the outgoing
+// period, so his payment buckets are Feb–Apr / May–Jul / Aug–Oct / Nov–Jan
+// (attendance Mar–May / Jun–Aug / Sep–Nov / Dec–Feb). Gaspard's 20th reset
+// precedes the pay day, so his buckets start in his anchor months as written.
 export const TFC_QUARTERLY_CAP = 500;
-export const TFC_PAY_DAY = 30; // day of the prior month the invoice is paid
+export const TFC_PAY_DAY = 28; // day of the prior month the invoice is paid
 export const TFC_ANCHORS = {
     ellis:   { month: 1, day: 31 }, // 31 Jan → Jan/Apr/Jul/Oct
     gaspard: { month: 5, day: 20 }, // 20 May → Feb/May/Aug/Nov
@@ -211,7 +217,11 @@ const payIndexOf = (attIdx) => attIdx - 1;
 // begins, given an anchor month (1-12). Period starts recur every 3 months in
 // phase with the anchor.
 function periodStartPayIndex(payIdx, anchor) {
-    const payMonth1to12 = (payIdx % 12) + 1;
+    // A payment made on TFC_PAY_DAY of an anchor month lands BEFORE that
+    // month's reset when the anchor day is later in the month than the pay
+    // day, so phase the 3-month grouping off the previous month.
+    const effIdx = anchor.day > TFC_PAY_DAY ? payIdx - 1 : payIdx;
+    const payMonth1to12 = (effIdx % 12) + 1;
     const offset = (((payMonth1to12 - anchor.month) % 3) + 3) % 3;
     return payIdx - offset;
 }
@@ -220,10 +230,14 @@ function periodStartPayIndex(payIdx, anchor) {
 // HMRC-style entitlement window, e.g. "20 May – 19 Aug 2026".
 function periodLabelFor(payIdx, anchor) {
     const startPay = periodStartPayIndex(payIdx, anchor);
-    const sy = Math.floor(startPay / 12), sm = (startPay % 12) + 1;
+    // When the anchor day is after the pay day the period's reset date falls
+    // in the month BEFORE its first payment month (e.g. payments Aug/Sep/Oct
+    // sit inside the 31 Jul – 30 Oct window).
+    const labelStart = anchor.day > TFC_PAY_DAY ? startPay - 1 : startPay;
+    const sy = Math.floor(labelStart / 12), sm = (labelStart % 12) + 1;
     const sd = Math.min(anchor.day, daysInMonth(sy, sm));
     const start = new Date(sy, sm - 1, sd);
-    const ny = Math.floor((startPay + 3) / 12), nm = ((startPay + 3) % 12) + 1;
+    const ny = Math.floor((labelStart + 3) / 12), nm = ((labelStart + 3) % 12) + 1;
     const nd = Math.min(anchor.day, daysInMonth(ny, nm));
     const last = new Date(ny, nm - 1, nd - 1); // day before the next period starts
     const fmt = (d) => `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;

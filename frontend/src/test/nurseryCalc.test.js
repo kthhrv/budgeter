@@ -142,33 +142,46 @@ describe('applyChildcareLinks', () => {
 });
 
 describe('TFC entitlement periods (per-child, payment-date based)', () => {
-    // Payment is made the month before attendance. Periods are 3 consecutive
-    // payment months anchored per child:
-    //   Gaspard (20th, phase May): payment May/Aug/Nov/Feb → attendance
+    // Payment is made on the 28th of the month before attendance. Periods are
+    // 3 consecutive payment months anchored per child:
+    //   Gaspard (20th, phase May): the 28th falls AFTER his reset, so payment
+    //     buckets start in his anchor months — May/Aug/Nov/Feb → attendance
     //     periods Jun–Aug, Sep–Nov, Dec–Feb, Mar–May.
-    //   Ellis (31st, phase Jan): payment Jan/Apr/Jul/Oct → attendance periods
-    //     Aug–Oct, Nov–Jan, Feb–Apr, May–Jul.
+    //   Ellis (31st, phase Jan): the 28th falls BEFORE his reset, so an
+    //     anchor-month payment still draws on the outgoing period — payment
+    //     buckets Feb–Apr, May–Jul, Aug–Oct, Nov–Jan → attendance periods
+    //     Mar–May, Jun–Aug, Sep–Nov, Dec–Feb.
     it("Gaspard's Jun–Aug attendance share one period; August is the 3rd month", () => {
         const aug = tfcSavingForMonth(baseSettings(), '2026-08');
         expect(aug.gaspardPeriodMonths).toEqual(['2026-06', '2026-07', '2026-08']);
     });
 
-    it("Ellis's August payment (30 Jul) opens a fresh period — August is the 1st month", () => {
+    it("Ellis's August payment (28 Jul) precedes the 31 Jul reset — August closes its period", () => {
         const aug = tfcSavingForMonth(baseSettings(), '2026-08');
-        expect(aug.ellisPeriodMonths).toEqual(['2026-08']);
-        expect(aug.ellisUsedBefore).toBe(0);
+        expect(aug.ellisPeriodMonths).toEqual(['2026-06', '2026-07', '2026-08']);
     });
 
-    it("Ellis's May–Jul attendance share the prior period", () => {
+    it("Ellis's September payment (28 Aug) opens a fresh period", () => {
+        const sep = tfcSavingForMonth(baseSettings(), '2026-09');
+        expect(sep.ellisPeriodMonths).toEqual(['2026-09']);
+        expect(sep.ellisUsedBefore).toBe(0);
+    });
+
+    it("Ellis's Mar–May attendance share the prior period", () => {
+        const may = tfcSavingForMonth(baseSettings(), '2026-05');
+        expect(may.ellisPeriodMonths).toEqual(['2026-03', '2026-04', '2026-05']);
         const jul = tfcSavingForMonth(baseSettings(), '2026-07');
-        expect(jul.ellisPeriodMonths).toEqual(['2026-05', '2026-06', '2026-07']);
+        expect(jul.ellisPeriodMonths).toEqual(['2026-06', '2026-07']);
     });
 
-    it('the two children can sit in different periods in the same calendar month', () => {
+    it('the children share attendance buckets but sit in different HMRC windows', () => {
         const aug = tfcSavingForMonth(baseSettings(), '2026-08');
-        // Gaspard mid/late in his period, Ellis fresh at the start of hers.
-        expect(aug.gaspardPeriodMonths.length).toBe(3);
-        expect(aug.ellisPeriodMonths.length).toBe(1);
+        expect(aug.ellisPeriodLabel).not.toBe(aug.gaspardPeriodLabel);
+    });
+
+    it("Ellis's HMRC window for Sep–Nov attendance is 31 Jul – 30 Oct", () => {
+        const sep = tfcSavingForMonth(baseSettings(), '2026-09');
+        expect(sep.ellisPeriodLabel).toBe('31 Jul – 30 Oct 2026');
     });
 });
 
@@ -189,11 +202,30 @@ describe('TFC quarterly cap', () => {
     });
 
     it('resets at the start of the next period (fresh usedBefore)', () => {
-        // Gaspard's next period starts at Sep attendance; Ellis's at Aug.
+        // Both children's next period starts at Sep attendance (Gaspard's
+        // 28 Aug payment follows his 20 Aug reset; Ellis's follows his 31 Jul one).
         const sep = tfcSavingForMonth(baseSettings(), '2026-09');
         expect(sep.gaspardUsedBefore).toBe(0);
-        const aug = tfcSavingForMonth(baseSettings(), '2026-08');
-        expect(aug.ellisUsedBefore).toBe(0);
+        expect(sep.ellisUsedBefore).toBe(0);
+    });
+
+    it('Ellis: Sep–Nov 2026 accumulates and clips November (the reported shortfall)', () => {
+        const s = baseSettings();
+        const sep = tfcSavingForMonth(s, '2026-09');
+        const oct = tfcSavingForMonth(s, '2026-10');
+        const nov = tfcSavingForMonth(s, '2026-11');
+        expect(sep.ellisUsedBefore).toBe(0);
+        expect(oct.ellisUsedBefore).toBeCloseTo(sep.ellisSaving, 2);
+        expect(nov.ellisUsedBefore).toBeCloseTo(sep.ellisSaving + oct.ellisSaving, 2);
+        // November's payment (28 Oct) is the 3rd in the 31 Jul – 30 Oct window,
+        // so its saving is clipped to whatever is left of the £500 cap.
+        const novInvoiced = computeMonthSummary(s, new Date(2026, 10, 1)).ellisInvoiced;
+        expect(nov.ellisSaving).toBeLessThan(novInvoiced * 0.20);
+        expect(nov.ellisSaving).toBeCloseTo(TFC_QUARTERLY_CAP - nov.ellisUsedBefore, 2);
+        // December's payment (28 Nov) lands after the 31 Oct reset — fresh £500.
+        const dec = tfcSavingForMonth(s, '2026-12');
+        expect(dec.ellisUsedBefore).toBe(0);
+        expect(dec.ellisPeriodMonths).toEqual(['2026-12']);
     });
 
     it('tfcSavingForMonth accumulates consumed savings across a period (Gaspard Jun→Jul→Aug)', () => {
