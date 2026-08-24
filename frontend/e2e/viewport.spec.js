@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Money in')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Joint', exact: true })).toBeVisible();
 });
 
 test('web: hovering a row reveals the edit action', async ({ page }, testInfo) => {

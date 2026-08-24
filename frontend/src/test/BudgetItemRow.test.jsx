@@ -44,9 +44,9 @@ describe('BudgetItemRow', () => {
         expect(screen.queryByText('shared')).not.toBeInTheDocument();
     });
 
-    it('shows Bills Pot badge when flagged', () => {
+    it('does not show a Bills Pot badge (pot is only visible in the item modal)', () => {
         render(<BudgetItemRow {...defaultProps} item={makeItem({ expense_pot: 'bills' })} />);
-        expect(screen.getByText('Bills Pot')).toBeInTheDocument();
+        expect(screen.queryByText('Bills Pot')).not.toBeInTheDocument();
     });
 
     it('shows One-off badge when flagged', () => {

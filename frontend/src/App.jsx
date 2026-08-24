@@ -8,7 +8,6 @@ import LoadingSkeleton from './components/LoadingSkeleton';
 import SearchComponent from './components/SearchComponent';
 import MonthSelector from './components/MonthSelector';
 import { useBudgetTotals } from './hooks/useBudgetTotals';
-import HouseholdSummary from './components/HouseholdSummary';
 import OwnerCard from './components/OwnerCard';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
@@ -22,13 +21,6 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
     // "left over" and the three cards' left-overs sum to the household total.
     const contributions = t.keithShare + t.tildShare;
     const sharedRemaining = t.sharedIncome + contributions - t.sharedExpenseTotal - t.sharedSavings;
-
-    const hero = {
-        moneyIn: t.keithIncome + t.tildIncome + t.sharedIncome,
-        moneyOut: t.keithDirectExpenses + t.tildDirectExpenses + t.sharedExpenseTotal,
-        saved: t.keithSavings + t.tildSavings + t.sharedSavings,
-    };
-    hero.leftOver = hero.moneyIn - hero.moneyOut - hero.saved;
 
     // How much each person moves into their Bills Pot this month (a labelled subtotal
     // of expenses already counted under that owner).
@@ -49,7 +41,6 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
 
     return (
         <div className="animate-fadeIn">
-            <HouseholdSummary {...hero} />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                 {owners.map(o => <OwnerCard key={o.key} config={o} {...cardProps} />)}
             </div>

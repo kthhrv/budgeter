@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 
 test('every owner card shows a Transfer to Bills pot line', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Money in')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Joint', exact: true })).toBeVisible();
     // One per owner card: Joint, Keith, Tild.
     await expect(page.getByText('Transfer to Bills pot')).toHaveCount(3);
 });

@@ -56,6 +56,30 @@ describe('ItemCategoryModal', () => {
         });
     });
 
+    describe('Category', () => {
+        it('shows the Category select for expenses and includes it in the payload', async () => {
+            const onSave = vi.fn();
+            const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} onSave={onSave} item={baseItem} />);
+            await user.selectOptions(getSelect('category'), 'subscriptions');
+            await user.click(btn('Save'));
+            const [, payload] = onSave.mock.calls[0];
+            expect(payload.category).toBe('subscriptions');
+        });
+
+        it('hides and clears the category when type is not expense', async () => {
+            const onSave = vi.fn();
+            const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} onSave={onSave} item={{ ...baseItem, category: 'house' }} />);
+            expect(getSelect('category').value).toBe('house');
+            await user.click(btn('Savings'));
+            expect(getSelect('category')).toBeNull();
+            await user.click(btn('Save'));
+            const [, payload] = onSave.mock.calls[0];
+            expect(payload.category).toBe('');
+        });
+    });
+
     describe('Pot ↔ Extra interaction', () => {
         it('hides and clears Extra when a pot is selected', async () => {
             const onSave = vi.fn();

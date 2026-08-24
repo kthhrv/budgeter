@@ -63,6 +63,13 @@ class BudgetItem(models.Model):
         ('groceries', 'Groceries Pot'),
     ]
 
+    CATEGORY_CHOICES = [
+        ('house', 'House'),
+        ('groceries', 'Groceries'),
+        ('subscriptions', 'Subscriptions'),
+        ('car', 'Car'),
+    ]
+
     budget_item_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -91,6 +98,13 @@ class BudgetItem(models.Model):
         blank=True,
         default='',
         help_text="Optional sub-classification for an expense: bills pot or groceries pot."
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        blank=True,
+        default='',
+        help_text="Optional bill category used to group expenses on the budget page."
     )
     is_tab_repayment = models.BooleanField(
         default=False,
