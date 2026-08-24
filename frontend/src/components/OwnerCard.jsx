@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Home, User, ChevronDown } from 'lucide-react';
-import { money } from '../utils/helpers';
+import { money, BILL_CATEGORIES } from '../utils/helpers';
 import BudgetItemRow from './BudgetItemRow';
 
 const ACCENTS = {
@@ -17,6 +17,8 @@ const sum = (rows) => rows.reduce((s, r) => s + (parseFloat(r.effective_value) |
 const OwnerCard = ({ config, items, searchTerm = '', currentDate, isEditingDisabled, onEditCategory, onDelete }) => {
     const { Icon, ...a } = ACCENTS[config.accent];
     const [collapsed, setCollapsed] = useState({});
+    // Category groups inside Expenses start collapsed; {} means all closed.
+    const [expandedCats, setExpandedCats] = useState({});
 
     const q = searchTerm.trim().toLowerCase();
     const matches = (i) => !q || i.item_name.toLowerCase().includes(q) || (i.owner || '').toLowerCase().includes(q);
@@ -87,6 +89,27 @@ const OwnerCard = ({ config, items, searchTerm = '', currentDate, isEditingDisab
                 <p className="px-4 py-8 text-center text-sm text-gray-400">{q ? 'No matching items' : 'No items yet'}</p>
             ) : sections.map(s => {
                 const isColl = collapsed[s.key];
+                const renderRows = (rows) => rows.map(r => (
+                    <BudgetItemRow
+                        key={r.budget_item_id}
+                        item={r}
+                        onEditCategory={onEditCategory}
+                        onDelete={onDelete}
+                        currentDate={currentDate}
+                        isEditingDisabled={isEditingDisabled}
+                        hideOwnerBadge
+                    />
+                ));
+                // Expenses are grouped into collapsible bill categories; items
+                // without a category stay listed flat below the groups.
+                const catGroups = s.key === 'expense'
+                    ? BILL_CATEGORIES
+                        .map(c => ({ ...c, rows: s.rows.filter(r => r.category === c.value) }))
+                        .filter(c => c.rows.length > 0)
+                    : [];
+                const flatRows = s.key === 'expense'
+                    ? s.rows.filter(r => !catGroups.some(c => c.value === r.category))
+                    : s.rows;
                 return (
                     <div key={s.key} className="px-4 py-2 mt-2 border-t border-gray-100">
                         <button
@@ -100,17 +123,32 @@ const OwnerCard = ({ config, items, searchTerm = '', currentDate, isEditingDisab
                         </button>
                         {!isColl && (
                             <div>
-                                {s.rows.map(r => (
-                                    <BudgetItemRow
-                                        key={r.budget_item_id}
-                                        item={r}
-                                        onEditCategory={onEditCategory}
-                                        onDelete={onDelete}
-                                        currentDate={currentDate}
-                                        isEditingDisabled={isEditingDisabled}
-                                        hideOwnerBadge
-                                    />
-                                ))}
+                                {catGroups.length > 0 && (
+                                    <div className="space-y-1 mb-1">
+                                        {catGroups.map(c => {
+                                            // Searching would hide matches inside closed
+                                            // groups, so an active search opens them all.
+                                            const open = !!q || expandedCats[c.value];
+                                            return (
+                                                <div key={c.value} className="rounded-lg bg-gray-50/70">
+                                                    <button
+                                                        onClick={() => setExpandedCats(p => ({ ...p, [c.value]: !p[c.value] }))}
+                                                        className="w-full flex items-center justify-between px-2 py-2"
+                                                    >
+                                                        <span className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                                                            <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
+                                                            {c.label}
+                                                            <span className="text-[11px] font-normal text-gray-400">{c.rows.length}</span>
+                                                        </span>
+                                                        <span className="text-sm font-semibold num text-gray-700">{money(sum(c.rows))}</span>
+                                                    </button>
+                                                    {open && <div className="px-2 pb-1">{renderRows(c.rows)}</div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {renderRows(flatRows)}
                             </div>
                         )}
                     </div>

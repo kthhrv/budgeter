@@ -50,7 +50,6 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                     <div className="flex items-center flex-wrap gap-1.5">
                         <span className="font-medium text-sm text-gray-800 truncate">{item.item_name}</span>
                         {!hideOwnerBadge && <span className={`${chip} ${ownerColors[item.owner?.toLowerCase()] || 'bg-gray-100 text-gray-700'}`}>{item.owner}</span>}
-                        {item.expense_pot === 'bills' && <span className={`${chip} bg-purple-50 text-purple-700`}>Bills Pot</span>}
                         {item.expense_pot === 'groceries' && <span className={`${chip} bg-emerald-50 text-emerald-700`}>Groceries Pot</span>}
                         {item.is_tab_repayment && <span className={`${chip} bg-indigo-50 text-indigo-700`}>Tab Repayment</span>}
                         {item.is_extra && <span className={`${chip} bg-amber-50 text-amber-700`}>Extra</span>}

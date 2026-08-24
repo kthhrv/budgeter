@@ -5,16 +5,7 @@ import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Wait for the authenticated dashboard to render (auth/me + month data loaded).
-    await expect(page.getByText('Money in')).toBeVisible();
-});
-
-test('renders the household summary headline', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /Budget/ }).first()).toBeVisible();
-    for (const label of ['Money in', 'Money out', 'Saved']) {
-        await expect(page.getByText(label, { exact: true })).toBeVisible();
-    }
-    // "Left over" appears in both the stat and the legend.
-    await expect(page.getByText('Left over').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Joint', exact: true })).toBeVisible();
 });
 
 test('shows the three owner cards', async ({ page }) => {

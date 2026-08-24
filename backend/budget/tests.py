@@ -651,3 +651,58 @@ class AutoExtraSingletonTestCase(TestCase):
         auto_items = [i for i in items if i.get('is_auto_extra')]
         self.assertEqual(len(auto_items), 1)
         self.assertTrue(auto_items[0]['is_extra'])
+
+
+class CategoryTestCase(TestCase):
+    """Defaults + round-tripping of the bill category via the create/edit/list endpoints."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.client = Client()
+        self.user = User.objects.create_user(username='u', password='p')
+        self.client.login(username='u', password='p')
+        self.month = Month.objects.create(
+            month_id='2026-06', month_name='June 2026',
+            start_date=datetime.date(2026, 6, 1), end_date=datetime.date(2026, 6, 30),
+        )
+
+    def _create(self, **overrides):
+        payload = {
+            'item_name': 'Misc', 'item_type': 'expense', 'owner': 'shared',
+            'is_tab_repayment': False, 'calculation_type': 'fixed',
+            'value': 10.0, 'is_one_off': False, **overrides,
+        }
+        return self.client.post(
+            f'/api/months/{self.month.month_id}/budgetitems/',
+            json.dumps(payload), content_type='application/json',
+        )
+
+    def test_create_defaults_category_to_empty(self):
+        resp = self._create()
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['category'], '')
+
+    def test_create_accepts_each_category_and_lists_it(self):
+        for cat in ('house', 'groceries', 'subscriptions', 'car'):
+            resp = self._create(item_name=f'C{cat}', category=cat)
+            self.assertEqual(resp.status_code, 200, resp.content)
+            self.assertEqual(resp.json()['category'], cat)
+        listed = {i['item_name']: i['category']
+                  for i in self.client.get(f'/api/months/{self.month.month_id}/items/').json()}
+        for cat in ('house', 'groceries', 'subscriptions', 'car'):
+            self.assertEqual(listed[f'C{cat}'], cat)
+
+    def test_edit_can_change_and_clear_category(self):
+        item_id = self._create(category='house').json()['budget_item_id']
+        resp = self.client.put(
+            f'/api/budgetitems/{item_id}/',
+            json.dumps({'category': 'car'}), content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['category'], 'car')
+        resp = self.client.put(
+            f'/api/budgetitems/{item_id}/',
+            json.dumps({'category': ''}), content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['category'], '')

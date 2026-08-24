@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { formatDate, DAY_CHOICES, money, weekdayOccurrencesInMonth } from '../utils/helpers';
+import { formatDate, DAY_CHOICES, BILL_CATEGORIES, money, weekdayOccurrencesInMonth } from '../utils/helpers';
 import ConfirmationModal from './ConfirmationModal';
 
 const EMPTY = {
-    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '',
+    item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', category: '',
     is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
     calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
     last_payment_month_id: '',
@@ -22,8 +22,8 @@ function applyRules(next, name) {
     if (name === 'owner' && next.owner === 'shared') next.is_tab_repayment = false;
     if (name === 'owner' && next.owner !== 'shared') next.is_auto_extra = false;
     if (name === 'item_type' && next.item_type !== 'expense') {
-        next.expense_pot = ''; next.is_tab_repayment = false; next.is_extra = false;
-        next.childcare_link = ''; next.is_auto_extra = false;
+        next.expense_pot = ''; next.category = ''; next.is_tab_repayment = false;
+        next.is_extra = false; next.childcare_link = ''; next.is_auto_extra = false;
     }
     if (name === 'expense_pot' && next.expense_pot !== '') { next.is_extra = false; next.is_auto_extra = false; }
     if (name === 'is_extra' && !next.is_extra) next.is_auto_extra = false;
@@ -82,6 +82,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
         const data = isNew ? { ...EMPTY } : {
             item_name: item.item_name || '', item_type: item.item_type || 'expense',
             owner: item.owner || 'shared', expense_pot: item.expense_pot || '',
+            category: item.category || '',
             is_tab_repayment: item.is_tab_repayment || false, is_extra: item.is_extra || false,
             childcare_link: item.childcare_link || '', is_auto_extra: item.is_auto_extra || false,
             calculation_type: item.calculation_type || 'fixed', weekly_payment_day: item.weekly_payment_day || '',
@@ -215,6 +216,17 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                 <Segmented ariaLabel="Owner" value={formData.owner} onChange={v => update('owner', v)}
                                     options={OWNER_OPTIONS.filter(o => !(formData.is_tab_repayment && o.value === 'shared'))} />
                             </div>
+
+                            {/* Category */}
+                            {isExpense && (
+                                <div>
+                                    <label htmlFor="category" className={fieldLabel}>Category</label>
+                                    <select id="category" name="category" value={formData.category} onChange={e => update('category', e.target.value)} className={inputCls}>
+                                        <option value="">No category</option>
+                                        {BILL_CATEGORIES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Frequency */}
                             <div>
