@@ -5,6 +5,8 @@ import {
     monthlySpendingForView, monthlySavingsForView,
     fiNumber, projectWealth, findFiCrossing, coastNumber,
     savingsRate, ageAt, mortgageStats, amortiseMortgage,
+    annualIncomeTax, annualNI, monthlyTakeHome,
+    monthsUntilAge, monthIndexOf, simulateLifecycle, findEarliestViableRetirement,
 } from '../utils/fireCalc';
 
 const account = (owner, kind, snapshots) => ({
@@ -215,5 +217,177 @@ describe('mortgage', () => {
     it('gives no payoff date when the payment does not cover interest', () => {
         const { payoffDate } = amortiseMortgage({ ...mortgage, monthly_payment: 100 });
         expect(payoffDate).toBeNull();
+    });
+});
+
+describe('UK income tax and NI', () => {
+    it('taxes a basic-rate salary correctly', () => {
+        // £30,000: (30000-12570) × 20% = £3,486
+        expect(annualIncomeTax(30000)).toBeCloseTo(3486);
+    });
+
+    it('taxes a higher-rate salary correctly', () => {
+        // £60,000: 37700 × 20% + (60000-12570-37700) × 40% = 7540 + 3892
+        expect(annualIncomeTax(60000)).toBeCloseTo(11432);
+    });
+
+    it('tapers the personal allowance above £100k', () => {
+        // £110,000: PA = 12570 - 5000 = 7570; taxable 102430
+        // 37700 × 20% + (102430-37700) × 40% = 7540 + 25892
+        expect(annualIncomeTax(110000)).toBeCloseTo(33432);
+    });
+
+    it('applies the additional rate above £125,140 taxable', () => {
+        // £150,000: PA fully tapered; taxable 150000
+        // 7540 + (125140-37700) × 40% + (150000-125140) × 45%
+        expect(annualIncomeTax(150000)).toBeCloseTo(7540 + 34976 + 11187);
+    });
+
+    it('computes employee NI', () => {
+        // £60,000: (50270-12570) × 8% + (60000-50270) × 2% = 3016 + 194.6
+        expect(annualNI(60000)).toBeCloseTo(3210.6);
+        expect(annualNI(10000)).toBe(0);
+    });
+
+    it('salary sacrifice reduces both tax and NI', () => {
+        const base = { gross_annual_salary: 60000, employee_pension_pct: 10, employer_pension_pct: 0 };
+        const sacrificed = monthlyTakeHome({ ...base, employee_pension_is_salary_sacrifice: true });
+        const netPay = monthlyTakeHome({ ...base, employee_pension_is_salary_sacrifice: false });
+        // Same income tax (both reduce taxable pay), but sacrifice saves NI on the £6,000: 2% × 6000 = £120/yr
+        expect((sacrificed - netPay) * 12).toBeCloseTo(6000 * 0.02);
+        // Sanity: £54,000 taxable → tax 9032, NI (sacrificed) on 54000 → 3090.6
+        expect(sacrificed * 12).toBeCloseTo(60000 - 6000 - 9032 - 3090.6);
+    });
+});
+
+describe('monthsUntilAge and monthIndexOf', () => {
+    const start = new Date(2026, 7, 15); // Aug 2026
+
+    it('counts months to a future birthday', () => {
+        // Born Jun 1990 → turns 57 in Jun 2047 = 22 months short of 24 years
+        expect(monthsUntilAge('1990-06-15', 57, start)).toBe((2047 - 2026) * 12 + (5 - 7));
+    });
+
+    it('clamps past ages to 0 and handles null DOB', () => {
+        expect(monthsUntilAge('1950-01-01', 57, start)).toBe(0);
+        expect(monthsUntilAge(null, 57, start)).toBeNull();
+    });
+
+    it('converts YYYY-MM to a month index', () => {
+        expect(monthIndexOf('2026-08', start)).toBe(0);
+        expect(monthIndexOf('2027-02', start)).toBe(6);
+        expect(monthIndexOf('2026-06', start)).toBe(-2);
+    });
+});
+
+describe('simulateLifecycle — the pension bridge', () => {
+    const start = new Date(2026, 7, 1);
+    // A person 10 years from pension access, spending £2,000/mo in retirement
+    const basePerson = { pensionStart: 500000, monthlyContribution: 0, accessMonth: 120, statePensionMonth: null, statePensionMonthly: 0 };
+    const baseParams = {
+        accessibleStart: 0, monthlyAccessible: 0, annualRealReturnPct: 3,
+        baseMonthlySpending: 2000, horizonMonths: 360, startDate: start,
+    };
+
+    it('fails when retiring with a locked pension and no accessible bridge', () => {
+        const { viable } = simulateLifecycle({ ...baseParams, people: [basePerson], retirementMonth: 0 });
+        expect(viable).toBe(false);
+    });
+
+    it('succeeds with the same wealth once accessible savings cover the bridge', () => {
+        const { viable } = simulateLifecycle({
+            ...baseParams, people: [basePerson], accessibleStart: 300000, retirementMonth: 0,
+        });
+        expect(viable).toBe(true);
+    });
+
+    it('succeeds when retirement waits until pension access', () => {
+        const { viable } = simulateLifecycle({ ...baseParams, people: [basePerson], retirementMonth: 120 });
+        expect(viable).toBe(true);
+    });
+
+    it('state pension income makes an otherwise-failing plan viable', () => {
+        // Small pot, unlocked pension, spending £1,400/mo: fails without state pension
+        const person = { pensionStart: 220000, monthlyContribution: 0, accessMonth: 0, statePensionMonth: null, statePensionMonthly: 0 };
+        const params = { ...baseParams, baseMonthlySpending: 1400, horizonMonths: 480 };
+        expect(simulateLifecycle({ ...params, people: [person], retirementMonth: 0 }).viable).toBe(false);
+        const withSP = { ...person, statePensionMonth: 60, statePensionMonthly: 11973 / 12 };
+        expect(simulateLifecycle({ ...params, people: [withSP], retirementMonth: 0 }).viable).toBe(true);
+    });
+
+    it('mortgage payoff reduces spending from the payoff month', () => {
+        // Spending £2,500 incl. £1,000 mortgage that ends at month 24
+        const person = { pensionStart: 480000, monthlyContribution: 0, accessMonth: 0, statePensionMonth: null, statePensionMonthly: 0 };
+        const fails = simulateLifecycle({
+            ...baseParams, people: [person], baseMonthlySpending: 2500, retirementMonth: 0, horizonMonths: 480,
+        });
+        const survives = simulateLifecycle({
+            ...baseParams, people: [person], baseMonthlySpending: 2500, retirementMonth: 0, horizonMonths: 480,
+            mortgageMonthlyPayment: 1000, mortgagePayoffMonth: 24,
+        });
+        expect(fails.viable).toBe(false);
+        expect(survives.viable).toBe(true);
+    });
+
+    it('trajectory covers the horizon quarterly and shows drawdown', () => {
+        const { trajectory } = simulateLifecycle({ ...baseParams, people: [basePerson], accessibleStart: 300000, retirementMonth: 0 });
+        expect(trajectory[0].monthIndex).toBe(0);
+        expect(trajectory.at(-1).monthIndex).toBe(360);
+        // Accessible is being drawn during the bridge
+        expect(trajectory[10].accessible).toBeLessThan(300000 * Math.pow(1.03, 3));
+    });
+});
+
+describe('findEarliestViableRetirement', () => {
+    const start = new Date(2026, 7, 1);
+
+    it('finds a month between "too early" and the pension access age', () => {
+        // Contributions build an accessible bridge over time; earliest viable
+        // retirement should be > 0 and ≤ pension access (120)
+        const params = {
+            people: [{ pensionStart: 400000, monthlyContribution: 500, accessMonth: 120, statePensionMonth: null, statePensionMonthly: 0 }],
+            accessibleStart: 20000, monthlyAccessible: 1500, annualRealReturnPct: 3,
+            baseMonthlySpending: 1800, horizonMonths: 480, startDate: start,
+        };
+        const t = findEarliestViableRetirement(params);
+        expect(t).toBeGreaterThan(0);
+        expect(t).toBeLessThanOrEqual(120);
+        // Consistency: viable at t, not viable at t-1
+        expect(simulateLifecycle({ ...params, retirementMonth: t }).viable).toBe(true);
+        expect(simulateLifecycle({ ...params, retirementMonth: t - 1 }).viable).toBe(false);
+    });
+
+    it('returns null when no retirement within the search window works', () => {
+        const params = {
+            people: [{ pensionStart: 0, monthlyContribution: 0, accessMonth: 0, statePensionMonth: null, statePensionMonthly: 0 }],
+            accessibleStart: 0, monthlyAccessible: 0, annualRealReturnPct: 3,
+            baseMonthlySpending: 2000, horizonMonths: 480, startDate: start,
+        };
+        expect(findEarliestViableRetirement(params)).toBeNull();
+    });
+});
+
+describe('simulateLifecycle trajectory dates', () => {
+    it('advances month by month from the start date', () => {
+        const { trajectory } = simulateLifecycle({
+            people: [{ pensionStart: 1000, monthlyContribution: 0, accessMonth: 0, statePensionMonth: null, statePensionMonthly: 0 }],
+            accessibleStart: 100000, monthlyAccessible: 0, annualRealReturnPct: 3,
+            baseMonthlySpending: 100, retirementMonth: 0, horizonMonths: 24,
+            startDate: new Date(2026, 7, 1), // Aug 2026
+        });
+        expect(trajectory[0].date).toBe('2026-08');
+        expect(trajectory[1].date).toBe('2026-11'); // quarterly
+        expect(trajectory.at(-1).date).toBe('2028-08');
+    });
+
+    it('samples extra marker months on top of the quarterly grid', () => {
+        const { trajectory } = simulateLifecycle({
+            people: [{ pensionStart: 1000, monthlyContribution: 0, accessMonth: 7, statePensionMonth: null, statePensionMonthly: 0 }],
+            accessibleStart: 100000, monthlyAccessible: 0, annualRealReturnPct: 3,
+            baseMonthlySpending: 100, retirementMonth: 0, horizonMonths: 24,
+            startDate: new Date(2026, 7, 1),
+            extraSampleMonths: [7], // Mar 2027 — not a quarterly sample
+        });
+        expect(trajectory.some(p => p.date === '2027-03')).toBe(true);
     });
 });

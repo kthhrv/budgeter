@@ -118,11 +118,20 @@ class FireAPITestCase(TestCase):
         resp = self._put('/api/fire/settings/tild/', {
             'date_of_birth': '1990-05-01', 'expected_real_return_pct': 4.0,
             'safe_withdrawal_rate_pct': 3.5, 'target_retirement_age': 55,
+            'pension_access_age': 58, 'include_state_pension': False,
         })
         self.assertEqual(resp.status_code, 200)
         obj = FireSettings.objects.get(owner='tild')
         self.assertEqual(obj.date_of_birth, datetime.date(1990, 5, 1))
         self.assertEqual(obj.target_retirement_age, 55)
+        self.assertEqual(obj.pension_access_age, 58)
+        self.assertFalse(obj.include_state_pension)
+
+    def test_settings_defaults_include_phase2_fields(self):
+        data = self.client.get('/api/fire/settings/').json()
+        for s in data:
+            self.assertEqual(s['pension_access_age'], 57)
+            self.assertTrue(s['include_state_pension'])
 
     def test_update_settings_unknown_owner(self):
         resp = self._put('/api/fire/settings/nobody/', {

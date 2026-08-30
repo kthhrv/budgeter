@@ -10,7 +10,9 @@ import {
     effectiveEarnings, monthlyPensionContribution, currentWealth, buildNetWorthHistory,
     monthlySpendingForView, monthlySavingsForView, average,
     fiNumber, projectWealth, findFiCrossing, coastNumber, savingsRate, ageAt,
-    mortgageStats, amortiseMortgage, PENSION_ACCESS_AGE,
+    mortgageStats, amortiseMortgage, latestBalance, monthlyTakeHome,
+    monthsUntilAge, monthIndexOf, simulateLifecycle, findEarliestViableRetirement,
+    STATE_PENSION_ANNUAL, STATE_PENSION_AGE, LONGEVITY_AGE,
 } from '../utils/fireCalc';
 
 // Series colors, validated for CVD separation and contrast on white
@@ -109,6 +111,8 @@ const FirePage = ({ showToast }) => {
                 expected_real_return_pct: s.expected_real_return_pct,
                 safe_withdrawal_rate_pct: s.safe_withdrawal_rate_pct,
                 target_retirement_age: s.target_retirement_age ?? '',
+                pension_access_age: s.pension_access_age,
+                include_state_pension: s.include_state_pension,
             }])));
         } catch (err) {
             console.error('Failed to load FIRE data', err);
@@ -161,14 +165,85 @@ const FirePage = ({ showToast }) => {
     const monthlyPension = pensionOwners.reduce(
         (sum, owner) => sum + monthlyPensionContribution(effectiveEarnings(earnings, owner, today())), 0
     );
+    const settingsByOwner = useMemo(() => Object.fromEntries(settings.map(s => [s.owner, s])), [settings]);
 
     const wealth = useMemo(() => currentWealth(accounts, view), [accounts, view]);
     const history = useMemo(() => buildNetWorthHistory(accounts, view), [accounts, view]);
 
     const fiTarget = viewSettings ? fiNumber(avgMonthlySpending * 12, parseFloat(viewSettings.safe_withdrawal_rate_pct)) : null;
 
+    const mortgage = mortgages[0] || null;
+    const mortgageAmort = useMemo(() => (mortgage ? amortiseMortgage(mortgage) : null), [mortgage]);
+
+    // Per-person views carry their salary-proportion share of the (shared)
+    // mortgage payment, mirroring how spending itself is split.
+    const avgProportion = useMemo(() => {
+        if (view === 'joint') return 1;
+        const key = view === 'keith' ? 'keithProportion' : 'tildProportion';
+        return average(monthlyTotals.map(m => m.totals[key]));
+    }, [monthlyTotals, view]);
+
+    // The bridge-tested plan: earliest retirement whose simulation (locked
+    // pensions until access age, state pension, mortgage payoff) survives to
+    // age 95. Needs a DOB for everyone in the view — otherwise `bridge` is
+    // null and the page falls back to the phase-1 crossing.
+    const bridge = useMemo(() => {
+        if (!viewSettings || avgMonthlySpending <= 0) return null;
+        const owners = view === 'joint' ? ['keith', 'tild'] : [view];
+        if (owners.some(o => !settingsByOwner[o]?.date_of_birth)) return null;
+        const start = new Date();
+        const idxToDate = (i) => `${start.getFullYear() + Math.floor((start.getMonth() + i) / 12)}-${String(((start.getMonth() + i) % 12) + 1).padStart(2, '0')}`;
+        const pensionPot = (owner) => accounts
+            .filter(a => a.kind === 'pension' && a.owner === owner)
+            .reduce((sum, a) => sum + (parseFloat(latestBalance(a)?.balance) || 0), 0);
+
+        const people = owners.map(o => {
+            const s = settingsByOwner[o];
+            return {
+                owner: o,
+                pensionStart: pensionPot(o),
+                monthlyContribution: monthlyPensionContribution(effectiveEarnings(earnings, o, today())),
+                accessMonth: monthsUntilAge(s.date_of_birth, s.pension_access_age, start),
+                statePensionMonth: s.include_state_pension ? monthsUntilAge(s.date_of_birth, STATE_PENSION_AGE, start) : null,
+                statePensionMonthly: s.include_state_pension ? STATE_PENSION_ANNUAL / 12 : 0,
+            };
+        });
+        // A shared-owner pension (unusual) counts for whoever unlocks last — the conservative choice.
+        const sharedPension = pensionPot('shared');
+        if (sharedPension > 0) {
+            people.reduce((a, b) => (a.accessMonth >= b.accessMonth ? a : b)).pensionStart += sharedPension;
+        }
+
+        const horizonMonths = Math.max(...owners.map(o => monthsUntilAge(settingsByOwner[o].date_of_birth, LONGEVITY_AGE, start)));
+        const params = {
+            people,
+            accessibleStart: wealth.accessible,
+            monthlyAccessible: avgMonthlySavings,
+            annualRealReturnPct: parseFloat(viewSettings.expected_real_return_pct),
+            baseMonthlySpending: avgMonthlySpending,
+            mortgageMonthlyPayment: mortgage ? parseFloat(mortgage.monthly_payment) * avgProportion : 0,
+            mortgagePayoffMonth: mortgageAmort?.payoffDate ? Math.max(0, monthIndexOf(mortgageAmort.payoffDate, start)) : null,
+            horizonMonths,
+            startDate: start,
+        };
+        const retirementMonth = findEarliestViableRetirement(params);
+        // With no viable month, simulate never-retiring so the chart still shows accumulation.
+        const sim = simulateLifecycle({
+            ...params,
+            retirementMonth: retirementMonth ?? horizonMonths + 1,
+            extraSampleMonths: [retirementMonth, ...people.map(p => p.accessMonth)].filter(v => v !== null),
+        });
+        return {
+            retirementMonth,
+            retireDate: retirementMonth !== null ? idxToDate(retirementMonth) : null,
+            trajectory: sim.trajectory,
+            accessDates: people.map(p => ({ owner: p.owner, date: idxToDate(p.accessMonth) })),
+        };
+    }, [viewSettings, view, settingsByOwner, accounts, earnings, wealth, avgMonthlySavings, avgMonthlySpending, mortgage, mortgageAmort, avgProportion]);
+
+    // Phase-1 fallback (no bridge test) when DOBs are missing
     const projection = useMemo(() => {
-        if (!viewSettings) return [];
+        if (!viewSettings || bridge) return [];
         return projectWealth({
             pensionStart: wealth.pension,
             accessibleStart: wealth.accessible,
@@ -177,11 +252,12 @@ const FirePage = ({ showToast }) => {
             annualRealReturnPct: parseFloat(viewSettings.expected_real_return_pct),
             years: 40,
         });
-    }, [viewSettings, wealth, monthlyPension, avgMonthlySavings]);
+    }, [viewSettings, bridge, wealth, monthlyPension, avgMonthlySavings]);
 
-    const fiCrossing = fiTarget !== null && fiTarget !== Infinity ? findFiCrossing(projection, fiTarget) : null;
-    const fiAge = fiCrossing && viewSettings?.date_of_birth
-        ? ageAt(viewSettings.date_of_birth, new Date(`${fiCrossing.date}-01`)) : null;
+    const fiCrossing = !bridge && fiTarget !== null && fiTarget !== Infinity ? findFiCrossing(projection, fiTarget) : null;
+    const fiDate = bridge ? bridge.retireDate : (fiCrossing?.date ?? null);
+    const fiAge = fiDate && viewSettings?.date_of_birth
+        ? ageAt(viewSettings.date_of_birth, new Date(`${fiDate}-01`)) : null;
 
     const currentAge = viewSettings?.date_of_birth ? ageAt(viewSettings.date_of_birth, new Date()) : null;
     const coast = (viewSettings?.target_retirement_age && currentAge !== null && fiTarget)
@@ -195,14 +271,12 @@ const FirePage = ({ showToast }) => {
     }, 0);
     const rate = savingsRate(monthlyPension + avgMonthlySavings, grossMonthlyIncome);
 
-    // Thin the 480-point monthly projection to quarterly for the chart
+    // Bridge trajectory is already quarterly; thin the phase-1 fallback to match
     const projectionChartData = useMemo(
-        () => projection.filter(p => p.monthIndex % 3 === 0),
-        [projection]
+        () => (bridge ? bridge.trajectory : projection.filter(p => p.monthIndex % 3 === 0)),
+        [bridge, projection]
     );
 
-    const mortgage = mortgages[0] || null;
-    const mortgageAmort = useMemo(() => (mortgage ? amortiseMortgage(mortgage) : null), [mortgage]);
     const mortgageChartData = useMemo(
         () => (mortgageAmort ? mortgageAmort.schedule.filter((_, i) => i % 3 === 0 || i === mortgageAmort.schedule.length - 1) : []),
         [mortgageAmort]
@@ -279,6 +353,8 @@ const FirePage = ({ showToast }) => {
                 expected_real_return_pct: parseFloat(form.expected_real_return_pct),
                 safe_withdrawal_rate_pct: parseFloat(form.safe_withdrawal_rate_pct),
                 target_retirement_age: form.target_retirement_age === '' ? null : parseInt(form.target_retirement_age, 10),
+                pension_access_age: parseInt(form.pension_access_age, 10) || 57,
+                include_state_pension: form.include_state_pension,
             });
         },
         `${OWNER_LABELS[owner]}'s assumptions saved`
@@ -316,10 +392,12 @@ const FirePage = ({ showToast }) => {
                     value={fiTarget && fiTarget !== Infinity ? fmtMoney(fiTarget) : '—'}
                     sub={avgMonthlySpending > 0 ? `${fmtMoney(avgMonthlySpending * 12)}/yr spending at ${viewSettings ? parseFloat(viewSettings.safe_withdrawal_rate_pct).toFixed(1) : '—'}% SWR` : 'No budget history yet'} />
                 <StatTile Icon={TrendingUp} label="Projected FI date"
-                    value={fiCrossing ? fmtMonth(fiCrossing.date) : '—'}
-                    sub={fiCrossing
-                        ? (fiAge !== null ? `Age ${fiAge}` : `${Math.round(fiCrossing.monthIndex / 12)} years away`)
-                        : 'Not reached within 40 years'} />
+                    value={fiDate ? fmtMonth(fiDate) : '—'}
+                    sub={bridge
+                        ? (bridge.retireDate
+                            ? `${fiAge !== null ? `Age ${fiAge} · ` : ''}bridge-tested to ${LONGEVITY_AGE}`
+                            : `No viable date within ${Math.round(480 / 12)} years`)
+                        : (fiDate ? 'Set dates of birth for the bridge-tested date' : 'Not reached within 40 years')} />
                 <StatTile Icon={PiggyBank} label="Savings rate"
                     value={grossMonthlyIncome > 0 ? `${(rate * 100).toFixed(0)}%` : '—'}
                     sub={`${fmtMoney(monthlyPension + avgMonthlySavings)}/mo incl. pension${coast ? ` · Coast FIRE ${fmtCompact(coast)}` : ''}`} />
@@ -343,7 +421,8 @@ const FirePage = ({ showToast }) => {
                     </ResponsiveContainer>
                 </ChartCard>
 
-                <ChartCard title="Projection to FI" empty={!projection.length ? 'Set assumptions and record balances to project' : null}>
+                <ChartCard title={bridge ? 'Lifecycle: accumulate, retire, draw down' : 'Projection to FI'}
+                    empty={!projectionChartData.length ? 'Set assumptions and record balances to project' : null}>
                     <ResponsiveContainer width="100%" height={280}>
                         <AreaChart data={projectionChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
@@ -355,10 +434,14 @@ const FirePage = ({ showToast }) => {
                                 <ReferenceLine y={fiTarget} stroke="#6b7280" strokeDasharray="6 4"
                                     label={{ value: `FI ${fmtCompact(fiTarget)}`, position: 'insideTopRight', fontSize: 11, fill: '#6b7280' }} />
                             )}
-                            {fiCrossing && (
-                                <ReferenceLine x={fiCrossing.date} stroke="#6b7280" strokeDasharray="6 4"
-                                    label={{ value: fmtMonth(fiCrossing.date), position: 'insideTopLeft', fontSize: 11, fill: '#6b7280' }} />
+                            {fiDate && (
+                                <ReferenceLine x={fiDate} stroke="#6b7280" strokeDasharray="6 4"
+                                    label={{ value: `Retire ${fmtMonth(fiDate)}`, position: 'insideTopLeft', fontSize: 11, fill: '#6b7280' }} />
                             )}
+                            {bridge?.accessDates.map((a, idx) => (
+                                <ReferenceLine key={a.owner} x={a.date} stroke="#9ca3af" strokeDasharray="2 4"
+                                    label={{ value: `${OWNER_LABELS[a.owner]} pension`, position: 'insideBottomLeft', fontSize: 10, fill: '#9ca3af', dy: -idx * 14 }} />
+                            ))}
                             <Area type="monotone" dataKey="pension" name="Pension" stackId="1"
                                 stroke={COLOR_PENSION} strokeWidth={2} fill={COLOR_PENSION} fillOpacity={0.25} />
                             <Area type="monotone" dataKey="accessible" name="Accessible" stackId="1"
@@ -367,8 +450,10 @@ const FirePage = ({ showToast }) => {
                     </ResponsiveContainer>
                     <p className="text-xs text-gray-400 mt-2">
                         In today's money at {viewSettings ? parseFloat(viewSettings.expected_real_return_pct).toFixed(1) : '—'}% real return,
-                        contributing {fmtMoney(monthlyPension)}/mo pension + {fmtMoney(avgMonthlySavings)}/mo savings.
-                        Pension is accessible from age {PENSION_ACCESS_AGE}; the phase-2 model will test the pre-{PENSION_ACCESS_AGE} bridge explicitly.
+                        contributing {fmtMoney(monthlyPension)}/mo pension + {fmtMoney(avgMonthlySavings)}/mo savings until retirement.
+                        {bridge
+                            ? ` The retirement date is the earliest where accessible wealth bridges every year before pension access, and the pot lasts to age ${LONGEVITY_AGE} — including state pension from ${STATE_PENSION_AGE} and spending dropping by the mortgage payment at payoff. Assumes the mortgage payment is part of budget spending.`
+                            : ' Set both dates of birth in Assumptions to enable the pension-bridge test.'}
                     </p>
                 </ChartCard>
             </div>
@@ -523,6 +608,7 @@ const FirePage = ({ showToast }) => {
                                         </div>
                                         <p className="text-xs text-gray-400 mt-0.5">
                                             From {e.effective_from} · {parseFloat(e.employee_pension_pct)}% you + {parseFloat(e.employer_pension_pct)}% employer
+                                            {` · ≈ ${fmtMoney(monthlyTakeHome(e))}/mo take-home`}
                                             {e.note ? ` · ${e.note}` : ''}
                                         </p>
                                     </div>
@@ -680,6 +766,18 @@ const FirePage = ({ showToast }) => {
                                             <input type="number" step="1" placeholder="e.g. 55" value={form.target_retirement_age}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, target_retirement_age: e.target.value } }))} className={inputCls} />
                                         </div>
+                                    </div>
+                                    <div className="flex items-end gap-4">
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Pension access age</label>
+                                            <input type="number" step="1" value={form.pension_access_age}
+                                                onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, pension_access_age: e.target.value } }))} className={inputCls} required />
+                                        </div>
+                                        <label className="flex items-center gap-2 text-sm text-gray-600 pb-2">
+                                            <input type="checkbox" checked={form.include_state_pension}
+                                                onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, include_state_pension: e.target.checked } }))} />
+                                            Include state pension ({fmtCompact(STATE_PENSION_ANNUAL)}/yr from {STATE_PENSION_AGE})
+                                        </label>
                                     </div>
                                 </form>
                             );
