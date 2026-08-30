@@ -469,6 +469,12 @@ class FireSettings(models.Model):
         help_text="Withdrawal rate defining the FI number (annual spending ÷ this %)."
     )
     target_retirement_age = models.IntegerField(null=True, blank=True, help_text="Optional target age, used for the Coast FIRE number.")
+    expected_annual_savings = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text="Optional override: how much this person actually invests per year (accessible, "
+                  "non-pension). Blank = derive it from the budget's savings lines — set this when "
+                  "those lines include money that gets spent (e.g. fun-money pots)."
+    )
     pension_access_age = models.IntegerField(
         default=57,
         help_text="Age pension wealth unlocks. 57 from April 2028 (Finance Act 2021); "

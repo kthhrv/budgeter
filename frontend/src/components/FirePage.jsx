@@ -120,6 +120,7 @@ const FirePage = ({ showToast }) => {
                 expected_real_return_pct: s.expected_real_return_pct,
                 safe_withdrawal_rate_pct: s.safe_withdrawal_rate_pct,
                 target_retirement_age: s.target_retirement_age ?? '',
+                expected_annual_savings: s.expected_annual_savings ?? '',
                 pension_access_age: s.pension_access_age,
                 include_state_pension: s.include_state_pension,
             }])));
@@ -218,10 +219,19 @@ const FirePage = ({ showToast }) => {
         () => average(monthlyTotals.map(m => monthlySpendingForView(m.totals, view))),
         [monthlyTotals, view]
     );
-    const avgMonthlySavings = useMemo(
-        () => average(monthlyTotals.map(m => monthlySavingsForView(m.totals, view))),
-        [monthlyTotals, view]
-    );
+    // Accessible-savings contribution: per person, an explicit "Expected
+    // savings" override wins; otherwise fall back to the budget's savings
+    // lines — which may include pots that get spent (fun money), hence the
+    // override existing at all.
+    const avgMonthlySavings = useMemo(() => {
+        const byOwner = Object.fromEntries(settings.map(s => [s.owner, s]));
+        const monthlyFor = (owner) => {
+            const override = byOwner[owner]?.expected_annual_savings;
+            if (override !== null && override !== undefined) return parseFloat(override) / 12;
+            return average(monthlyTotals.map(m => monthlySavingsForView(m.totals, owner)));
+        };
+        return view === 'joint' ? monthlyFor('keith') + monthlyFor('tild') : monthlyFor(view);
+    }, [monthlyTotals, view, settings]);
 
     const viewSettings = useMemo(() => {
         const byOwner = Object.fromEntries(settings.map(s => [s.owner, s]));
@@ -463,6 +473,7 @@ const FirePage = ({ showToast }) => {
                 expected_real_return_pct: parseFloat(form.expected_real_return_pct),
                 safe_withdrawal_rate_pct: parseFloat(form.safe_withdrawal_rate_pct),
                 target_retirement_age: form.target_retirement_age === '' ? null : parseInt(form.target_retirement_age, 10),
+                expected_annual_savings: form.expected_annual_savings === '' ? null : parseFloat(form.expected_annual_savings),
                 pension_access_age: parseInt(form.pension_access_age, 10) || 57,
                 include_state_pension: form.include_state_pension,
             });
@@ -979,11 +990,19 @@ const FirePage = ({ showToast }) => {
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, target_retirement_age: e.target.value } }))} className={inputCls} />
                                         </div>
                                     </div>
-                                    <div className="flex items-end gap-4">
+                                    <div className="flex items-end gap-4 flex-wrap">
                                         <div>
                                             <label className="text-xs text-gray-500 mb-1 block">Pension access age</label>
                                             <input type="number" step="1" value={form.pension_access_age}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, pension_access_age: e.target.value } }))} className={inputCls} required />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block" title="How much you actually invest per year. Blank = use the budget's savings lines.">Expected savings £/yr</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">£</span>
+                                                <input type="number" step="100" placeholder="from budget" value={form.expected_annual_savings}
+                                                    onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, expected_annual_savings: e.target.value } }))} className={`${inputCls} pl-7`} />
+                                            </div>
                                         </div>
                                         <label className="flex items-center gap-2 text-sm text-gray-600 pb-2">
                                             <input type="checkbox" checked={form.include_state_pension}
@@ -997,7 +1016,8 @@ const FirePage = ({ showToast }) => {
                     </div>
                     <p className="text-xs text-gray-400 mt-3">
                         Return is after inflation, so all projections read in today's money. The joint view blends both people's assumptions.
-                        Spending and savings averages come from the last {monthlyTotals.length || 12} months of the budget.
+                        Spending averages come from the last {monthlyTotals.length || 12} months of the budget; savings do too unless
+                        "Expected savings" is set — use it when the budget's savings lines include money that gets spent.
                     </p>
                 </div>
             </div>
