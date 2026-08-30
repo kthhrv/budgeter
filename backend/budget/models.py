@@ -311,6 +311,10 @@ class FireAccount(models.Model):
                   "accessible and can bridge an early retirement."
     )
     provider = models.CharField(max_length=100, blank=True, default='', help_text="Optional provider name, e.g. 'Monzo'.")
+    monzo_pot_id = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text="If set, 'Sync from Monzo' writes this pot's balance as a snapshot on this account."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -457,6 +461,35 @@ class FireSettings(models.Model):
 
     def __str__(self):
         return f"FIRE settings for {self.get_owner_display()}"
+
+
+class MonzoConnection(models.Model):
+    """
+    Per-user Monzo OAuth tokens for the FIRE tab's pot sync. Tokens live only
+    in the volume-mounted SQLite database (never the repo — it's public); the
+    client id/secret come from envars like every other secret. The client must
+    be registered as *confidential* at developers.monzo.com or Monzo won't
+    issue a refresh token and the connection dies when the access token does.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="monzo_connection",
+    )
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True, default='')
+    monzo_user_id = models.CharField(max_length=100, blank=True, default='')
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Monzo Connection"
+        verbose_name_plural = "Monzo Connections"
+
+    def __str__(self):
+        return f"Monzo connection for {self.user}"
 
 
 class NurserySettings(models.Model):

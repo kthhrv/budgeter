@@ -10,9 +10,15 @@ import uuid
 import calendar
 import os
 
+import secrets
+
+from django.shortcuts import redirect
+
+from . import monzo
 from .models import (
     Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings,
     FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, FireSettings,
+    MonzoConnection,
 )
 from django.db.models import Prefetch
 from django.middleware.csrf import get_token
@@ -595,6 +601,7 @@ class FireAccountSchema(Schema):
     owner: str
     kind: str
     provider: str
+    monzo_pot_id: str
     snapshots: List[BalanceSnapshotSchema]
 
     @staticmethod
@@ -606,6 +613,7 @@ class FireAccountInputSchema(Schema):
     owner: str
     kind: str
     provider: str = ''
+    monzo_pot_id: str = ''
 
 class BalanceSnapshotInputSchema(Schema):
     date: str
@@ -803,6 +811,122 @@ def update_fire_settings(request, owner: str, payload: FireSettingsInputSchema):
     obj.include_state_pension = payload.include_state_pension
     obj.save()
     return obj
+
+# --- Monzo integration ---
+#
+# OAuth flow: /fire/monzo/connect/ redirects the browser to Monzo; Monzo
+# redirects back to /fire/monzo/callback/ (both go through the same host the
+# app is served from — the vite proxy in dev, nginx in prod — so
+# build_absolute_uri gives a redirect_uri that must be registered verbatim on
+# the client at developers.monzo.com for each environment).
+
+class MonzoStatusSchema(Schema):
+    configured: bool
+    connected: bool
+    token_expires_at: Optional[str] = None
+    last_synced_at: Optional[str] = None
+
+class MonzoPotSchema(Schema):
+    id: str
+    name: str
+    balance: float
+    currency: str
+
+class MonzoSyncResultSchema(Schema):
+    synced: int
+    skipped: List[str]
+
+
+def _monzo_connection(request):
+    return MonzoConnection.objects.filter(user=request.user).first()
+
+
+def _monzo_redirect_uri(request):
+    return os.environ.get("MONZO_REDIRECT_URI") or request.build_absolute_uri("/api/fire/monzo/callback/")
+
+
+@api.get("/fire/monzo/status/", response=MonzoStatusSchema)
+def monzo_status(request):
+    connection = _monzo_connection(request)
+    return {
+        "configured": monzo.is_configured(),
+        "connected": connection is not None,
+        "token_expires_at": connection.token_expires_at.isoformat() if connection and connection.token_expires_at else None,
+        "last_synced_at": connection.last_synced_at.isoformat() if connection and connection.last_synced_at else None,
+    }
+
+
+@api.get("/fire/monzo/connect/", response={400: dict})
+def monzo_connect(request):
+    if not monzo.is_configured():
+        return 400, {"detail": "MONZO_CLIENT_ID / MONZO_CLIENT_SECRET are not set."}
+    state = secrets.token_urlsafe(32)
+    request.session["monzo_oauth_state"] = state
+    return redirect(monzo.authorize_url(_monzo_redirect_uri(request), state))
+
+
+@api.get("/fire/monzo/callback/", response={400: dict})
+def monzo_callback(request, code: str = "", state: str = ""):
+    expected_state = request.session.pop("monzo_oauth_state", None)
+    if not code or not state or state != expected_state:
+        return 400, {"detail": "Monzo OAuth state mismatch — start the connection again from the FIRE tab."}
+    try:
+        payload = monzo.exchange_code(code, _monzo_redirect_uri(request))
+    except monzo.MonzoError as exc:
+        return 400, {"detail": str(exc)}
+    connection, _ = MonzoConnection.objects.get_or_create(user=request.user, defaults={"access_token": ""})
+    monzo.apply_token_payload(connection, payload)
+    # Back to the SPA — the FIRE tab's status call now reports connected.
+    return redirect("/")
+
+
+@api.get("/fire/monzo/pots/", response={200: List[MonzoPotSchema], 400: dict})
+def monzo_pots(request):
+    connection = _monzo_connection(request)
+    if not connection:
+        return 400, {"detail": "Monzo is not connected."}
+    try:
+        return 200, monzo.list_pots(connection)
+    except monzo.MonzoError as exc:
+        return 400, {"detail": str(exc)}
+
+
+@api.post("/fire/monzo/sync/", response={200: MonzoSyncResultSchema, 400: dict})
+def monzo_sync(request):
+    """Write today's balance snapshot (source=monzo) for every pot-linked account."""
+    connection = _monzo_connection(request)
+    if not connection:
+        return 400, {"detail": "Monzo is not connected."}
+    linked = list(FireAccount.objects.exclude(monzo_pot_id=""))
+    if not linked:
+        return 400, {"detail": "No accounts are linked to Monzo pots yet."}
+    try:
+        pots = {p["id"]: p for p in monzo.list_pots(connection)}
+    except monzo.MonzoError as exc:
+        return 400, {"detail": str(exc)}
+
+    synced, skipped = 0, []
+    today = datetime.date.today()
+    for account in linked:
+        pot = pots.get(account.monzo_pot_id)
+        if pot is None:
+            skipped.append(f"{account.name}: linked pot no longer exists")
+            continue
+        BalanceSnapshot.objects.update_or_create(
+            account=account, date=today,
+            defaults={"balance": pot["balance"], "source": "monzo"},
+        )
+        synced += 1
+    connection.last_synced_at = datetime.datetime.now(datetime.timezone.utc)
+    connection.save(update_fields=["last_synced_at", "updated_at"])
+    return 200, {"synced": synced, "skipped": skipped}
+
+
+@api.post("/fire/monzo/disconnect/", response={204: None})
+def monzo_disconnect(request):
+    MonzoConnection.objects.filter(user=request.user).delete()
+    return 204, None
+
 
 @api.get("/fire/monthly-items/", response=List[MonthItemsSchema])
 def fire_monthly_items(request, count: int = 12):
