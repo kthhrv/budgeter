@@ -7,6 +7,7 @@ import {
     savingsRate, ageAt, mortgageStats, amortiseMortgage, combineSchedules,
     annualIncomeTax, annualNI, monthlyTakeHome,
     monthsUntilAge, monthIndexOf, simulateLifecycle, findEarliestViableRetirement,
+    netFromPensionWithdrawal, grossPensionWithdrawal,
 } from '../utils/fireCalc';
 
 const account = (owner, kind, snapshots) => ({
@@ -448,5 +449,54 @@ describe('simulateLifecycle with two loans', () => {
         const withoutRelief = simulateLifecycle({ ...base, baseMonthlySpending: 2800 });
         expect(withLoans.viable).toBe(true);
         expect(withoutRelief.viable).toBe(false);
+    });
+});
+
+describe('retirement drawdown tax', () => {
+    it('withdrawals under the personal allowance are untaxed', () => {
+        // £1,000/mo gross → £750/mo taxable = £9,000/yr, below the allowance
+        expect(netFromPensionWithdrawal(1000, 0)).toBeCloseTo(1000);
+    });
+
+    it('taxes the 75% taxable portion above the allowance', () => {
+        // £4,000/mo gross → £36,000/yr taxable → tax £4,686/yr = £390.50/mo
+        expect(netFromPensionWithdrawal(4000, 0)).toBeCloseTo(4000 - 4686 / 12);
+    });
+
+    it('stacks on top of other taxable income like the state pension', () => {
+        // SP £998/mo alone is under the allowance; a £2,000/mo withdrawal adds
+        // £1,500/mo taxable → total £29,976/yr → tax £3,481.20/yr
+        expect(netFromPensionWithdrawal(2000, 998)).toBeCloseTo(2000 - 3481.2 / 12, 1);
+    });
+
+    it('grossPensionWithdrawal inverts netFromPensionWithdrawal', () => {
+        for (const [net, other] of [[800, 0], [2500, 0], [3500, 998], [9000, 0], [12000, 1000]]) {
+            const gross = grossPensionWithdrawal(net, other);
+            expect(netFromPensionWithdrawal(gross, other)).toBeCloseTo(net, 1);
+            expect(gross).toBeGreaterThanOrEqual(net);
+        }
+        expect(grossPensionWithdrawal(0, 0)).toBe(0);
+    });
+});
+
+describe('simulateLifecycle drawdown tax', () => {
+    // £480k funding £2,000/mo over 30 years at 3% real sits right on the
+    // viability boundary — where the money lives decides the outcome.
+    const base = {
+        monthlyAccessible: 0, annualRealReturnPct: 3, retirementMonth: 0,
+        horizonMonths: 360, startDate: new Date(2026, 7, 1), baseMonthlySpending: 2000,
+    };
+    const person = (pot) => ({ pensionStart: pot, monthlyContribution: 0, accessMonth: 0, statePensionMonth: null, statePensionMonthly: 0 });
+
+    it('ISA wealth survives where a single pension fails on tax drag', () => {
+        const isa = simulateLifecycle({ ...base, people: [person(0)], accessibleStart: 480000 });
+        const pension = simulateLifecycle({ ...base, people: [person(480000)], accessibleStart: 0 });
+        expect(isa.viable).toBe(true);
+        expect(pension.viable).toBe(false);
+    });
+
+    it('a couple splitting withdrawals uses both personal allowances', () => {
+        const split = simulateLifecycle({ ...base, people: [person(240000), person(240000)], accessibleStart: 0 });
+        expect(split.viable).toBe(true);
     });
 });
