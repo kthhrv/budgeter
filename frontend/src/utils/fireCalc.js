@@ -6,11 +6,6 @@
 // with pension and accessible wealth tracked as separate streams; the
 // two-phase pension-bridge test, tax/NI and state pension land in phase 2.
 
-// Normal minimum pension age. 55 today, legislated to rise to 57 in April
-// 2028 (Finance Act 2021 s.10); an expected rise to 58 alongside state
-// pension age 68 is not yet legislated. Phase 1 shows this for context only.
-export const PENSION_ACCESS_AGE = 57;
-
 const toNumber = (v) => parseFloat(v) || 0;
 
 // --- Earnings ---
@@ -174,6 +169,173 @@ export const ageAt = (dateOfBirthIso, date) => {
         (date.getMonth() === dob.getMonth() && date.getDate() < dob.getDate());
     if (beforeBirthday) age -= 1;
     return age;
+};
+
+// --- UK tax & NI (2025/26, thresholds frozen to April 2028 — gov.uk/income-tax-rates,
+// gov.uk/national-insurance-rates-letters; employee class 1 main rate 8% since Jan 2024) ---
+
+export const UK_TAX = {
+    personalAllowance: 12570,
+    basicBand: 37700,          // taxable income width of the 20% band
+    additionalThreshold: 125140, // taxable income above this taxed at 45%
+    taperThreshold: 100000,    // PA shrinks £1 per £2 of income above this
+    basicRate: 0.20, higherRate: 0.40, additionalRate: 0.45,
+    niLower: 12570, niUpper: 50270,
+    niMainRate: 0.08, niUpperRate: 0.02,
+};
+
+/** Annual income tax on gross taxable pay (after any pension deduction). */
+export const annualIncomeTax = (taxableGross) => {
+    const t = UK_TAX;
+    let allowance = t.personalAllowance;
+    if (taxableGross > t.taperThreshold) {
+        allowance = Math.max(0, allowance - (taxableGross - t.taperThreshold) / 2);
+    }
+    const taxable = Math.max(0, taxableGross - allowance);
+    return (
+        Math.min(taxable, t.basicBand) * t.basicRate +
+        Math.max(0, Math.min(taxable, t.additionalThreshold) - t.basicBand) * t.higherRate +
+        Math.max(0, taxable - t.additionalThreshold) * t.additionalRate
+    );
+};
+
+/** Annual employee class 1 NI on NI-able gross pay. */
+export const annualNI = (niableGross) => {
+    const t = UK_TAX;
+    return (
+        Math.max(0, Math.min(niableGross, t.niUpper) - t.niLower) * t.niMainRate +
+        Math.max(0, niableGross - t.niUpper) * t.niUpperRate
+    );
+};
+
+/** Monthly take-home pay from an EarningsVersion. Salary sacrifice reduces
+ *  both tax and NI; a non-sacrificed contribution is treated as a net-pay
+ *  arrangement (reduces taxable pay but not NI). */
+export const monthlyTakeHome = (earnings) => {
+    if (!earnings) return 0;
+    const gross = toNumber(earnings.gross_annual_salary);
+    const employeeContribution = gross * toNumber(earnings.employee_pension_pct) / 100;
+    const taxableGross = gross - employeeContribution;
+    const niableGross = earnings.employee_pension_is_salary_sacrifice ? gross - employeeContribution : gross;
+    return (gross - employeeContribution - annualIncomeTax(taxableGross) - annualNI(niableGross)) / 12;
+};
+
+// --- Lifecycle simulation (the two-phase pension bridge test) ---
+
+// Full new state pension 2025/26 (£230.25/wk — gov.uk/new-state-pension).
+// Treated as flat in today's money: the triple lock at least matches inflation.
+export const STATE_PENSION_ANNUAL = 11973;
+// State pension age 68 applies to anyone born after April 1977 under the
+// current review trajectory; both owners are younger than that.
+export const STATE_PENSION_AGE = 68;
+// Simulate until this age — the pot must survive the whole retirement.
+export const LONGEVITY_AGE = 95;
+
+/** Month index (from startDate) of a 'YYYY-MM' date; negative if in the past. */
+export const monthIndexOf = (ym, startDate = new Date()) => {
+    const [y, m] = ym.split('-').map(Number);
+    return (y - startDate.getFullYear()) * 12 + (m - 1 - startDate.getMonth());
+};
+
+/** Whole months from startDate until `dobIso` turns `age`; 0 if already past. */
+export const monthsUntilAge = (dobIso, age, startDate = new Date()) => {
+    if (!dobIso) return null;
+    const dob = new Date(dobIso);
+    const months = (dob.getFullYear() + age - startDate.getFullYear()) * 12
+        + (dob.getMonth() - startDate.getMonth());
+    return Math.max(0, months);
+};
+
+/**
+ * Simulate the household month by month, in today's money: accumulate until
+ * `retirementMonth`, then draw spending down. Pension pots stay locked until
+ * each person's access age — before that, only accessible wealth can fund
+ * spending, which is the "bridge" an early retirement must survive.
+ *
+ * people: [{ pensionStart, monthlyContribution, accessMonth, statePensionMonth, statePensionMonthly }]
+ *   (accessMonth/statePensionMonth are month indices from now; null access = never locked)
+ * Returns { viable, trajectory } — trajectory has quarterly points
+ *   { monthIndex, date, pension, accessible, total } through the whole horizon.
+ */
+export const simulateLifecycle = ({
+    people, accessibleStart, monthlyAccessible, annualRealReturnPct,
+    baseMonthlySpending, mortgageMonthlyPayment = 0, mortgagePayoffMonth = null,
+    retirementMonth, horizonMonths, startDate = new Date(),
+    extraSampleMonths = [],
+}) => {
+    const monthlyRate = Math.pow(1 + annualRealReturnPct / 100, 1 / 12) - 1;
+    const pensions = people.map(p => p.pensionStart);
+    let accessible = accessibleStart;
+    let viable = true;
+    const trajectory = [];
+    // Charts anchor ReferenceLines to exact data points, so always sample the
+    // marker months (retirement, pension access) on top of the quarterly grid.
+    const extraSamples = new Set(extraSampleMonths);
+    let y = startDate.getFullYear(), m = startDate.getMonth() + 1;
+
+    for (let i = 0; i <= horizonMonths; i++) {
+        if (i % 3 === 0 || i === horizonMonths || extraSamples.has(i)) {
+            trajectory.push({
+                monthIndex: i,
+                date: `${y}-${String(m).padStart(2, '0')}`,
+                pension: Math.round(pensions.reduce((a, b) => a + b, 0)),
+                accessible: Math.round(Math.max(0, accessible)),
+                total: Math.round(pensions.reduce((a, b) => a + b, 0) + Math.max(0, accessible)),
+            });
+        }
+
+        m += 1;
+        if (m > 12) { m = 1; y += 1; }
+
+        // grow
+        for (let pi = 0; pi < pensions.length; pi++) pensions[pi] *= 1 + monthlyRate;
+        accessible *= 1 + monthlyRate;
+
+        if (i < retirementMonth) {
+            for (let pi = 0; pi < pensions.length; pi++) pensions[pi] += people[pi].monthlyContribution;
+            accessible += monthlyAccessible;
+            continue;
+        }
+
+        // retired: meet this month's spending
+        let spending = baseMonthlySpending;
+        if (mortgagePayoffMonth !== null && i >= mortgagePayoffMonth) spending -= mortgageMonthlyPayment;
+        for (const p of people) {
+            if (p.statePensionMonth !== null && i >= p.statePensionMonth) spending -= p.statePensionMonthly;
+        }
+        let need = Math.max(0, spending);
+
+        const fromAccessible = Math.min(Math.max(0, accessible), need);
+        accessible -= fromAccessible;
+        need -= fromAccessible;
+        if (need > 0) {
+            for (let pi = 0; pi < pensions.length && need > 0; pi++) {
+                const p = people[pi];
+                if (p.accessMonth !== null && i < p.accessMonth) continue; // still locked
+                const draw = Math.min(pensions[pi], need);
+                pensions[pi] -= draw;
+                need -= draw;
+            }
+        }
+        if (need > 0.005) viable = false; // couldn't fund the month (pensions locked or everything empty)
+    }
+    return { viable, trajectory };
+};
+
+/** Earliest retirement month (index from now) whose lifecycle simulation
+ *  survives to the horizon, found by coarse scan + refinement. Returns null
+ *  when no month within `searchMonths` is viable. */
+export const findEarliestViableRetirement = (params, searchMonths = 480) => {
+    const viableAt = (t) => simulateLifecycle({ ...params, retirementMonth: t }).viable;
+    let coarse = null;
+    for (let t = 0; t <= searchMonths; t += 6) {
+        if (viableAt(t)) { coarse = t; break; }
+    }
+    if (coarse === null) return null;
+    for (let t = Math.max(0, coarse - 5); t < coarse; t++) {
+        if (viableAt(t)) return t;
+    }
+    return coarse;
 };
 
 // --- Mortgage ---

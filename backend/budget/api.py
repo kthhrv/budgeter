@@ -667,6 +667,8 @@ class FireSettingsSchema(Schema):
     expected_real_return_pct: float
     safe_withdrawal_rate_pct: float
     target_retirement_age: Optional[int] = None
+    pension_access_age: int
+    include_state_pension: bool
 
     @staticmethod
     def resolve_date_of_birth(obj):
@@ -677,6 +679,8 @@ class FireSettingsInputSchema(Schema):
     expected_real_return_pct: float
     safe_withdrawal_rate_pct: float
     target_retirement_age: Optional[int] = None
+    pension_access_age: int = 57
+    include_state_pension: bool = True
 
 class MonthItemsSchema(Schema):
     month_id: str
@@ -795,6 +799,8 @@ def update_fire_settings(request, owner: str, payload: FireSettingsInputSchema):
     obj.expected_real_return_pct = payload.expected_real_return_pct
     obj.safe_withdrawal_rate_pct = payload.safe_withdrawal_rate_pct
     obj.target_retirement_age = payload.target_retirement_age
+    obj.pension_access_age = payload.pension_access_age
+    obj.include_state_pension = payload.include_state_pension
     obj.save()
     return obj
 

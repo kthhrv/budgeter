@@ -440,6 +440,15 @@ class FireSettings(models.Model):
         help_text="Withdrawal rate defining the FI number (annual spending ÷ this %)."
     )
     target_retirement_age = models.IntegerField(null=True, blank=True, help_text="Optional target age, used for the Coast FIRE number.")
+    pension_access_age = models.IntegerField(
+        default=57,
+        help_text="Age pension wealth unlocks. 57 from April 2028 (Finance Act 2021); "
+                  "set 58 to anticipate the expected-but-unlegislated rise alongside state pension age 68."
+    )
+    include_state_pension = models.BooleanField(
+        default=True,
+        help_text="If true, the full new state pension is added to retirement income from state pension age."
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
