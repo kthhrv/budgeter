@@ -59,6 +59,21 @@ class MonzoAPITestCase(TestCase):
         self.assertIn(f'state={state}', resp['Location'])
         self.assertIn('redirect_uri=', resp['Location'])
 
+    def test_connect_forces_https_redirect_uri_outside_debug(self):
+        # TLS terminates upstream of Django, so the request scheme is http in
+        # prod; the redirect_uri sent to Monzo must still be https or Monzo
+        # rejects the mismatch with its registered URI.
+        from django.test import override_settings
+        with mock.patch.dict(os.environ, MONZO_ENV), override_settings(DEBUG=False):
+            resp = self.client.get('/api/fire/monzo/connect/')
+        self.assertIn('redirect_uri=https%3A%2F%2Ftestserver%2Fapi%2Ffire%2Fmonzo%2Fcallback%2F', resp['Location'])
+
+    def test_connect_keeps_http_redirect_uri_in_debug(self):
+        from django.test import override_settings
+        with mock.patch.dict(os.environ, MONZO_ENV), override_settings(DEBUG=True):
+            resp = self.client.get('/api/fire/monzo/connect/')
+        self.assertIn('redirect_uri=http%3A%2F%2Ftestserver%2Fapi%2Ffire%2Fmonzo%2Fcallback%2F', resp['Location'])
+
     def test_callback_rejects_state_mismatch(self):
         session = self.client.session
         session['monzo_oauth_state'] = 'expected'
