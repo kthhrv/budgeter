@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 
-export const useBudgetTotals = (items) => {
-    return useMemo(() => {
+// Plain function so non-hook callers (the FIRE page's per-month history) can
+// reuse the exact totals logic the budget dashboard shows.
+export const computeBudgetTotals = (items) => {
         const incomes = items.filter(item => item.item_type === 'income');
         const expenses = items.filter(item => item.item_type === 'expense');
         const savingsItems = items.filter(item => item.item_type === 'savings');
@@ -63,5 +64,6 @@ export const useBudgetTotals = (items) => {
             sharedTotal, sharedExpenseTotal, sharedFundedTotal,
             extraTotal, sharedIncome,
         };
-    }, [items]);
 };
+
+export const useBudgetTotals = (items) => useMemo(() => computeBudgetTotals(items), [items]);
