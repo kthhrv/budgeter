@@ -54,3 +54,11 @@ environment_variables:
 
   HA_NOTIFY_ENTITY:
     default: notify.mobile_app_pixel_8
+
+  MONZO_CLIENT_ID:
+    prod: !secret |-
+      vault:v1:cNTOK6wYZZrT19GohK6pLLBiLadU0IDWq7LYZqJltoC5Lc52TT3Vv6sBOd7wMOs/oKKZbDIdbmuyNa1CNoSV
+
+  MONZO_CLIENT_SECRET:
+    prod: !secret |-
+      vault:v1:91ENnXUUp3kRfytiQh6D9OZBM6ItvSuB7tcJWqYs92aNXZd+wUqB7/7R+LK/TMJCQ/UccgDbP0cLVhH0/wCzNbKUw1zpnjYcrkvuFUMTybaXBxCaMjeAiQQw08sRwUsJr9FCwM9s7xKa8fdVHrI3nEFJyPW6CrS8yklc1Q==

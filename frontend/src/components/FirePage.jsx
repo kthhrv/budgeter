@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, Trash2, Flame, PiggyBank, Landmark, Home, TrendingUp, Settings2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { PlusCircle, Trash2, Flame, PiggyBank, Landmark, Home, TrendingUp, Settings2, RefreshCw, Link2 } from 'lucide-react';
+import { API_BASE_URL } from '../utils/helpers';
 import {
     AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ReferenceLine, ResponsiveContainer,
@@ -91,16 +92,22 @@ const FirePage = ({ showToast }) => {
         balance: '', balance_date: today(), interest_rate_pct: '', monthly_payment: '',
     });
     const [settingsForms, setSettingsForms] = useState({}); // owner -> editable copy
+    const [monzoStatus, setMonzoStatus] = useState(null);
+    const [monzoPots, setMonzoPots] = useState(null);
+    const [showPotLinks, setShowPotLinks] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const fetchData = useCallback(async () => {
         try {
-            const [accountsData, earningsData, mortgagesData, settingsData, monthlyData] = await Promise.all([
+            const [accountsData, earningsData, mortgagesData, settingsData, monthlyData, monzoStatusData] = await Promise.all([
                 apiService.getFireAccounts(),
                 apiService.getEarnings(),
                 apiService.getMortgages(),
                 apiService.getFireSettings(),
                 apiService.getFireMonthlyItems(12),
+                apiService.getMonzoStatus().catch(() => null),
             ]);
+            setMonzoStatus(monzoStatusData);
             setAccounts(accountsData);
             setEarnings(earningsData);
             setMortgages(mortgagesData);
@@ -123,6 +130,73 @@ const FirePage = ({ showToast }) => {
     }, [showToast]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    const handleMonzoSync = useCallback(async (silent = false) => {
+        setIsSyncing(true);
+        try {
+            const result = await apiService.syncMonzo();
+            if (!silent || result.skipped.length) {
+                showToast(`Synced ${result.synced} Monzo pot balance${result.synced === 1 ? '' : 's'}${result.skipped.length ? ` · skipped: ${result.skipped.join('; ')}` : ''}`);
+            }
+            fetchData();
+        } catch (err) {
+            if (!silent) showToast(err.message, 'error');
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [fetchData, showToast]);
+
+    // One automatic sync per visit when the connection is stale (>24h since
+    // the last sync) and at least one account is pot-linked.
+    const autoSyncAttempted = useRef(false);
+    useEffect(() => {
+        if (autoSyncAttempted.current || !monzoStatus?.connected) return;
+        if (!accounts.some(a => a.monzo_pot_id)) return;
+        const staleMs = 24 * 60 * 60 * 1000;
+        const last = monzoStatus.last_synced_at ? new Date(monzoStatus.last_synced_at).getTime() : 0;
+        if (Date.now() - last < staleMs) return;
+        autoSyncAttempted.current = true;
+        handleMonzoSync(true);
+    }, [monzoStatus, accounts, handleMonzoSync]);
+
+    const handleTogglePotLinks = async () => {
+        const opening = !showPotLinks;
+        setShowPotLinks(opening);
+        if (opening && monzoPots === null) {
+            try {
+                setMonzoPots(await apiService.getMonzoPots());
+            } catch (err) {
+                setShowPotLinks(false);
+                showToast(err.message, 'error');
+            }
+        }
+    };
+
+    const handleLinkPot = async (pot, accountId) => {
+        try {
+            const previous = accounts.find(a => a.monzo_pot_id === pot.id);
+            const payloadFor = (a, potId) => ({ name: a.name, owner: a.owner, kind: a.kind, provider: a.provider, monzo_pot_id: potId });
+            if (previous && previous.id !== accountId) {
+                await apiService.updateFireAccount(previous.id, payloadFor(previous, ''));
+            }
+            if (accountId) {
+                const target = accounts.find(a => a.id === accountId);
+                await apiService.updateFireAccount(accountId, payloadFor(target, pot.id));
+            }
+            showToast(accountId ? 'Pot linked' : 'Pot unlinked');
+            fetchData();
+        } catch (err) { showToast(err.message, 'error'); }
+    };
+
+    const handleMonzoDisconnect = async () => {
+        try {
+            await apiService.disconnectMonzo();
+            setMonzoPots(null);
+            setShowPotLinks(false);
+            showToast('Monzo disconnected');
+            fetchData();
+        } catch (err) { showToast(err.message, 'error'); }
+    };
 
     // --- Derived numbers ---
 
@@ -504,6 +578,7 @@ const FirePage = ({ showToast }) => {
                                                 <span className="font-semibold text-sm text-gray-800 truncate">{account.name}</span>
                                                 <span className={`px-1.5 py-0.5 text-xs font-semibold rounded-full ${account.owner === 'keith' ? 'bg-blue-100 text-blue-800' : account.owner === 'tild' ? 'bg-pink-100 text-pink-800' : 'bg-purple-100 text-purple-800'}`}>{account.owner}</span>
                                                 <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">{KIND_LABELS[account.kind]}</span>
+                                                {account.monzo_pot_id && <span className="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">Monzo</span>}
                                             </div>
                                             <p className="text-xs text-gray-400 mt-0.5">{snap ? `${fmtMoney(snap.balance, 2)} on ${snap.date}` : 'No balance recorded'}</p>
                                         </div>
@@ -534,6 +609,61 @@ const FirePage = ({ showToast }) => {
                         })}
                     </div>
                     <p className="text-xs text-gray-400 mt-3">Re-entering a balance for the same date corrects it; a new date supersedes older entries.</p>
+
+                    {/* Monzo sync */}
+                    {monzoStatus && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                            {!monzoStatus.configured ? (
+                                <p className="text-xs text-gray-400">Monzo sync is available once <code>MONZO_CLIENT_ID</code> / <code>MONZO_CLIENT_SECRET</code> are set (see the FIRE PR for setup).</p>
+                            ) : !monzoStatus.connected ? (
+                                <button onClick={() => { window.location.href = `${API_BASE_URL}/fire/monzo/connect/`; }}
+                                    className="w-full py-2 text-sm font-semibold text-white bg-gradient-to-r from-rose-500 to-red-500 rounded-lg hover:from-rose-600 hover:to-red-600 flex items-center justify-center gap-2">
+                                    <Link2 className="h-4 w-4" /> Connect Monzo
+                                </button>
+                            ) : (
+                                <>
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <p className="text-xs text-gray-500">
+                                            <span className="font-semibold text-rose-600">Monzo connected</span>
+                                            {monzoStatus.last_synced_at ? ` · synced ${new Date(monzoStatus.last_synced_at).toLocaleString('en-GB')}` : ' · never synced'}
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => handleMonzoSync(false)} disabled={isSyncing}
+                                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 disabled:opacity-50">
+                                                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} /> Sync now
+                                            </button>
+                                            <button onClick={handleTogglePotLinks} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                                                {showPotLinks ? 'Hide pots' : 'Link pots'}
+                                            </button>
+                                            <button onClick={handleMonzoDisconnect} className="text-xs text-gray-400 hover:text-red-500">Disconnect</button>
+                                        </div>
+                                    </div>
+                                    {showPotLinks && monzoPots && (
+                                        <div className="mt-3 space-y-2">
+                                            {monzoPots.length === 0 && <p className="text-sm text-gray-400 text-center py-2">No open pots found</p>}
+                                            {monzoPots.map(pot => {
+                                                const linkedAccount = accounts.find(a => a.monzo_pot_id === pot.id);
+                                                return (
+                                                    <div key={pot.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-gray-50">
+                                                        <div className="min-w-0">
+                                                            <span className="text-sm font-semibold text-gray-700 truncate">{pot.name}</span>
+                                                            <span className="text-xs text-gray-400 ml-2">{fmtMoney(pot.balance, 2)}</span>
+                                                        </div>
+                                                        <select value={linkedAccount?.id || ''} onChange={e => handleLinkPot(pot, e.target.value)}
+                                                            className="rounded-lg border border-gray-200 px-2 py-1 text-xs outline-none focus:border-indigo-400">
+                                                            <option value="">Not linked</option>
+                                                            {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.owner})</option>)}
+                                                        </select>
+                                                    </div>
+                                                );
+                                            })}
+                                            <p className="text-xs text-gray-400">Each sync writes today's pot balance onto the linked account. Balances auto-sync when you open this tab if the last sync is over a day old.</p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Earnings */}

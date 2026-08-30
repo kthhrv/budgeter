@@ -143,7 +143,10 @@ const apiService = {
     },
     async _fireGet(path, errorMessage) {
         const response = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include' });
-        if (!response.ok) throw new Error(errorMessage);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.detail || errorMessage);
+        }
         return await response.json();
     },
     async _fireSend(method, path, payload, errorMessage) {
@@ -174,7 +177,11 @@ const apiService = {
     deleteMortgage(id) { return this._fireSend('DELETE', `/fire/mortgages/${id}/`, undefined, 'Failed to delete mortgage'); },
     getFireSettings() { return this._fireGet('/fire/settings/', 'Failed to fetch FIRE settings'); },
     updateFireSettings(owner, payload) { return this._fireSend('PUT', `/fire/settings/${owner}/`, payload, 'Failed to update FIRE settings'); },
-    getFireMonthlyItems(count = 12) { return this._fireGet(`/fire/monthly-items/?count=${count}`, 'Failed to fetch budget history'); }
+    getFireMonthlyItems(count = 12) { return this._fireGet(`/fire/monthly-items/?count=${count}`, 'Failed to fetch budget history'); },
+    getMonzoStatus() { return this._fireGet('/fire/monzo/status/', 'Failed to fetch Monzo status'); },
+    getMonzoPots() { return this._fireGet('/fire/monzo/pots/', 'Failed to fetch Monzo pots'); },
+    syncMonzo() { return this._fireSend('POST', '/fire/monzo/sync/', {}, 'Monzo sync failed'); },
+    disconnectMonzo() { return this._fireSend('POST', '/fire/monzo/disconnect/', {}, 'Failed to disconnect Monzo'); }
 };
 
 export default apiService;

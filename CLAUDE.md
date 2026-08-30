@@ -206,6 +206,18 @@ Consumed by the app:
 - `ADDON_DOMAIN` — falls back to the hostname in `run.sh`
 - `DEBUG` — defaults to false; true for local/test
 
+Optional, read by `budget/monzo.py` for the FIRE tab's pot sync (absent →
+the feature reports "not configured" and nothing else changes):
+- `MONZO_CLIENT_ID`, `MONZO_CLIENT_SECRET` — a *confidential* OAuth client
+  from developers.monzo.com (public clients get no refresh token and the
+  connection dies within hours). The redirect URI
+  `https://<host>/api/fire/monzo/callback/` must be registered per
+  environment; `MONZO_REDIRECT_URI` overrides the derived value if needed.
+  A previous Monzo integration was removed in `f081d75` — migration 0028
+  drops its leftover `budget_monzoconnection` table, but
+  `budget_monzotransaction` / `budget_monzomerchantmapping` may still exist
+  in older databases; they are dead and untouched.
+
 `HA_ACCESS_TOKEN`, `HA_API_URL` and `HA_NOTIFY_ENTITY` are still defined in
 `envars.yml`, but no tracked file outside `envars.yml` reads them. Treat them
 as unused unless you are deliberately reviving a Home Assistant integration.
