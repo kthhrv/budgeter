@@ -144,6 +144,7 @@ class FireAPITestCase(TestCase):
             'date_of_birth': '1990-05-01', 'expected_real_return_pct': 4.0,
             'safe_withdrawal_rate_pct': 3.5, 'target_retirement_age': 55,
             'pension_access_age': 58, 'include_state_pension': False,
+            'expected_annual_savings': 6000,
         })
         self.assertEqual(resp.status_code, 200)
         obj = FireSettings.objects.get(owner='tild')
@@ -151,6 +152,16 @@ class FireAPITestCase(TestCase):
         self.assertEqual(obj.target_retirement_age, 55)
         self.assertEqual(obj.pension_access_age, 58)
         self.assertFalse(obj.include_state_pension)
+        self.assertEqual(float(obj.expected_annual_savings), 6000)
+
+    def test_expected_annual_savings_clears_to_null(self):
+        FireSettings.objects.create(owner='tild', expected_annual_savings=6000)
+        resp = self._put('/api/fire/settings/tild/', {
+            'expected_real_return_pct': 3.5, 'safe_withdrawal_rate_pct': 4.0,
+            'pension_access_age': 57, 'include_state_pension': True,
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(FireSettings.objects.get(owner='tild').expected_annual_savings)
 
     def test_settings_defaults_include_phase2_fields(self):
         data = self.client.get('/api/fire/settings/').json()
