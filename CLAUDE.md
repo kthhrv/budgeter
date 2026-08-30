@@ -153,8 +153,10 @@ change is a new `EarningsVersion` with a later `effective_from`, mirroring the
 `BudgetItemVersion` roll-forward but keyed on plain dates because projections
 run decades past where `Month` rows exist. `FireSettings` is keyed by *owner*
 (`keith`/`tild`), not by login — the joint view needs both people's
-assumptions whoever is looking. The mortgage balance is a stated
-figure+date, projected by amortisation, not snapshot rows. All FIRE maths
+assumptions whoever is looking. A `Property` (value + valuation date) carries
+any number of `Mortgage` loans — a split product's parts, a further advance —
+each amortised on its own rate/payment from a stated balance+date (not
+snapshot rows); equity/LTV use the combined balance. All FIRE maths
 lives in `src/utils/fireCalc.js` (real returns, today's money); spending and
 savings averages come from `/api/fire/monthly-items/`, re-using
 `computeBudgetTotals` per month on the frontend.
