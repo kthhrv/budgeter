@@ -12,6 +12,7 @@ import os
 
 import secrets
 
+from django.conf import settings as django_settings
 from django.shortcuts import redirect
 
 from . import monzo
@@ -842,7 +843,18 @@ def _monzo_connection(request):
 
 
 def _monzo_redirect_uri(request):
-    return os.environ.get("MONZO_REDIRECT_URI") or request.build_absolute_uri("/api/fire/monzo/callback/")
+    override = os.environ.get("MONZO_REDIRECT_URI")
+    if override:
+        return override
+    uri = request.build_absolute_uri("/api/fire/monzo/callback/")
+    # TLS terminates at the proxy manager; the in-container nginx then
+    # overwrites X-Forwarded-Proto with its own plain-http $scheme, so
+    # build_absolute_uri says "http" in prod and Monzo rejects the mismatch
+    # with its registered https URI. Force https outside DEBUG, mirroring
+    # allauth's ACCOUNT_DEFAULT_HTTP_PROTOCOL.
+    if not django_settings.DEBUG and uri.startswith("http://"):
+        uri = "https://" + uri[len("http://"):]
+    return uri
 
 
 @api.get("/fire/monzo/status/", response=MonzoStatusSchema)
