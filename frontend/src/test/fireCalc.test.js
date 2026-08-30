@@ -4,7 +4,7 @@ import {
     currentWealth, buildNetWorthHistory,
     monthlySpendingForView, monthlySavingsForView,
     fiNumber, projectWealth, findFiCrossing, coastNumber,
-    savingsRate, ageAt, mortgageStats, amortiseMortgage,
+    savingsRate, ageAt, mortgageStats, amortiseMortgage, combineSchedules,
     annualIncomeTax, annualNI, monthlyTakeHome,
     monthsUntilAge, monthIndexOf, simulateLifecycle, findEarliestViableRetirement,
 } from '../utils/fireCalc';
@@ -191,13 +191,23 @@ describe('savingsRate and ageAt', () => {
 });
 
 describe('mortgage', () => {
+    const property = { value: 400000, value_date: '2026-01-01' };
     const mortgage = {
-        property_value: 400000, balance: 250000, balance_date: '2026-08-01',
+        balance: 250000, balance_date: '2026-08-01',
         interest_rate_pct: 4.8, monthly_payment: 2000,
     };
 
-    it('computes equity and LTV', () => {
-        const stats = mortgageStats(mortgage);
+    it('computes equity and LTV across all loans on the property', () => {
+        const secondLoan = { balance: 50000, balance_date: '2026-08-01', interest_rate_pct: 6, monthly_payment: 400 };
+        const stats = mortgageStats(property, [mortgage, secondLoan]);
+        expect(stats.totalBalance).toBe(300000);
+        expect(stats.equity).toBe(100000);
+        expect(stats.equityPct).toBeCloseTo(25);
+        expect(stats.ltvPct).toBeCloseTo(75);
+    });
+
+    it('handles a single loan', () => {
+        const stats = mortgageStats(property, [mortgage]);
         expect(stats.equity).toBe(150000);
         expect(stats.equityPct).toBeCloseTo(37.5);
         expect(stats.ltvPct).toBeCloseTo(62.5);
@@ -323,7 +333,7 @@ describe('simulateLifecycle — the pension bridge', () => {
         });
         const survives = simulateLifecycle({
             ...baseParams, people: [person], baseMonthlySpending: 2500, retirementMonth: 0, horizonMonths: 480,
-            mortgageMonthlyPayment: 1000, mortgagePayoffMonth: 24,
+            mortgages: [{ monthlyPayment: 1000, payoffMonth: 24 }],
         });
         expect(fails.viable).toBe(false);
         expect(survives.viable).toBe(true);
@@ -389,5 +399,54 @@ describe('simulateLifecycle trajectory dates', () => {
             extraSampleMonths: [7], // Mar 2027 — not a quarterly sample
         });
         expect(trajectory.some(p => p.date === '2027-03')).toBe(true);
+    });
+});
+
+describe('combineSchedules', () => {
+    it('sums loans that start on different dates and end at different payoffs', () => {
+        const partOne = [
+            { date: '2026-08', balance: 300 },
+            { date: '2026-09', balance: 200 },
+            { date: '2026-10', balance: 100 },
+            { date: '2026-11', balance: 0 },
+        ];
+        const advance = [
+            { date: '2026-09', balance: 50 },
+            { date: '2026-10', balance: 0 },
+        ];
+        const combined = combineSchedules([partOne, advance]);
+        expect(combined).toEqual([
+            { date: '2026-08', balance: 350 }, // advance not started: contributes opening balance
+            { date: '2026-09', balance: 250 },
+            { date: '2026-10', balance: 100 },
+            { date: '2026-11', balance: 0 },   // advance ended: contributes its final 0
+        ]);
+    });
+
+    it('is empty with no schedules', () => {
+        expect(combineSchedules([])).toEqual([]);
+        expect(combineSchedules([[]])).toEqual([]);
+    });
+});
+
+describe('simulateLifecycle with two loans', () => {
+    it('drops spending at each payoff independently', () => {
+        const person = { pensionStart: 560000, monthlyContribution: 0, accessMonth: 0, statePensionMonth: null, statePensionMonthly: 0 };
+        const base = {
+            people: [person], accessibleStart: 0, monthlyAccessible: 0,
+            annualRealReturnPct: 3, retirementMonth: 0, horizonMonths: 480,
+            startDate: new Date(2026, 7, 1),
+        };
+        // £2,800/mo incl. £800 + £400 of mortgage payments ending at months 24 and 60
+        const withLoans = simulateLifecycle({
+            ...base, baseMonthlySpending: 2800,
+            mortgages: [
+                { monthlyPayment: 800, payoffMonth: 24 },
+                { monthlyPayment: 400, payoffMonth: 60 },
+            ],
+        });
+        const withoutRelief = simulateLifecycle({ ...base, baseMonthlySpending: 2800 });
+        expect(withLoans.viable).toBe(true);
+        expect(withoutRelief.viable).toBe(false);
     });
 });

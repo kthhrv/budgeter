@@ -18,7 +18,7 @@ from django.shortcuts import redirect
 from . import monzo
 from .models import (
     Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings,
-    FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, FireSettings,
+    FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, Property, FireSettings,
     MonzoConnection,
 )
 from django.db.models import Prefetch
@@ -645,30 +645,44 @@ class EarningsVersionInputSchema(Schema):
 
 class MortgageSchema(Schema):
     id: uuid.UUID
+    property_id: uuid.UUID
     name: str
-    property_value: float
-    property_value_date: str
     balance: float
     balance_date: str
     interest_rate_pct: float
     monthly_payment: float
-
-    @staticmethod
-    def resolve_property_value_date(obj):
-        return obj.property_value_date.isoformat()
 
     @staticmethod
     def resolve_balance_date(obj):
         return obj.balance_date.isoformat()
 
 class MortgageInputSchema(Schema):
-    name: str = 'Home'
-    property_value: float
-    property_value_date: str
+    property_id: uuid.UUID
+    name: str = 'Mortgage'
     balance: float
     balance_date: str
     interest_rate_pct: float
     monthly_payment: float
+
+class PropertySchema(Schema):
+    id: uuid.UUID
+    name: str
+    value: float
+    value_date: str
+    mortgages: List[MortgageSchema]
+
+    @staticmethod
+    def resolve_value_date(obj):
+        return obj.value_date.isoformat()
+
+    @staticmethod
+    def resolve_mortgages(obj):
+        return list(obj.mortgages.all())  # model ordering: creation order
+
+class PropertyInputSchema(Schema):
+    name: str = 'Home'
+    value: float
+    value_date: str
 
 class FireSettingsSchema(Schema):
     owner: str
@@ -766,25 +780,53 @@ def delete_earnings_version(request, version_id: uuid.UUID):
     version.delete()
     return 204, None
 
-@api.get("/fire/mortgages/", response=List[MortgageSchema])
-def list_mortgages(request):
-    return Mortgage.objects.all()
+@api.get("/fire/properties/", response=List[PropertySchema])
+def list_properties(request):
+    return Property.objects.prefetch_related('mortgages')
+
+@api.post("/fire/properties/", response=PropertySchema)
+def create_property(request, payload: PropertyInputSchema):
+    data = payload.dict()
+    data['value_date'] = datetime.date.fromisoformat(data['value_date'])
+    return Property.objects.create(**data)
+
+@api.put("/fire/properties/{property_id}/", response=PropertySchema)
+def edit_property(request, property_id: uuid.UUID, payload: PropertyInputSchema):
+    prop = get_object_or_404(Property, id=property_id)
+    prop.name = payload.name
+    prop.value = payload.value
+    prop.value_date = datetime.date.fromisoformat(payload.value_date)
+    prop.save()
+    return prop
+
+@api.delete("/fire/properties/{property_id}/", response={204: None})
+def delete_property(request, property_id: uuid.UUID):
+    """Deletes the property AND its loans (FK cascade)."""
+    prop = get_object_or_404(Property, id=property_id)
+    prop.delete()
+    return 204, None
 
 @api.post("/fire/mortgages/", response=MortgageSchema)
 def create_mortgage(request, payload: MortgageInputSchema):
-    data = payload.dict()
-    data['property_value_date'] = datetime.date.fromisoformat(data['property_value_date'])
-    data['balance_date'] = datetime.date.fromisoformat(data['balance_date'])
-    return Mortgage.objects.create(**data)
+    prop = get_object_or_404(Property, id=payload.property_id)
+    return Mortgage.objects.create(
+        property=prop,
+        name=payload.name,
+        balance=payload.balance,
+        balance_date=datetime.date.fromisoformat(payload.balance_date),
+        interest_rate_pct=payload.interest_rate_pct,
+        monthly_payment=payload.monthly_payment,
+    )
 
 @api.put("/fire/mortgages/{mortgage_id}/", response=MortgageSchema)
 def edit_mortgage(request, mortgage_id: uuid.UUID, payload: MortgageInputSchema):
     mortgage = get_object_or_404(Mortgage, id=mortgage_id)
-    data = payload.dict()
-    data['property_value_date'] = datetime.date.fromisoformat(data['property_value_date'])
-    data['balance_date'] = datetime.date.fromisoformat(data['balance_date'])
-    for attr, value in data.items():
-        setattr(mortgage, attr, value)
+    mortgage.property = get_object_or_404(Property, id=payload.property_id)
+    mortgage.name = payload.name
+    mortgage.balance = payload.balance
+    mortgage.balance_date = datetime.date.fromisoformat(payload.balance_date)
+    mortgage.interest_rate_pct = payload.interest_rate_pct
+    mortgage.monthly_payment = payload.monthly_payment
     mortgage.save()
     return mortgage
 

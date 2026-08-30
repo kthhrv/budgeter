@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from .models import (
     Month, BudgetItem, BudgetItemVersion,
-    FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, FireSettings,
+    FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, Property, FireSettings,
 )
 import datetime
 import json
@@ -84,24 +84,49 @@ class FireAPITestCase(TestCase):
         data = self.client.get('/api/fire/earnings/').json()
         self.assertEqual([e['effective_from'] for e in data], ['2026-04-01', '2025-04-01'])
 
-    # --- Mortgage ---
+    # --- Property & mortgages ---
 
-    def test_mortgage_crud(self):
-        resp = self._post('/api/fire/mortgages/', {
-            'property_value': 400000, 'property_value_date': '2026-01-01',
-            'balance': 250000, 'balance_date': '2026-08-01',
-            'interest_rate_pct': 4.5, 'monthly_payment': 1500,
+    def test_property_with_two_loans(self):
+        resp = self._post('/api/fire/properties/', {
+            'name': 'Home', 'value': 400000, 'value_date': '2026-01-01',
         })
         self.assertEqual(resp.status_code, 200)
-        mortgage_id = resp.json()['id']
-        resp = self._put(f'/api/fire/mortgages/{mortgage_id}/', {
-            'property_value': 410000, 'property_value_date': '2026-08-01',
-            'balance': 248000, 'balance_date': '2026-08-28',
-            'interest_rate_pct': 4.5, 'monthly_payment': 1500,
+        property_id = resp.json()['id']
+
+        for name, balance in [('Part 1', 200000), ('Further advance', 50000)]:
+            resp = self._post('/api/fire/mortgages/', {
+                'property_id': property_id, 'name': name,
+                'balance': balance, 'balance_date': '2026-08-01',
+                'interest_rate_pct': 4.5, 'monthly_payment': 1000,
+            })
+            self.assertEqual(resp.status_code, 200)
+
+        data = self.client.get('/api/fire/properties/').json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual([m['name'] for m in data[0]['mortgages']], ['Part 1', 'Further advance'])
+
+    def test_edit_and_delete_single_loan(self):
+        prop = Property.objects.create(name='Home', value=400000, value_date=datetime.date(2026, 1, 1))
+        loan = Mortgage.objects.create(property=prop, name='Part 1', balance=250000,
+                                       balance_date=datetime.date(2026, 8, 1),
+                                       interest_rate_pct=4.5, monthly_payment=1500)
+        resp = self._put(f'/api/fire/mortgages/{loan.id}/', {
+            'property_id': str(prop.id), 'name': 'Part 1', 'balance': 248000,
+            'balance_date': '2026-08-28', 'interest_rate_pct': 4.5, 'monthly_payment': 1500,
         })
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['balance'], 248000)
-        resp = self.client.delete(f'/api/fire/mortgages/{mortgage_id}/')
+        resp = self.client.delete(f'/api/fire/mortgages/{loan.id}/')
+        self.assertEqual(resp.status_code, 204)
+        self.assertEqual(Mortgage.objects.count(), 0)
+        self.assertEqual(Property.objects.count(), 1)  # loan deletion keeps the property
+
+    def test_delete_property_cascades_loans(self):
+        prop = Property.objects.create(name='Home', value=400000, value_date=datetime.date(2026, 1, 1))
+        Mortgage.objects.create(property=prop, name='Part 1', balance=250000,
+                                balance_date=datetime.date(2026, 8, 1),
+                                interest_rate_pct=4.5, monthly_payment=1500)
+        resp = self.client.delete(f'/api/fire/properties/{prop.id}/')
         self.assertEqual(resp.status_code, 204)
         self.assertEqual(Mortgage.objects.count(), 0)
 

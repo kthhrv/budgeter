@@ -254,12 +254,14 @@ export const monthsUntilAge = (dobIso, age, startDate = new Date()) => {
  *
  * people: [{ pensionStart, monthlyContribution, accessMonth, statePensionMonth, statePensionMonthly }]
  *   (accessMonth/statePensionMonth are month indices from now; null access = never locked)
+ * mortgages: [{ monthlyPayment, payoffMonth }] — spending drops by each loan's
+ *   payment from its payoff month (payoffMonth null = never pays off).
  * Returns { viable, trajectory } — trajectory has quarterly points
  *   { monthIndex, date, pension, accessible, total } through the whole horizon.
  */
 export const simulateLifecycle = ({
     people, accessibleStart, monthlyAccessible, annualRealReturnPct,
-    baseMonthlySpending, mortgageMonthlyPayment = 0, mortgagePayoffMonth = null,
+    baseMonthlySpending, mortgages = [],
     retirementMonth, horizonMonths, startDate = new Date(),
     extraSampleMonths = [],
 }) => {
@@ -299,7 +301,9 @@ export const simulateLifecycle = ({
 
         // retired: meet this month's spending
         let spending = baseMonthlySpending;
-        if (mortgagePayoffMonth !== null && i >= mortgagePayoffMonth) spending -= mortgageMonthlyPayment;
+        for (const loan of mortgages) {
+            if (loan.payoffMonth !== null && i >= loan.payoffMonth) spending -= loan.monthlyPayment;
+        }
         for (const p of people) {
             if (p.statePensionMonth !== null && i >= p.statePensionMonth) spending -= p.statePensionMonthly;
         }
@@ -340,16 +344,39 @@ export const findEarliestViableRetirement = (params, searchMonths = 480) => {
 
 // --- Mortgage ---
 
-/** Equity and loan-to-value from the stated property value and balance. */
-export const mortgageStats = (mortgage) => {
-    const value = toNumber(mortgage.property_value);
-    const balance = toNumber(mortgage.balance);
-    const equity = value - balance;
+/** Equity and loan-to-value from the property value and the combined balance
+ *  of every loan secured on it. */
+export const mortgageStats = (property, mortgages) => {
+    const value = toNumber(property.value);
+    const totalBalance = mortgages.reduce((sum, m) => sum + toNumber(m.balance), 0);
+    const equity = value - totalBalance;
     return {
         equity,
+        totalBalance,
         equityPct: value > 0 ? (equity / value) * 100 : 0,
-        ltvPct: value > 0 ? (balance / value) * 100 : 0,
+        ltvPct: value > 0 ? (totalBalance / value) * 100 : 0,
     };
+};
+
+/** Sum several amortisation schedules into one combined-balance series.
+ *  Loans start on different dates: before a loan's schedule begins it
+ *  contributes its opening balance; after it ends, its final balance
+ *  (0 when paid off). */
+export const combineSchedules = (schedules) => {
+    const nonEmpty = schedules.filter(s => s.length);
+    if (!nonEmpty.length) return [];
+    const withLookup = nonEmpty.map(s => ({
+        first: s[0], last: s[s.length - 1],
+        byDate: new Map(s.map(p => [p.date, p.balance])),
+    }));
+    const allMonths = [...new Set(nonEmpty.flatMap(s => s.map(p => p.date)))].sort();
+    return allMonths.map(date => ({
+        date,
+        balance: withLookup.reduce((sum, s) => {
+            if (s.byDate.has(date)) return sum + s.byDate.get(date);
+            return sum + (date < s.first.date ? s.first.balance : s.last.balance);
+        }, 0),
+    }));
 };
 
 /** Amortise the mortgage forward from its stated balance/date.

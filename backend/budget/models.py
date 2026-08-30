@@ -396,26 +396,51 @@ class EarningsVersion(models.Model):
         return f"{self.get_owner_display()}: £{self.gross_annual_salary} from {self.effective_from}"
 
 
-class Mortgage(models.Model):
+class Property(models.Model):
     """
-    Mortgage details for the equity/LTV view. The balance is a stated figure
-    with a date, projected forward by amortisation — correct it by updating
-    balance + balance_date whenever a statement arrives.
+    A property whose equity feeds the FIRE mortgage view. One property can
+    carry several Mortgage loans (a mortgage split into fixed-rate parts, a
+    further advance) — equity and LTV are computed against their combined
+    balance.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, default='Home', help_text="Display name for the property.")
-    property_value = models.DecimalField(max_digits=12, decimal_places=2, help_text="Estimated current property value.")
-    property_value_date = models.DateField(help_text="When the property value estimate was made.")
-    balance = models.DecimalField(max_digits=12, decimal_places=2, help_text="Outstanding mortgage balance as of balance_date.")
+    value = models.DecimalField(max_digits=12, decimal_places=2, help_text="Estimated current property value.")
+    value_date = models.DateField(help_text="When the property value estimate was made.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Property"
+        verbose_name_plural = "Properties"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name}: £{self.value}"
+
+
+class Mortgage(models.Model):
+    """
+    One loan secured on a Property — a whole mortgage, or one part of a
+    split product with its own rate and payment. The balance is a stated
+    figure with a date, projected forward by amortisation — correct it by
+    updating balance + balance_date whenever a statement arrives.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='mortgages',
+        help_text="The property this loan is secured on."
+    )
+    name = models.CharField(max_length=100, default='Mortgage', help_text="Loan label, e.g. 'Part 1 (fixed to 2029)' or 'Further advance'.")
+    balance = models.DecimalField(max_digits=12, decimal_places=2, help_text="Outstanding balance of this loan as of balance_date.")
     balance_date = models.DateField(help_text="The date the stated balance was correct.")
     interest_rate_pct = models.DecimalField(max_digits=5, decimal_places=2, help_text="Annual interest rate %.")
-    monthly_payment = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total monthly payment (capital + interest).")
+    monthly_payment = models.DecimalField(max_digits=10, decimal_places=2, help_text="Monthly payment for this loan (capital + interest).")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Mortgage"
         verbose_name_plural = "Mortgages"
-        ordering = ['name']
+        ordering = ['created_at']
 
     def __str__(self):
         return f"{self.name}: £{self.balance} @ {self.interest_rate_pct}%"
