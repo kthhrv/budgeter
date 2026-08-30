@@ -83,7 +83,7 @@ See README.md for the pipeline. Three things worth knowing before you edit it:
 
 ## Domain model
 
-Six models in `budget/models.py`. Field-level meaning is in each field's
+Eleven models in `budget/models.py`. Field-level meaning is in each field's
 `help_text` — read that rather than guessing. What follows is the part the
 field definitions don't tell you.
 
@@ -143,6 +143,21 @@ have already started — future months must not show a repayment yet.
 **`NurserySettings`** — a per-user `JSONField` blob (one-to-one with `User`)
 holding the nursery calculator's inputs. Schema-less by design; the shape is
 defined by the frontend calculators, not the model.
+
+**FIRE models** (`FireAccount`, `BalanceSnapshot`, `EarningsVersion`,
+`Mortgage`, `FireSettings`) — inputs for the FIRE tab. The design principle
+throughout is *rows supersede, nothing updates in place*: an account's current
+balance is its latest `BalanceSnapshot` (same date corrects, new date
+supersedes — that's how manual pension-interest corrections work), and a pay
+change is a new `EarningsVersion` with a later `effective_from`, mirroring the
+`BudgetItemVersion` roll-forward but keyed on plain dates because projections
+run decades past where `Month` rows exist. `FireSettings` is keyed by *owner*
+(`keith`/`tild`), not by login — the joint view needs both people's
+assumptions whoever is looking. The mortgage balance is a stated
+figure+date, projected by amortisation, not snapshot rows. All FIRE maths
+lives in `src/utils/fireCalc.js` (real returns, today's money); spending and
+savings averages come from `/api/fire/monthly-items/`, re-using
+`computeBudgetTotals` per month on the frontend.
 
 **Childcare calculators live in the frontend**, not the backend:
 `src/utils/nurseryCalc.js` (Ellis's nursery invoice model, funded hours, TFC

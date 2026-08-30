@@ -140,7 +140,41 @@ const apiService = {
         if (!response.ok) throw new Error('Failed to update nursery settings');
         const json = await response.json();
         return json.data || {};
-    }
+    },
+    async _fireGet(path, errorMessage) {
+        const response = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include' });
+        if (!response.ok) throw new Error(errorMessage);
+        return await response.json();
+    },
+    async _fireSend(method, path, payload, errorMessage) {
+        const response = await fetch(`${API_BASE_URL}${path}`, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: payload !== undefined ? JSON.stringify(payload) : undefined,
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.detail || errorMessage);
+        }
+        return response.status === 204 ? null : await response.json();
+    },
+    getFireAccounts() { return this._fireGet('/fire/accounts/', 'Failed to fetch FIRE accounts'); },
+    createFireAccount(payload) { return this._fireSend('POST', '/fire/accounts/', payload, 'Failed to create account'); },
+    updateFireAccount(id, payload) { return this._fireSend('PUT', `/fire/accounts/${id}/`, payload, 'Failed to update account'); },
+    deleteFireAccount(id) { return this._fireSend('DELETE', `/fire/accounts/${id}/`, undefined, 'Failed to delete account'); },
+    setFireAccountBalance(id, payload) { return this._fireSend('PUT', `/fire/accounts/${id}/balance/`, payload, 'Failed to record balance'); },
+    deleteBalanceSnapshot(id) { return this._fireSend('DELETE', `/fire/snapshots/${id}/`, undefined, 'Failed to delete balance entry'); },
+    getEarnings() { return this._fireGet('/fire/earnings/', 'Failed to fetch earnings'); },
+    createEarnings(payload) { return this._fireSend('POST', '/fire/earnings/', payload, 'Failed to create earnings version'); },
+    deleteEarnings(id) { return this._fireSend('DELETE', `/fire/earnings/${id}/`, undefined, 'Failed to delete earnings version'); },
+    getMortgages() { return this._fireGet('/fire/mortgages/', 'Failed to fetch mortgages'); },
+    createMortgage(payload) { return this._fireSend('POST', '/fire/mortgages/', payload, 'Failed to create mortgage'); },
+    updateMortgage(id, payload) { return this._fireSend('PUT', `/fire/mortgages/${id}/`, payload, 'Failed to update mortgage'); },
+    deleteMortgage(id) { return this._fireSend('DELETE', `/fire/mortgages/${id}/`, undefined, 'Failed to delete mortgage'); },
+    getFireSettings() { return this._fireGet('/fire/settings/', 'Failed to fetch FIRE settings'); },
+    updateFireSettings(owner, payload) { return this._fireSend('PUT', `/fire/settings/${owner}/`, payload, 'Failed to update FIRE settings'); },
+    getFireMonthlyItems(count = 12) { return this._fireGet(`/fire/monthly-items/?count=${count}`, 'Failed to fetch budget history'); }
 };
 
 export default apiService;

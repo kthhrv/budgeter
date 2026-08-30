@@ -277,6 +277,179 @@ class TabRepayment(models.Model):
         return f"£{self.amount} by {self.paid_by} on {self.date}"
 
 
+class FireAccount(models.Model):
+    """
+    A pot of wealth tracked for the FIRE calculator: a pension, ISA, cash
+    savings account or general investment account. Balances live in
+    BalanceSnapshot rows so history is preserved and corrections are just
+    newer entries.
+    """
+    OWNER_CHOICES = [
+        ('shared', 'Shared'),
+        ('keith', 'Keith'),
+        ('tild', 'Tild'),
+    ]
+
+    KIND_CHOICES = [
+        ('pension', 'Pension'),
+        ('isa', 'ISA'),
+        ('cash', 'Cash savings'),
+        ('gia', 'General investment'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, help_text="Display name, e.g. 'Royal London pension'.")
+    owner = models.CharField(
+        max_length=50,
+        choices=OWNER_CHOICES,
+        help_text="Whose wealth this is — drives the per-person vs joint FIRE views."
+    )
+    kind = models.CharField(
+        max_length=20,
+        choices=KIND_CHOICES,
+        help_text="Pension wealth is locked until pension access age; the other kinds are "
+                  "accessible and can bridge an early retirement."
+    )
+    provider = models.CharField(max_length=100, blank=True, default='', help_text="Optional provider name, e.g. 'Monzo'.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "FIRE Account"
+        verbose_name_plural = "FIRE Accounts"
+        ordering = ['owner', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_kind_display()}, {self.get_owner_display()})"
+
+
+class BalanceSnapshot(models.Model):
+    """
+    The balance of a FireAccount on a given date. One row per account per
+    date — re-entering the same date corrects it in place, while a new date
+    supersedes older entries (latest date wins as the current balance).
+    """
+    SOURCE_CHOICES = [
+        ('manual', 'Manual'),
+        ('monzo', 'Monzo sync'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.ForeignKey(FireAccount, on_delete=models.CASCADE, related_name='snapshots')
+    date = models.DateField(help_text="The date this balance was observed.")
+    balance = models.DecimalField(max_digits=12, decimal_places=2, help_text="Balance on that date.")
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default='manual')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Balance Snapshot"
+        verbose_name_plural = "Balance Snapshots"
+        unique_together = ('account', 'date')
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.account.name}: £{self.balance} on {self.date}"
+
+
+class EarningsVersion(models.Model):
+    """
+    A person's gross salary and pension contribution terms, effective from a
+    date. Like BudgetItemVersion, a change is a new row with a later
+    effective_from — the most recent row on or before a date is the one in
+    force, so history is preserved for past-accuracy and future rows can
+    pre-record a known pay change.
+    """
+    OWNER_CHOICES = [
+        ('keith', 'Keith'),
+        ('tild', 'Tild'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.CharField(max_length=50, choices=OWNER_CHOICES)
+    effective_from = models.DateField(help_text="The date these terms start applying from.")
+    gross_annual_salary = models.DecimalField(max_digits=12, decimal_places=2, help_text="Gross annual salary before any salary sacrifice.")
+    employee_pension_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text="Employee pension contribution as % of gross salary."
+    )
+    employee_pension_is_salary_sacrifice = models.BooleanField(
+        default=True,
+        help_text="If true, the employee contribution is salary-sacrificed (reduces taxable gross)."
+    )
+    employer_pension_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text="Employer pension contribution as % of gross salary."
+    )
+    note = models.CharField(max_length=200, blank=True, default='', help_text="Optional note, e.g. 'promotion'.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Earnings Version"
+        verbose_name_plural = "Earnings Versions"
+        unique_together = ('owner', 'effective_from')
+        ordering = ['-effective_from']
+
+    def __str__(self):
+        return f"{self.get_owner_display()}: £{self.gross_annual_salary} from {self.effective_from}"
+
+
+class Mortgage(models.Model):
+    """
+    Mortgage details for the equity/LTV view. The balance is a stated figure
+    with a date, projected forward by amortisation — correct it by updating
+    balance + balance_date whenever a statement arrives.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, default='Home', help_text="Display name for the property.")
+    property_value = models.DecimalField(max_digits=12, decimal_places=2, help_text="Estimated current property value.")
+    property_value_date = models.DateField(help_text="When the property value estimate was made.")
+    balance = models.DecimalField(max_digits=12, decimal_places=2, help_text="Outstanding mortgage balance as of balance_date.")
+    balance_date = models.DateField(help_text="The date the stated balance was correct.")
+    interest_rate_pct = models.DecimalField(max_digits=5, decimal_places=2, help_text="Annual interest rate %.")
+    monthly_payment = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total monthly payment (capital + interest).")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Mortgage"
+        verbose_name_plural = "Mortgages"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name}: £{self.balance} @ {self.interest_rate_pct}%"
+
+
+class FireSettings(models.Model):
+    """
+    Per-person FIRE assumptions, keyed by owner (not by login) because the
+    joint projection needs both people's assumptions regardless of who is
+    looking at it. All rates are in today's money — expected return should be
+    a real (after-inflation) figure.
+    """
+    OWNER_CHOICES = [
+        ('keith', 'Keith'),
+        ('tild', 'Tild'),
+    ]
+
+    owner = models.CharField(max_length=50, choices=OWNER_CHOICES, primary_key=True)
+    date_of_birth = models.DateField(null=True, blank=True, help_text="Used to convert projection dates to ages and pick the pension access age.")
+    expected_real_return_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=3.5,
+        help_text="Expected annual investment return AFTER inflation, %."
+    )
+    safe_withdrawal_rate_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=4.0,
+        help_text="Withdrawal rate defining the FI number (annual spending ÷ this %)."
+    )
+    target_retirement_age = models.IntegerField(null=True, blank=True, help_text="Optional target age, used for the Coast FIRE number.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "FIRE Settings"
+        verbose_name_plural = "FIRE Settings"
+
+    def __str__(self):
+        return f"FIRE settings for {self.get_owner_display()}"
+
+
 class NurserySettings(models.Model):
     """Per-user nursery calculator state (stored as a single JSON blob)."""
     user = models.OneToOneField(

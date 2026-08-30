@@ -10,7 +10,10 @@ import uuid
 import calendar
 import os
 
-from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings
+from .models import (
+    Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings,
+    FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, FireSettings,
+)
 from django.db.models import Prefetch
 from django.middleware.csrf import get_token
 
@@ -256,21 +259,22 @@ def _ensure_auto_extra_singleton(month_obj):
         )
 
 
-@api.get("/months/{month_id}/items/", response=List[BudgetItemVersionSchema])
-def list_budget_items_for_month(request, month_id: str):
-    month_obj = get_object_or_404(Month, month_id=month_id)
-
+def _prefetched_budget_items():
+    """All BudgetItems with versions prefetched in the order _effective_version_for_month requires."""
     versions_qs = (
         BudgetItemVersion.objects
         .select_related('effective_from_month', 'month')
         .order_by('-effective_from_month__start_date')
     )
-    items = (
+    return (
         BudgetItem.objects
         .select_related('last_payment_month')
         .prefetch_related(Prefetch('versions', queryset=versions_qs))
     )
 
+
+def _serialized_items_for_month(items, month_obj):
+    """Effective, serialized budget items for a month, honouring last_payment_month expiry."""
     out = []
     for item in items:
         if item.last_payment_month and month_obj.start_date > item.last_payment_month.end_date:
@@ -280,6 +284,12 @@ def list_budget_items_for_month(request, month_id: str):
             continue
         out.append(_serialize_version(item, version, month_obj))
     return out
+
+
+@api.get("/months/{month_id}/items/", response=List[BudgetItemVersionSchema])
+def list_budget_items_for_month(request, month_id: str):
+    month_obj = get_object_or_404(Month, month_id=month_id)
+    return _serialized_items_for_month(_prefetched_budget_items(), month_obj)
 
 @api.put("/months/{month_id}/items/{budget_item_id}/value/", response={200: BudgetItemVersionSchema, 403: dict})
 def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid.UUID, payload: BudgetItemVersionInputSchema):
@@ -565,3 +575,246 @@ def update_nursery_settings(request, payload: NurserySettingsInputSchema):
     obj.data = payload.data
     obj.save(update_fields=["data", "updated_at"])
     return {"data": obj.data}
+
+
+# --- FIRE Schemas ---
+
+class BalanceSnapshotSchema(Schema):
+    id: uuid.UUID
+    date: str
+    balance: float
+    source: str
+
+    @staticmethod
+    def resolve_date(obj):
+        return obj.date.isoformat()
+
+class FireAccountSchema(Schema):
+    id: uuid.UUID
+    name: str
+    owner: str
+    kind: str
+    provider: str
+    snapshots: List[BalanceSnapshotSchema]
+
+    @staticmethod
+    def resolve_snapshots(obj):
+        return list(obj.snapshots.all())  # model ordering: newest first
+
+class FireAccountInputSchema(Schema):
+    name: str
+    owner: str
+    kind: str
+    provider: str = ''
+
+class BalanceSnapshotInputSchema(Schema):
+    date: str
+    balance: float
+
+class EarningsVersionSchema(Schema):
+    id: uuid.UUID
+    owner: str
+    effective_from: str
+    gross_annual_salary: float
+    employee_pension_pct: float
+    employee_pension_is_salary_sacrifice: bool
+    employer_pension_pct: float
+    note: str
+
+    @staticmethod
+    def resolve_effective_from(obj):
+        return obj.effective_from.isoformat()
+
+class EarningsVersionInputSchema(Schema):
+    owner: str
+    effective_from: str
+    gross_annual_salary: float
+    employee_pension_pct: float = 0
+    employee_pension_is_salary_sacrifice: bool = True
+    employer_pension_pct: float = 0
+    note: str = ''
+
+class MortgageSchema(Schema):
+    id: uuid.UUID
+    name: str
+    property_value: float
+    property_value_date: str
+    balance: float
+    balance_date: str
+    interest_rate_pct: float
+    monthly_payment: float
+
+    @staticmethod
+    def resolve_property_value_date(obj):
+        return obj.property_value_date.isoformat()
+
+    @staticmethod
+    def resolve_balance_date(obj):
+        return obj.balance_date.isoformat()
+
+class MortgageInputSchema(Schema):
+    name: str = 'Home'
+    property_value: float
+    property_value_date: str
+    balance: float
+    balance_date: str
+    interest_rate_pct: float
+    monthly_payment: float
+
+class FireSettingsSchema(Schema):
+    owner: str
+    date_of_birth: Optional[str] = None
+    expected_real_return_pct: float
+    safe_withdrawal_rate_pct: float
+    target_retirement_age: Optional[int] = None
+
+    @staticmethod
+    def resolve_date_of_birth(obj):
+        return obj.date_of_birth.isoformat() if obj.date_of_birth else None
+
+class FireSettingsInputSchema(Schema):
+    date_of_birth: Optional[str] = None
+    expected_real_return_pct: float
+    safe_withdrawal_rate_pct: float
+    target_retirement_age: Optional[int] = None
+
+class MonthItemsSchema(Schema):
+    month_id: str
+    month_name: str
+    items: List[BudgetItemVersionSchema]
+
+
+# --- FIRE Endpoints ---
+
+@api.get("/fire/accounts/", response=List[FireAccountSchema])
+def list_fire_accounts(request):
+    return FireAccount.objects.prefetch_related('snapshots')
+
+@api.post("/fire/accounts/", response=FireAccountSchema)
+def create_fire_account(request, payload: FireAccountInputSchema):
+    return FireAccount.objects.create(**payload.dict())
+
+@api.put("/fire/accounts/{account_id}/", response=FireAccountSchema)
+def edit_fire_account(request, account_id: uuid.UUID, payload: FireAccountInputSchema):
+    account = get_object_or_404(FireAccount, id=account_id)
+    for attr, value in payload.dict().items():
+        setattr(account, attr, value)
+    account.save()
+    return account
+
+@api.delete("/fire/accounts/{account_id}/", response={204: None})
+def delete_fire_account(request, account_id: uuid.UUID):
+    account = get_object_or_404(FireAccount, id=account_id)
+    account.delete()
+    return 204, None
+
+@api.put("/fire/accounts/{account_id}/balance/", response=BalanceSnapshotSchema)
+def set_fire_account_balance(request, account_id: uuid.UUID, payload: BalanceSnapshotInputSchema):
+    """Record (or correct — same date overwrites) the account balance on a date."""
+    account = get_object_or_404(FireAccount, id=account_id)
+    snapshot, _ = BalanceSnapshot.objects.update_or_create(
+        account=account,
+        date=datetime.date.fromisoformat(payload.date),
+        defaults={'balance': payload.balance, 'source': 'manual'},
+    )
+    return snapshot
+
+@api.delete("/fire/snapshots/{snapshot_id}/", response={204: None})
+def delete_balance_snapshot(request, snapshot_id: uuid.UUID):
+    snapshot = get_object_or_404(BalanceSnapshot, id=snapshot_id)
+    snapshot.delete()
+    return 204, None
+
+@api.get("/fire/earnings/", response=List[EarningsVersionSchema])
+def list_earnings_versions(request):
+    return EarningsVersion.objects.all()
+
+@api.post("/fire/earnings/", response={200: EarningsVersionSchema, 409: dict})
+def create_earnings_version(request, payload: EarningsVersionInputSchema):
+    data = payload.dict()
+    data['effective_from'] = datetime.date.fromisoformat(data['effective_from'])
+    if EarningsVersion.objects.filter(owner=data['owner'], effective_from=data['effective_from']).exists():
+        return 409, {"detail": "An earnings version already exists for that owner and date. Edit it instead."}
+    return EarningsVersion.objects.create(**data)
+
+@api.put("/fire/earnings/{version_id}/", response=EarningsVersionSchema)
+def edit_earnings_version(request, version_id: uuid.UUID, payload: EarningsVersionInputSchema):
+    version = get_object_or_404(EarningsVersion, id=version_id)
+    data = payload.dict()
+    data['effective_from'] = datetime.date.fromisoformat(data['effective_from'])
+    for attr, value in data.items():
+        setattr(version, attr, value)
+    version.save()
+    return version
+
+@api.delete("/fire/earnings/{version_id}/", response={204: None})
+def delete_earnings_version(request, version_id: uuid.UUID):
+    version = get_object_or_404(EarningsVersion, id=version_id)
+    version.delete()
+    return 204, None
+
+@api.get("/fire/mortgages/", response=List[MortgageSchema])
+def list_mortgages(request):
+    return Mortgage.objects.all()
+
+@api.post("/fire/mortgages/", response=MortgageSchema)
+def create_mortgage(request, payload: MortgageInputSchema):
+    data = payload.dict()
+    data['property_value_date'] = datetime.date.fromisoformat(data['property_value_date'])
+    data['balance_date'] = datetime.date.fromisoformat(data['balance_date'])
+    return Mortgage.objects.create(**data)
+
+@api.put("/fire/mortgages/{mortgage_id}/", response=MortgageSchema)
+def edit_mortgage(request, mortgage_id: uuid.UUID, payload: MortgageInputSchema):
+    mortgage = get_object_or_404(Mortgage, id=mortgage_id)
+    data = payload.dict()
+    data['property_value_date'] = datetime.date.fromisoformat(data['property_value_date'])
+    data['balance_date'] = datetime.date.fromisoformat(data['balance_date'])
+    for attr, value in data.items():
+        setattr(mortgage, attr, value)
+    mortgage.save()
+    return mortgage
+
+@api.delete("/fire/mortgages/{mortgage_id}/", response={204: None})
+def delete_mortgage(request, mortgage_id: uuid.UUID):
+    mortgage = get_object_or_404(Mortgage, id=mortgage_id)
+    mortgage.delete()
+    return 204, None
+
+@api.get("/fire/settings/", response=List[FireSettingsSchema])
+def list_fire_settings(request):
+    """Settings for both owners — created with defaults on first read so the frontend always gets two rows."""
+    return [FireSettings.objects.get_or_create(owner=owner)[0] for owner, _ in FireSettings.OWNER_CHOICES]
+
+@api.put("/fire/settings/{owner}/", response={200: FireSettingsSchema, 400: dict})
+def update_fire_settings(request, owner: str, payload: FireSettingsInputSchema):
+    if owner not in dict(FireSettings.OWNER_CHOICES):
+        return 400, {"detail": "Unknown owner."}
+    obj, _ = FireSettings.objects.get_or_create(owner=owner)
+    obj.date_of_birth = datetime.date.fromisoformat(payload.date_of_birth) if payload.date_of_birth else None
+    obj.expected_real_return_pct = payload.expected_real_return_pct
+    obj.safe_withdrawal_rate_pct = payload.safe_withdrawal_rate_pct
+    obj.target_retirement_age = payload.target_retirement_age
+    obj.save()
+    return obj
+
+@api.get("/fire/monthly-items/", response=List[MonthItemsSchema])
+def fire_monthly_items(request, count: int = 12):
+    """Effective budget items for the last `count` started months, oldest first.
+
+    Feeds the FIRE page's spending/saving averages — the frontend applies the
+    same totals logic the budget dashboard uses, per month.
+    """
+    today = datetime.date.today()
+    months = list(
+        Month.objects.filter(start_date__lte=today).order_by('-start_date')[:max(1, min(count, 36))]
+    )
+    items = list(_prefetched_budget_items())
+    return [
+        MonthItemsSchema(
+            month_id=m.month_id,
+            month_name=m.month_name,
+            items=_serialized_items_for_month(items, m),
+        )
+        for m in reversed(months)
+    ]
