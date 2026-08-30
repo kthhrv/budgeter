@@ -573,7 +573,7 @@ const FirePage = ({ showToast }) => {
                         In today's money at {viewSettings ? parseFloat(viewSettings.expected_real_return_pct).toFixed(1) : '—'}% real return,
                         contributing {fmtMoney(monthlyPension)}/mo pension + {fmtMoney(avgMonthlySavings)}/mo savings until retirement.
                         {bridge
-                            ? ` The retirement date is the earliest where accessible wealth bridges every year before pension access, and the pot lasts to age ${LONGEVITY_AGE} — including state pension from ${STATE_PENSION_AGE} and spending dropping by the mortgage payment at payoff. Assumes the mortgage payment is part of budget spending.`
+                            ? ` The retirement date is the earliest where accessible wealth bridges every year before pension access, and the pot lasts to age ${LONGEVITY_AGE} — including state pension from ${STATE_PENSION_AGE}, spending dropping by the mortgage payment at payoff, and income tax on pension withdrawals (25% tax-free, the rest through the UK bands, split across both allowances). ISA/cash draws are tax-free. Assumes the mortgage payment is part of budget spending.`
                             : ' Set both dates of birth in Assumptions to enable the pension-bridge test.'}
                     </p>
                 </ChartCard>

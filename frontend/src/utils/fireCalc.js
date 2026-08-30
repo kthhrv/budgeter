@@ -220,6 +220,36 @@ export const monthlyTakeHome = (earnings) => {
     return (gross - employeeContribution - annualIncomeTax(taxableGross) - annualNI(niableGross)) / 12;
 };
 
+// --- Retirement drawdown tax ---
+// Pension withdrawals are modelled UFPLS-style: 25% of each withdrawal is
+// tax-free cash, the other 75% is taxed as income on top of whatever else the
+// person receives that month (state pension). No NI is due on pension income.
+// Simplifications, both stated: the £268,275 lump-sum allowance cap on total
+// tax-free cash is ignored, and GIA gains are treated like ISA (no CGT).
+
+/** Income tax on one month's income, using annual bands ÷ 12. */
+export const monthlyIncomeTax = (monthlyIncome) => annualIncomeTax(monthlyIncome * 12) / 12;
+
+/** Net amount received from a gross pension withdrawal this month, given the
+ *  person's other taxable income for the month. */
+export const netFromPensionWithdrawal = (gross, otherTaxableMonthly = 0) =>
+    gross - (monthlyIncomeTax(otherTaxableMonthly + gross * 0.75) - monthlyIncomeTax(otherTaxableMonthly));
+
+/** Gross pension withdrawal needed to receive `netNeed` after tax. Solved by
+ *  damped fixed-point iteration — the net-of-gross slope is at worst 0.55
+ *  (45% band × 75% taxable, or the 60% PA-taper zone), so this converges to
+ *  under a penny well within the iteration cap. */
+export const grossPensionWithdrawal = (netNeed, otherTaxableMonthly = 0) => {
+    if (netNeed <= 0) return 0;
+    let gross = netNeed;
+    for (let i = 0; i < 20; i++) {
+        const shortfall = netNeed - netFromPensionWithdrawal(gross, otherTaxableMonthly);
+        if (Math.abs(shortfall) < 0.005) break;
+        gross += shortfall / 0.6;
+    }
+    return gross;
+};
+
 // --- Lifecycle simulation (the two-phase pension bridge test) ---
 
 // Full new state pension 2025/26 (£230.25/wk — gov.uk/new-state-pension).
@@ -299,26 +329,52 @@ export const simulateLifecycle = ({
             continue;
         }
 
-        // retired: meet this month's spending
+        // retired: meet this month's spending from net-of-tax income
         let spending = baseMonthlySpending;
         for (const loan of mortgages) {
             if (loan.payoffMonth !== null && i >= loan.payoffMonth) spending -= loan.monthlyPayment;
         }
-        for (const p of people) {
-            if (p.statePensionMonth !== null && i >= p.statePensionMonth) spending -= p.statePensionMonthly;
-        }
         let need = Math.max(0, spending);
 
+        // State pension first — taxable income (though alone it sits under the
+        // personal allowance). Track each person's taxable income this month
+        // so pension withdrawals stack on top of it for tax.
+        const taxableSoFar = people.map(p =>
+            (p.statePensionMonth !== null && i >= p.statePensionMonth) ? p.statePensionMonthly : 0);
+        for (const t of taxableSoFar) {
+            if (t > 0) need -= t - monthlyIncomeTax(t);
+        }
+        need = Math.max(0, need);
+
+        // Accessible wealth (ISA/cash) is tax-free
         const fromAccessible = Math.min(Math.max(0, accessible), need);
         accessible -= fromAccessible;
         need -= fromAccessible;
-        if (need > 0) {
-            for (let pi = 0; pi < pensions.length && need > 0; pi++) {
-                const p = people[pi];
-                if (p.accessMonth !== null && i < p.accessMonth) continue; // still locked
-                const draw = Math.min(pensions[pi], need);
-                pensions[pi] -= draw;
-                need -= draw;
+
+        // Pension withdrawals, grossed up for tax. Two passes: an equal split
+        // first so a couple uses both personal allowances, then spill-over to
+        // whoever still has funds.
+        if (need > 0.005) {
+            const drawNet = (pi, netTarget) => {
+                let gross = grossPensionWithdrawal(netTarget, taxableSoFar[pi]);
+                if (gross > pensions[pi]) gross = pensions[pi];
+                const net = netFromPensionWithdrawal(gross, taxableSoFar[pi]);
+                pensions[pi] -= gross;
+                taxableSoFar[pi] += gross * 0.75;
+                return net;
+            };
+            const unlocked = () => people
+                .map((_, pi) => pi)
+                .filter(pi => (people[pi].accessMonth === null || i >= people[pi].accessMonth) && pensions[pi] > 0.005);
+            const first = unlocked();
+            const share = first.length ? need / first.length : 0;
+            for (const pi of first) {
+                if (need <= 0.005) break;
+                need -= drawNet(pi, Math.min(share, need));
+            }
+            for (const pi of unlocked()) {
+                if (need <= 0.005) break;
+                need -= drawNet(pi, need);
             }
         }
         if (need > 0.005) viable = false; // couldn't fund the month (pensions locked or everything empty)
