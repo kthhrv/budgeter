@@ -40,12 +40,12 @@ const MonthSelector = ({ currentDate, isLoading }) => {
 
     return (
         <div ref={containerRef} className="flex items-center gap-2 select-none">
-            <button onClick={() => changeMonth(-1)} aria-label="Previous month" className="p-1.5 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={isLoading}>
-                <ChevronLeft className="h-5 w-5 text-gray-600" />
+            <button onClick={() => changeMonth(-1)} aria-label="Previous month" className="p-1.5 rounded-full hover:bg-line disabled:opacity-50 transition-colors" disabled={isLoading}>
+                <ChevronLeft className="h-5 w-5 text-ink-soft" />
             </button>
-            <h2 className="text-lg font-bold text-gray-800 min-w-[140px] text-center">{formatDate(currentDate, 'MonthYYYY')}</h2>
-            <button onClick={() => changeMonth(1)} aria-label="Next month" className="p-1.5 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={isLoading}>
-                <ChevronRight className="h-5 w-5 text-gray-600" />
+            <h2 className="text-lg font-bold text-ink min-w-[140px] text-center">{formatDate(currentDate, 'MonthYYYY')}</h2>
+            <button onClick={() => changeMonth(1)} aria-label="Next month" className="p-1.5 rounded-full hover:bg-line disabled:opacity-50 transition-colors" disabled={isLoading}>
+                <ChevronRight className="h-5 w-5 text-ink-soft" />
             </button>
         </div>
     );

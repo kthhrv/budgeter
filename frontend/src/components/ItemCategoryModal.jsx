@@ -11,9 +11,9 @@ const EMPTY = {
 };
 
 const OWNER_OPTIONS = [
-    { value: 'shared', label: 'Joint', active: 'bg-white text-violet-700 shadow-sm' },
-    { value: 'keith', label: 'Keith', active: 'bg-white text-blue-700 shadow-sm' },
-    { value: 'tild', label: 'Tild', active: 'bg-white text-pink-700 shadow-sm' },
+    { value: 'shared', label: 'Joint', active: 'bg-card text-accent-strong shadow-sm' },
+    { value: 'keith', label: 'Keith', active: 'bg-card text-keith shadow-sm' },
+    { value: 'tild', label: 'Tild', active: 'bg-card text-tild shadow-sm' },
 ];
 
 // Apply the same field interdependencies the flat form used to enforce inline.
@@ -33,12 +33,12 @@ function applyRules(next, name) {
 
 function Segmented({ options, value, onChange, ariaLabel }) {
     return (
-        <div role="group" aria-label={ariaLabel} className="grid grid-flow-col auto-cols-fr gap-1 p-1 bg-gray-100 rounded-xl">
+        <div role="group" aria-label={ariaLabel} className="grid grid-flow-col auto-cols-fr gap-1 p-1 bg-line/70 rounded-xl">
             {options.map(o => {
                 const on = value === o.value;
                 return (
                     <button key={o.value} type="button" aria-pressed={on} onClick={() => onChange(o.value)}
-                        className={`px-2 py-2 rounded-lg text-sm font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400 ${on ? (o.active || 'bg-white text-indigo-700 shadow-sm') : 'text-gray-500 hover:text-gray-700'}`}>
+                        className={`px-2 py-2 rounded-lg text-sm font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${on ? (o.active || 'bg-accent text-paper shadow-sm') : 'text-ink-soft hover:text-ink'}`}>
                         {o.label}
                     </button>
                 );
@@ -47,24 +47,24 @@ function Segmented({ options, value, onChange, ariaLabel }) {
     );
 }
 
-function Toggle({ checked, onChange, label, hint, name, accent = 'peer-checked:bg-indigo-500' }) {
+function Toggle({ checked, onChange, label, hint, name, accent = 'peer-checked:bg-accent' }) {
     return (
         <label className="flex items-center justify-between gap-3 cursor-pointer py-1">
             <span className="min-w-0">
-                <span className="block text-sm text-gray-700">{label}</span>
-                {hint && <span className="block text-xs text-gray-400">{hint}</span>}
+                <span className="block text-sm text-ink">{label}</span>
+                {hint && <span className="block text-xs text-ink-faint">{hint}</span>}
             </span>
             <span className="relative shrink-0">
                 <input type="checkbox" name={name} checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only peer" />
-                <span className={`block w-10 h-6 bg-gray-200 rounded-full transition-colors ${accent}`}></span>
-                <span className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></span>
+                <span className={`block w-10 h-6 bg-line rounded-full transition-colors ${accent}`}></span>
+                <span className="absolute left-0.5 top-0.5 w-5 h-5 bg-card rounded-full shadow-sm peer-checked:translate-x-4 transition-transform"></span>
             </span>
         </label>
     );
 }
 
-const fieldLabel = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5';
-const inputCls = 'block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all';
+const fieldLabel = 'block text-xs font-semibold text-ink-soft uppercase tracking-wide mb-1.5';
+const inputCls = 'block w-full rounded-xl border border-line bg-paper px-4 py-3 text-ink focus:border-accent focus:ring-2 focus:ring-accent/20 focus:bg-card outline-none transition-all';
 
 const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDate }) => {
     const isNew = !item?.budget_item_id;
@@ -180,15 +180,15 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center p-0 sm:p-4 animate-fadeIn" onClick={requestClose}>
+            <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center p-0 sm:p-4 animate-fadeIn" onClick={requestClose}>
                 <div ref={dialogRef} onKeyDown={onDialogKeyDown} role="dialog" aria-modal="true" aria-labelledby="modal-title"
-                    className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col border border-gray-100 animate-slideUp"
+                    className="bg-card rounded-t-2xl sm:rounded-2xl border border-line shadow-sm w-full max-w-lg max-h-[92vh] flex flex-col border border-line animate-slideUp"
                     onClick={(e) => e.stopPropagation()}>
 
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                        <h2 id="modal-title" className="text-lg font-bold text-gray-800">{isNew ? 'New item' : 'Edit item'}</h2>
-                        <button type="button" onClick={requestClose} aria-label="Close" className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
+                        <h2 id="modal-title" className="text-lg font-bold text-ink">{isNew ? 'New item' : 'Edit item'}</h2>
+                        <button type="button" onClick={requestClose} aria-label="Close" className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-line/70 transition-colors">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
@@ -200,7 +200,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                 <label htmlFor="item_name" className={fieldLabel}>Name</label>
                                 <input id="item_name" name="item_name" type="text" value={formData.item_name} onChange={e => update('item_name', e.target.value)}
                                     placeholder="e.g. Netflix, Groceries…" className={inputCls} />
-                                {errors.item_name && <p className="text-xs text-red-500 mt-1">{errors.item_name}</p>}
+                                {errors.item_name && <p className="text-xs text-danger mt-1">{errors.item_name}</p>}
                             </div>
 
                             {/* Type */}
@@ -239,7 +239,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                             <option value="">Which day?</option>
                                             {Object.entries(DAY_CHOICES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                                         </select>
-                                        {errors.weekly_payment_day && <p className="text-xs text-red-500 mt-1">{errors.weekly_payment_day}</p>}
+                                        {errors.weekly_payment_day && <p className="text-xs text-danger mt-1">{errors.weekly_payment_day}</p>}
                                     </div>
                                 )}
                             </div>
@@ -250,20 +250,20 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                     {formData.is_auto_extra ? 'Buffer amount' : formData.calculation_type === 'weekly_count' ? 'Amount per week' : 'Amount'}
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">£</span>
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint font-semibold text-lg">£</span>
                                     <input id="value" type="number" name="value" step="0.01" inputMode="decimal" value={formData.value}
                                         onChange={e => update('value', e.target.value)}
                                         onFocus={e => e.target.select()}
                                         onWheel={e => e.target.blur()}
                                         placeholder="0.00"
-                                        className="block w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 py-3 text-lg font-semibold text-gray-800 placeholder-gray-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white outline-none transition-all" />
+                                        className="block w-full rounded-xl border border-line bg-paper pl-9 pr-4 py-3 text-lg font-semibold text-ink placeholder-ink-faint focus:border-accent focus:ring-2 focus:ring-accent/20 focus:bg-card outline-none transition-all" />
                                 </div>
-                                {errors.value && <p className="text-xs text-red-500 mt-1">{errors.value}</p>}
+                                {errors.value && <p className="text-xs text-danger mt-1">{errors.value}</p>}
                                 {weeklyMonthly != null && (
-                                    <p className="text-xs text-gray-500 mt-1.5">≈ <span className="num font-semibold text-gray-700">{money(weeklyMonthly)}</span> in {monthName} ({occurrences} × {money(parsedValue || 0)})</p>
+                                    <p className="text-xs text-ink-soft mt-1.5">≈ <span className="num font-semibold text-ink">{money(weeklyMonthly)}</span> in {monthName} ({occurrences} × {money(parsedValue || 0)})</p>
                                 )}
                                 {formData.is_auto_extra && (
-                                    <p className="text-xs text-gray-500 mt-1.5">Joint income covers the bills first, so the joint Remaining holds at this buffer each month.</p>
+                                    <p className="text-xs text-ink-soft mt-1.5">Joint income covers the bills first, so the joint Remaining holds at this buffer each month.</p>
                                 )}
                             </div>
 
@@ -275,7 +275,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                         onChange={v => update('is_one_off', v === 'once')}
                                         options={[{ value: 'ongoing', label: 'From this month on' }, { value: 'once', label: 'Just this month' }]} />
                                     {item?.effective_value != null && (
-                                        <p className="text-xs text-gray-400 mt-1.5">
+                                        <p className="text-xs text-ink-faint mt-1.5">
                                             Currently <span className="num">{money(item.effective_value)}</span>
                                             {item.effective_from_month_name ? ` · set ${item.effective_from_month_name}` : ''}
                                         </p>
@@ -285,14 +285,14 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
 
                             {/* Advanced */}
                             {(isExpense || hasExpiry) && (
-                                <div className="rounded-xl border border-gray-100">
+                                <div className="rounded-xl border border-line">
                                     <button type="button" onClick={() => setAdvancedOpen(o => !o)}
-                                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-600">
+                                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-ink-soft">
                                         <span>Advanced options</span>
-                                        <span className={`text-gray-400 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}>▾</span>
+                                        <span className={`text-ink-faint transition-transform ${advancedOpen ? 'rotate-180' : ''}`}>▾</span>
                                     </button>
                                     {advancedOpen && (
-                                        <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                                        <div className="px-4 pb-4 space-y-3 border-t border-line pt-3">
                                             {isExpense && (
                                                 <div>
                                                     <span className={fieldLabel}>Pot</span>
@@ -304,12 +304,12 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
 
                                             {isExpense && formData.owner === 'shared' && !formData.is_tab_repayment && formData.expense_pot === '' && (
                                                 <Toggle name="is_extra" checked={formData.is_extra} onChange={v => update('is_extra', v)}
-                                                    accent="peer-checked:bg-amber-500"
+                                                    accent="peer-checked:bg-warn-soft0"
                                                     label="Extra (buffer in joint, not an expense)" />
                                             )}
                                             {isExpense && formData.owner === 'shared' && !formData.is_tab_repayment && formData.expense_pot === '' && formData.is_extra && (
                                                 <Toggle name="is_auto_extra" checked={formData.is_auto_extra} onChange={v => update('is_auto_extra', v)}
-                                                    accent="peer-checked:bg-amber-600"
+                                                    accent="peer-checked:bg-warn"
                                                     label="Auto-add this fixed buffer each month" />
                                             )}
 
@@ -337,8 +337,8 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                                     <input type="month" name="last_payment_month_id" value={formData.last_payment_month_id}
                                                         onChange={e => update('last_payment_month_id', e.target.value)}
                                                         min={formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 1), 'YYYY-MM')}
-                                                        className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
-                                                    <p className="text-xs text-gray-400 mt-1">{formData.last_payment_month_id ? `Last active month: ${new Date(formData.last_payment_month_id + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}` : 'Pick the last active month'}</p>
+                                                        className="block w-full rounded-xl border border-line bg-card px-4 py-2.5 text-sm text-ink focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all" />
+                                                    <p className="text-xs text-ink-faint mt-1">{formData.last_payment_month_id ? `Last active month: ${new Date(formData.last_payment_month_id + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}` : 'Pick the last active month'}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -348,15 +348,15 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                         </div>
 
                         {/* Footer */}
-                        <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-100 shrink-0 bg-white rounded-b-2xl">
+                        <div className="flex items-center gap-3 px-6 py-4 border-t border-line shrink-0 bg-card rounded-b-2xl">
                             {!isNew && (
                                 <button type="button" onClick={() => setConfirm('delete')}
-                                    className="p-2.5 rounded-xl text-red-500 hover:bg-red-50 transition-colors" aria-label="Delete item">
+                                    className="p-2.5 rounded-xl text-danger hover:bg-danger-soft/60 transition-colors" aria-label="Delete item">
                                     <Trash2 className="h-5 w-5" />
                                 </button>
                             )}
-                            <button type="button" onClick={requestClose} className="flex-1 py-3 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
-                            <button type="submit" className="flex-1 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md transition-all">{isNew ? 'Create' : 'Save'}</button>
+                            <button type="button" onClick={requestClose} className="flex-1 py-3 px-4 border border-line rounded-xl text-sm font-semibold text-ink-soft hover:bg-paper transition-all">Cancel</button>
+                            <button type="submit" className="flex-1 py-3 px-4 rounded-xl text-sm font-semibold text-paper bg-accent hover:bg-accent-strong transition-all">{isNew ? 'Create' : 'Save'}</button>
                         </div>
                     </form>
                 </div>

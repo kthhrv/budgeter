@@ -252,60 +252,59 @@ const App = () => {
 
     if (isAuthLoading) {
         return (
-            <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="bg-paper min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
             </div>
         );
     }
 
     if (!user) {
         return (
-            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 min-h-screen flex items-center justify-center p-4">
-                <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md text-center animate-slideUp">
-                    <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Wallet className="w-10 h-10 text-indigo-600" />
+            <div className="bg-paper min-h-screen flex items-center justify-center p-4">
+                <div className="bg-card/95 backdrop-blur-sm p-8 rounded-2xl border border-line shadow-sm w-full max-w-md text-center animate-slideUp">
+                    <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Wallet className="w-10 h-10 text-accent" />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Budgeter</h1>
-                    <p className="text-gray-600 mb-8">Please sign in to access your budget.</p>
+                    <h1 className="font-serif italic text-4xl text-accent-strong mb-2">Budgeter</h1>
+                    <p className="text-ink-soft mb-8">Please sign in to access your budget.</p>
                     <button
                         onClick={handleGoogleLogin}
-                        className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 py-3 px-4 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+                        className="w-full flex items-center justify-center space-x-3 bg-card border border-line py-3 px-4 rounded-lg font-semibold text-ink hover:bg-paper transition-all shadow-sm active:scale-95"
                     >
                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
                         <span>Sign in with Google</span>
                     </button>
-                    <p className="mt-8 text-xs text-gray-400">Restricted access enabled.</p>
+                    <p className="mt-8 text-xs text-ink-faint">Restricted access enabled.</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-gray-50 min-h-screen font-sans">
-            <header className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white p-4 shadow-lg sticky top-0 z-40">
+        <div className="bg-paper min-h-screen font-sans">
+            <header className="bg-card border-b border-line text-ink p-4 sticky top-0 z-40">
                 <div className="container mx-auto flex justify-between items-center max-w-7xl gap-3">
                     <button
                         type="button"
                         onClick={() => setMobileMenuOpen(o => !o)}
-                        className="p-2 hover:bg-indigo-500 rounded-md transition-colors"
+                        className="p-2 hover:bg-line/60 rounded-md transition-colors"
                         aria-label="Toggle navigation"
                         aria-expanded={mobileMenuOpen}
                     >
                         <Menu className="h-6 w-6" />
                     </button>
-                    <h1 className="text-2xl md:text-3xl font-bold flex items-center grow">
-                        <Wallet className="mr-3 h-7 w-7 md:h-8 md:w-8" />
+                    <h1 className="font-serif italic text-2xl md:text-3xl leading-none text-accent-strong grow">
                         {{ budget: 'Budget', tabs: 'Tabs', nursery: 'Cost calculator', childcare: 'Childcare', fire: 'FIRE', reports: 'Reports', mortgage: 'Mortgage' }[activePage] || 'Budget'}
                     </h1>
                     <div className="flex items-center space-x-4">
-                        <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
-                        <button onClick={handleLogout} className="p-2 hover:bg-indigo-500 rounded-full transition-colors" title="Logout">
+                        <span className="hidden md:block text-ink-soft text-sm">Signed in as {user.username}</span>
+                        <button onClick={handleLogout} className="p-2 hover:bg-line/60 rounded-full transition-colors" title="Logout">
                             <XCircle className="h-6 w-6" />
                         </button>
                     </div>
                 </div>
                 {mobileMenuOpen && (
-                    <div className="mt-3 -mx-4 px-4 pt-3 border-t border-white/10 flex flex-col gap-1">
+                    <div className="mt-3 -mx-4 px-4 pt-3 border-t border-line flex flex-col gap-1">
                         {[
                             { id: 'budget',  label: 'Budget',  Icon: LayoutDashboard },
                             { id: 'tabs',    label: 'Tabs',    Icon: ArrowRightLeft },
@@ -318,7 +317,7 @@ const App = () => {
                             <button
                                 key={tab.id}
                                 onClick={() => { setActivePage(tab.id); setMobileMenuOpen(false); }}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${activePage === tab.id ? 'bg-white text-indigo-700' : 'text-white/90 hover:bg-white/10'}`}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${activePage === tab.id ? 'bg-accent text-paper' : 'text-ink-soft hover:bg-line/50'}`}
                             >
                                 <tab.Icon className="h-4 w-4" /> {tab.label}
                             </button>
@@ -358,8 +357,8 @@ const App = () => {
                                     disabled={isEditingDisabled}
                                     title={isEditingDisabled ? 'Past Month - Locked' : 'Add New Item'}
                                     className={`flex-shrink-0 p-2 rounded-lg transition-all duration-300 ${isEditingDisabled
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98]'
+                                        ? 'bg-line text-ink-soft cursor-not-allowed'
+                                        : 'bg-accent text-paper hover:bg-accent-strong active:scale-[0.98]'
                                         }`}
                                 >
                                     <PlusCircle className="h-5 w-5" />
