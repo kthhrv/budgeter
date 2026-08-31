@@ -28,6 +28,19 @@ export const currentPeriod = (now = new Date()) => {
  *  FOLLOWING calendar month (the month the period mostly falls in). */
 export const fundedMonthDate = (period) => new Date(period.end.getFullYear(), period.end.getMonth(), 1);
 
+/** A plain calendar-month period (same shape as currentPeriod) — the
+ *  groceries pot refills on the 1st, unlike the buffer's pay-day cycle. */
+export const calendarMonthPeriod = (now = new Date()) => {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return {
+        start,
+        end,
+        totalDays: dayNumber(end) - dayNumber(start),
+        dayIndex: now.getDate(),
+    };
+};
+
 /** Expected remaining buffer after day `day` (1..D) of a D-day period. */
 export const expectedRemaining = (buffer, day, totalDays) =>
     buffer * Math.max(0, totalDays - day) / totalDays;
@@ -44,3 +57,31 @@ export const dailyAllowanceSeries = (buffer, period) =>
             expected: expectedRemaining(buffer, i + 1, period.totalDays),
         };
     });
+
+/** Weekly burn-down for the groceries pot: shopping happens once a week (on
+ *  the budget's weekly_payment_day, 1=Mon..7=Sun), so the expected balance
+ *  steps down by one shop's worth on each shop day instead of daily.
+ *  Returns { series: [{ day, date, label, expected, isShopDay }], totalShops,
+ *  shopsDone } — shopsDone counted up to and including `period.dayIndex`. */
+export const weeklyBurndownSeries = (total, period, shopWeekday) => {
+    const jsWeekday = shopWeekday % 7; // budget 1=Mon..7=Sun → JS 0=Sun..6=Sat
+    const days = Array.from({ length: period.totalDays }, (_, i) => {
+        const date = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate() + i);
+        return { day: i + 1, date, isShopDay: date.getDay() === jsWeekday };
+    });
+    const totalShops = days.filter(d => d.isShopDay).length || 1;
+    let shops = 0;
+    let shopsDone = 0;
+    const series = days.map(d => {
+        if (d.isShopDay) {
+            shops += 1;
+            if (d.day <= period.dayIndex) shopsDone = shops;
+        }
+        return {
+            ...d,
+            label: d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            expected: total * (totalShops - shops) / totalShops,
+        };
+    });
+    return { series, totalShops, shopsDone };
+};

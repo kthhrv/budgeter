@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RESET_DAY, currentPeriod, fundedMonthDate, expectedRemaining, dailyAllowanceSeries } from '../utils/allowanceCalc';
+import { RESET_DAY, currentPeriod, calendarMonthPeriod, fundedMonthDate, expectedRemaining, dailyAllowanceSeries, weeklyBurndownSeries } from '../utils/allowanceCalc';
 
 describe('currentPeriod', () => {
     it('starts on the 28th of the current month once pay day has passed', () => {
@@ -61,5 +61,53 @@ describe('dailyAllowanceSeries', () => {
         expect(series[4].label).toBe('1 Sept'); // en-GB short month for September
         expect(series.at(-1).label).toBe('27 Sept');
         expect(series.at(-1).expected).toBe(0);
+    });
+});
+
+describe('weeklyBurndownSeries', () => {
+    // Period 28 Aug – 27 Sep 2026: 28 Aug is a Friday. Fridays in the period:
+    // 28 Aug, 4, 11, 18, 25 Sep = 5 shops.
+    const period = currentPeriod(new Date(2026, 7, 31)); // day 4 of 31
+
+    it('steps down one shop at a time on the shop weekday', () => {
+        const { series, totalShops, shopsDone } = weeklyBurndownSeries(500, period, 5); // Friday
+        expect(totalShops).toBe(5);
+        expect(shopsDone).toBe(1); // only the 28 Aug shop has happened by the 31st
+        expect(series[0]).toMatchObject({ label: '28 Aug', isShopDay: true, expected: 400 });
+        // flat between shops
+        expect(series[1].expected).toBe(400);
+        expect(series[6].expected).toBe(400);
+        // next Friday (4 Sep, day 8) drops another fifth
+        expect(series[7]).toMatchObject({ isShopDay: true, expected: 300 });
+        // last shop empties the pot
+        expect(series.at(-1).expected).toBe(0);
+    });
+
+    it('converts the budget weekday convention (7=Sunday)', () => {
+        const { series } = weeklyBurndownSeries(400, period, 7);
+        const firstShop = series.find(d => d.isShopDay);
+        expect(firstShop.date.getDay()).toBe(0); // JS Sunday
+        expect(firstShop.label).toBe('30 Aug');
+    });
+});
+
+describe('calendarMonthPeriod', () => {
+    it('runs from the 1st to the end of the month', () => {
+        const p = calendarMonthPeriod(new Date(2026, 7, 31)); // 31 Aug
+        expect(p.start).toEqual(new Date(2026, 7, 1));
+        expect(p.end).toEqual(new Date(2026, 8, 1));
+        expect(p.totalDays).toBe(31);
+        expect(p.dayIndex).toBe(31);
+    });
+
+    it('is day 1 on the 1st and handles February', () => {
+        expect(calendarMonthPeriod(new Date(2026, 8, 1)).dayIndex).toBe(1);
+        expect(calendarMonthPeriod(new Date(2027, 1, 15)).totalDays).toBe(28);
+    });
+
+    it('feeds the weekly staircase with calendar-month shops', () => {
+        // August 2026 has 5 Saturdays (1, 8, 15, 22, 29)
+        const { totalShops } = weeklyBurndownSeries(500, calendarMonthPeriod(new Date(2026, 7, 31)), 6);
+        expect(totalShops).toBe(5);
     });
 });

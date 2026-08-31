@@ -4,7 +4,7 @@ import {
     currentWealth, buildNetWorthHistory,
     monthlySpendingForView, monthlySavingsForView,
     fiNumber, projectWealth, findFiCrossing, coastNumber,
-    savingsRate, ageAt, mortgageStats, amortiseMortgage, combineSchedules,
+    savingsRate, ageAt, mortgageStats, amortiseMortgage, combineSchedules, aggregateLoans,
     annualIncomeTax, annualNI, monthlyTakeHome,
     monthsUntilAge, monthIndexOf, simulateLifecycle, findEarliestViableRetirement,
     netFromPensionWithdrawal, grossPensionWithdrawal,
@@ -498,5 +498,29 @@ describe('simulateLifecycle drawdown tax', () => {
     it('a couple splitting withdrawals uses both personal allowances', () => {
         const split = simulateLifecycle({ ...base, people: [person(240000), person(240000)], accessibleStart: 0 });
         expect(split.viable).toBe(true);
+    });
+});
+
+describe('aggregateLoans', () => {
+    it('combines balance, payment and a balance-weighted rate', () => {
+        const combined = aggregateLoans([
+            { balance: 300000, monthly_payment: 1500, interest_rate_pct: 4.0, balance_date: '2026-08-01' },
+            { balance: 100000, monthly_payment: 600, interest_rate_pct: 6.0, balance_date: '2026-08-15' },
+        ]);
+        expect(combined.balance).toBe(400000);
+        expect(combined.monthly_payment).toBe(2100);
+        expect(combined.interest_rate_pct).toBeCloseTo(4.5); // (300k*4 + 100k*6) / 400k
+        expect(combined.balance_date).toBe('2026-08-15');
+    });
+
+    it('overpaying the aggregate shortens the payoff', () => {
+        const combined = aggregateLoans([
+            { balance: 200000, monthly_payment: 1200, interest_rate_pct: 4.5, balance_date: '2026-08-01' },
+            { balance: 50000, monthly_payment: 400, interest_rate_pct: 6.0, balance_date: '2026-08-01' },
+        ]);
+        const baseline = amortiseMortgage(combined);
+        const scenario = amortiseMortgage({ ...combined, monthly_payment: combined.monthly_payment + 300 });
+        expect(scenario.payoffDate < baseline.payoffDate).toBe(true);
+        expect(scenario.totalInterest).toBeLessThan(baseline.totalInterest);
     });
 });
