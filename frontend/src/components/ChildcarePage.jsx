@@ -414,11 +414,14 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         gross: calc.holidayClubs.reduce((s, h) => s + h.cost, 0),
                         saving: calc.holidayClubs.reduce((s, h) => s + h.saving, 0),
                         net: calc.holidayNet,
-                        children: calc.holidayClubs.map(h => ({
-                            key: `club-${h.id}`, label: h.name || 'Holiday club',
-                            days: clubDaysThisMonth(h.id),
-                            gross: h.cost, saving: h.saving, net: h.cost - h.saving,
-                        })),
+                        // Clubs with no days assigned this month stay out of the breakdown
+                        children: calc.holidayClubs
+                            .filter(h => clubDaysThisMonth(h.id) > 0)
+                            .map(h => ({
+                                key: `club-${h.id}`, label: h.name || 'Holiday club',
+                                days: clubDaysThisMonth(h.id),
+                                gross: h.cost, saving: h.saving, net: h.cost - h.saving,
+                            })),
                     },
                 ],
             };
