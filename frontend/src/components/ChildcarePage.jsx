@@ -141,21 +141,34 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
             </div>
             {sessionsAllowed ? (
                 <div className="space-y-2">
+                    {/* The effective option is selected; picking the weekly value
+                        clears any one-off override, picking another sets one. */}
                     <div>
-                        <div className="text-xs text-ink-soft mb-1">Breakfast {ICON.breakfast} {!bOverridden && <span className="text-ink-faint/70">(weekly: {weeklyBreakfast ? 'yes' : 'no'})</span>}</div>
+                        <div className="text-xs text-ink-soft mb-1">
+                            Breakfast {ICON.breakfast}
+                            {bOverridden
+                                ? <span className="text-warn"> · one-off (weekly: {weeklyBreakfast ? 'attending' : 'not attending'})</span>
+                                : <span className="text-ink-faint/70"> · weekly pattern</span>}
+                        </div>
                         <div className="flex gap-1.5">
-                            <Btn active={!bOverridden} onClick={() => onSetBreakfast(undefined)}>Weekly default</Btn>
-                            <Btn active={bOverridden && marker.breakfast} onClick={() => onSetBreakfast(true)}>Attending</Btn>
-                            <Btn active={bOverridden && !marker.breakfast} onClick={() => onSetBreakfast(false)}>Not</Btn>
+                            <Btn active={marker.breakfast === true}
+                                 onClick={() => onSetBreakfast(weeklyBreakfast === true ? undefined : true)}>Attending</Btn>
+                            <Btn active={marker.breakfast !== true}
+                                 onClick={() => onSetBreakfast(weeklyBreakfast === false ? undefined : false)}>Not attending</Btn>
                         </div>
                     </div>
                     <div>
-                        <div className="text-xs text-ink-soft mb-1">After-school {!aOverridden && <span className="text-ink-faint/70">(weekly: {AFTER_SCHOOL_LABEL[weeklyAfterSchool]})</span>}</div>
+                        <div className="text-xs text-ink-soft mb-1">
+                            After-school
+                            {aOverridden
+                                ? <span className="text-warn"> · one-off (weekly: {AFTER_SCHOOL_LABEL[weeklyAfterSchool]})</span>
+                                : <span className="text-ink-faint/70"> · weekly pattern</span>}
+                        </div>
                         <div className="flex gap-1.5 flex-wrap">
-                            <Btn active={!aOverridden} onClick={() => onSetAfterSchool(undefined)}>Weekly default</Btn>
-                            <Btn active={aOverridden && (marker.afterSchool == null)} onClick={() => onSetAfterSchool('none')}>None</Btn>
-                            <Btn active={marker.afterSchool === 'short'} onClick={() => onSetAfterSchool('short')}>{ICON.short} 4:30</Btn>
-                            <Btn active={marker.afterSchool === 'long'} onClick={() => onSetAfterSchool('long')}>{ICON.long} 6:30</Btn>
+                            {[['none', 'None'], ['short', `${ICON.short} 4:30`], ['long', `${ICON.long} 6:30`]].map(([opt, label]) => (
+                                <Btn key={opt} active={(marker.afterSchool ?? 'none') === opt}
+                                     onClick={() => onSetAfterSchool(weeklyAfterSchool === opt ? undefined : opt)}>{label}</Btn>
+                            ))}
                         </div>
                     </div>
                 </div>
