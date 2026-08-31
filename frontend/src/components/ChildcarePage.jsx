@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { ChevronRight } from 'lucide-react';
 import apiService from '../services/api';
 import { formatDate, getInitialDate } from '../utils/helpers';
 import MonthSelector from './MonthSelector';
@@ -181,6 +182,40 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
     );
 }
 
+// ------------------------- Drill-down cost breakdown -------------------------
+
+// One row of the breakdown tree. Rows with children expand on click; every
+// row shows the net (with TFC) bold on the right, with the gross and saving
+// as small print when TFC applies.
+function BreakdownNode({ node, depth, expanded, onToggle }) {
+    const hasChildren = (node.children || []).length > 0;
+    const open = expanded.has(node.key);
+    return (
+        <>
+            <button type="button" disabled={!hasChildren}
+                    onClick={() => hasChildren && onToggle(node.key)}
+                    className={`w-full flex items-center justify-between gap-2 py-2 text-left border-b border-line last:border-none ${hasChildren ? 'cursor-pointer hover:bg-paper/60' : 'cursor-default'}`}
+                    style={{ paddingLeft: depth * 18 }}>
+                <span className="flex items-center gap-1 min-w-0">
+                    {hasChildren
+                        ? <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-ink-faint transition-transform ${open ? 'rotate-90' : ''}`} />
+                        : <span className="w-3.5 shrink-0" />}
+                    <span className="min-w-0">
+                        <span className={`block text-sm ${depth === 0 ? 'font-semibold text-ink' : 'text-ink'}`}>{node.label}</span>
+                        {node.saving > 0.005 && (
+                            <span className="block text-[11px] text-ink-faint num">£{node.gross.toFixed(2)} − £{node.saving.toFixed(2)} TFC</span>
+                        )}
+                    </span>
+                </span>
+                <span className={`num text-sm ${depth === 0 ? 'font-bold' : 'font-medium'} text-ink shrink-0`}>£{node.net.toFixed(2)}</span>
+            </button>
+            {open && node.children.map(child => (
+                <BreakdownNode key={child.key} node={child} depth={depth + 1} expanded={expanded} onToggle={onToggle} />
+            ))}
+        </>
+    );
+}
+
 // ------------------------- Page -------------------------
 
 const ChildcarePage = ({ onSettingsChange }) => {
@@ -319,6 +354,53 @@ const ChildcarePage = ({ onSettingsChange }) => {
 
     const breakfastDays = Math.round(calc.breakfast.cost / CHILDCARE_RATES.breakfast);
 
+    // Drill-down breakdown: child → concept → club. Gaspard's subtree uses his
+    // nursery figures before the school switchover.
+    const [expandedRows, setExpandedRows] = useState(() => new Set());
+    const toggleRow = (key) => setExpandedRows(prev => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        return next;
+    });
+    const breakdownTree = useMemo(() => {
+        const ellis = {
+            key: 'ellis', label: 'Ellis · nursery',
+            gross: nursery.ellisInvoiced, saving: nursery.tfc.ellisSaving, net: nursery.ellisTFC,
+        };
+        const gaspard = gaspardInNursery
+            ? {
+                key: 'gaspard', label: 'Gaspard · nursery',
+                gross: nursery.gaspardInvoiced, saving: nursery.tfc.gaspardSaving, net: nursery.gaspardTFC,
+            }
+            : {
+                key: 'gaspard', label: 'Gaspard · school clubs',
+                gross: calc.gross, saving: calc.tfcSaving, net: calc.net,
+                children: [
+                    {
+                        key: 'g-term', label: 'Term clubs',
+                        gross: calc.breakfast.cost + calc.afterSchool.cost,
+                        saving: calc.breakfast.saving + calc.afterSchool.saving,
+                        net: calc.termNet,
+                        children: [
+                            { key: 'g-breakfast', label: `Breakfast (${breakfastDays} ${breakfastDays === 1 ? 'day' : 'days'})`, gross: calc.breakfast.cost, saving: calc.breakfast.saving, net: calc.breakfast.cost - calc.breakfast.saving },
+                            { key: 'g-after', label: 'After-school', gross: calc.afterSchool.cost, saving: calc.afterSchool.saving, net: calc.afterSchool.cost - calc.afterSchool.saving },
+                        ],
+                    },
+                    {
+                        key: 'g-holiday', label: 'Holiday clubs',
+                        gross: calc.holidayClubs.reduce((s, h) => s + h.cost, 0),
+                        saving: calc.holidayClubs.reduce((s, h) => s + h.saving, 0),
+                        net: calc.holidayNet,
+                        children: calc.holidayClubs.map(h => ({
+                            key: `club-${h.id}`, label: h.name || 'Holiday club',
+                            gross: h.cost, saving: h.saving, net: h.cost - h.saving,
+                        })),
+                    },
+                ],
+            };
+        return [ellis, gaspard];
+    }, [nursery, calc, gaspardInNursery, breakfastDays]);
+
     // Tooltip'd TFC amount with the £500-per-period cap diagnostics (nursery).
     const TFCAmount = ({ amount, saving, usedBefore, capped, periodLabel }) => {
         const periodTotal = usedBefore + saving;
@@ -405,8 +487,23 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 </div>
             </div>
 
-            {/* Calendar + cost breakdown, side by side on wide screens */}
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-4 items-start">
+            {/* Cost breakdown */}
+            <div className="bg-card rounded-xl p-5 border border-line">
+                <h2 className="text-lg font-semibold text-ink mb-1">Cost breakdown</h2>
+                <p className="text-xs text-ink-faint mb-2">Net you pay, with TFC. Click a row to drill down.</p>
+                <div>
+                    {breakdownTree.map(node => (
+                        <BreakdownNode key={node.key} node={node} depth={0} expanded={expandedRows} onToggle={toggleRow} />
+                    ))}
+                    <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-line">
+                        <span className="text-sm font-bold text-ink">Total you pay</span>
+                        <span className="num text-sm font-bold text-ink">
+                            £{breakdownTree.reduce((s, n) => s + n.net, 0).toFixed(2)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
             {/* Calendar */}
             <div className="bg-card rounded-xl p-5 border border-line">
                 <div className="flex items-center justify-between mb-3 gap-2">
@@ -464,63 +561,6 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         />
                     );
                 })()}
-            </div>
-
-            {/* Cost breakdown */}
-            <div className="bg-card rounded-xl p-5 border border-line">
-                <h2 className="text-lg font-semibold text-ink mb-3">School clubs breakdown</h2>
-                <div>
-                    <table className="w-full text-sm num [&_td:not(:first-child)]:whitespace-nowrap [&_th]:whitespace-nowrap">
-                        <thead>
-                            <tr className="text-ink-soft text-xs text-right">
-                                <th className="text-left font-medium pb-1">Activity</th>
-                                <th className="font-medium pb-1">Gross</th>
-                                <th className="font-medium pb-1">TFC saving</th>
-                                <th className="font-medium pb-1">You pay</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td className="py-1">Breakfast <span className="text-ink-faint">({breakfastDays} {breakfastDays === 1 ? 'day' : 'days'})</span></td>
-                                <td className="text-right">{money(calc.breakfast.cost)}</td>
-                                <td className="text-right text-good">−{money(calc.breakfast.saving)}</td>
-                                <td className="text-right">{money(calc.breakfast.cost - calc.breakfast.saving)}</td>
-                            </tr>
-                            <tr>
-                                <td className="py-1">After-school</td>
-                                <td className="text-right">{money(calc.afterSchool.cost)}</td>
-                                <td className="text-right text-good">−{money(calc.afterSchool.saving)}</td>
-                                <td className="text-right">{money(calc.afterSchool.cost - calc.afterSchool.saving)}</td>
-                            </tr>
-                            {calc.holidayClubs.map(h => (
-                                <tr key={h.id}>
-                                    <td className="py-1">{h.name || 'Holiday club'}</td>
-                                    <td className="text-right">{money(h.cost)}</td>
-                                    <td className="text-right text-good">−{money(h.saving)}</td>
-                                    <td className="text-right">{money(h.cost - h.saving)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr className="font-semibold border-t">
-                                <td className="pt-2">Term clubs</td>
-                                <td colSpan="2"></td>
-                                <td className="text-right pt-2">{money(calc.termNet)}</td>
-                            </tr>
-                            <tr className="font-semibold">
-                                <td>Holiday clubs</td>
-                                <td colSpan="2"></td>
-                                <td className="text-right">{money(calc.holidayNet)}</td>
-                            </tr>
-                            <tr className="font-bold border-t">
-                                <td className="pt-1">Total you pay</td>
-                                <td colSpan="2"></td>
-                                <td className="text-right pt-1">{money(calc.net)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-4">
