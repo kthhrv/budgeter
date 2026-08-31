@@ -57,7 +57,7 @@ function MonthCalendar({ currentDate, markers, mode, onToggleDay, onSelectDay, s
 
     return (
         <div className="select-none w-full" onPointerLeave={endDrag}>
-            <div className="grid grid-cols-7 gap-0.5 mb-0.5 text-center text-[10px] font-medium text-gray-400">
+            <div className="grid grid-cols-7 gap-0.5 mb-0.5 text-center text-[10px] font-medium text-ink-faint">
                 {WEEK_HEAD.map(w => <div key={w}>{w}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-0.5">
@@ -76,14 +76,14 @@ function MonthCalendar({ currentDate, markers, mode, onToggleDay, onSelectDay, s
                             onPointerEnter={() => mode.type !== 'sessions' && !disabled && overDrag(d)}
                             className={[
                                 'h-16 rounded-md border p-1 text-left flex flex-col transition-colors',
-                                mk.nonTerm ? 'bg-sky-100 border-sky-200' : 'bg-white border-gray-200',
-                                assignHere || selected ? 'ring-2 ring-indigo-500' : '',
-                                mk.overridden ? 'border-dashed border-amber-400' : '',
-                                disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-indigo-300',
+                                mk.nonTerm ? 'bg-keith-soft border-keith/30' : 'bg-card border-line',
+                                assignHere || selected ? 'ring-2 ring-accent' : '',
+                                mk.overridden ? 'border-dashed border-warn' : '',
+                                disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-accent/40',
                             ].join(' ')}
                             title={mk.nonTerm ? 'Non-term day' : 'Term day'}
                         >
-                            <span className={`text-[10px] leading-none font-semibold ${mk.nonTerm ? 'text-sky-700' : 'text-gray-500'}`}>{d}</span>
+                            <span className={`text-[10px] leading-none font-semibold ${mk.nonTerm ? 'text-keith' : 'text-ink-soft'}`}>{d}</span>
                             <span className="mt-auto flex flex-wrap gap-px justify-center text-[11px] leading-none">
                                 {mk.breakfast && <span title="Breakfast club">{ICON.breakfast}</span>}
                                 {mk.afterSchool && <span title={`After-school · ${AFTER_SCHOOL_LABEL[mk.afterSchool]}`}>{ICON[mk.afterSchool]}</span>}
@@ -101,8 +101,8 @@ function MonthCalendar({ currentDate, markers, mode, onToggleDay, onSelectDay, s
 
 function ConceptTfc({ checked, onChange }) {
     return (
-        <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-gray-600">
-            <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4 accent-emerald-500" />
+        <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-ink-soft">
+            <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4 accent-good" />
             TFC (−20%)
         </label>
     );
@@ -114,21 +114,21 @@ function ConceptTfc({ checked, onChange }) {
 function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfast, weeklyAfterSchool, holidayClubs, onToggleClubDay, onSetBreakfast, onSetAfterSchool, onClose }) {
     const Btn = ({ active, onClick, children }) => (
         <button type="button" onClick={onClick}
-                className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300'}`}>
+                className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${active ? 'bg-accent text-paper border-accent' : 'bg-card text-ink border-line hover:border-accent/40'}`}>
             {children}
         </button>
     );
     const sessionsAllowed = !marker.nonTerm && !marker.weekend;
     return (
-        <div className="mt-3 border-t border-gray-100 pt-3">
+        <div className="mt-3 border-t border-line pt-3">
             <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold text-gray-700">{iso} <span className="text-xs font-normal text-gray-400">{marker.nonTerm ? '· non-term' : marker.weekend ? '· weekend' : ''}</span></div>
-                <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 text-sm">Close</button>
+                <div className="text-sm font-semibold text-ink">{iso} <span className="text-xs font-normal text-ink-faint">{marker.nonTerm ? '· non-term' : marker.weekend ? '· weekend' : ''}</span></div>
+                <button type="button" onClick={onClose} className="text-ink-faint hover:text-ink text-sm">Close</button>
             </div>
             {sessionsAllowed ? (
                 <div className="space-y-2">
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Breakfast {ICON.breakfast} {!bOverridden && <span className="text-gray-300">(weekly: {weeklyBreakfast ? 'yes' : 'no'})</span>}</div>
+                        <div className="text-xs text-ink-soft mb-1">Breakfast {ICON.breakfast} {!bOverridden && <span className="text-ink-faint/70">(weekly: {weeklyBreakfast ? 'yes' : 'no'})</span>}</div>
                         <div className="flex gap-1.5">
                             <Btn active={!bOverridden} onClick={() => onSetBreakfast(undefined)}>Weekly default</Btn>
                             <Btn active={bOverridden && marker.breakfast} onClick={() => onSetBreakfast(true)}>Attending</Btn>
@@ -136,7 +136,7 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
                         </div>
                     </div>
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">After-school {!aOverridden && <span className="text-gray-300">(weekly: {AFTER_SCHOOL_LABEL[weeklyAfterSchool]})</span>}</div>
+                        <div className="text-xs text-ink-soft mb-1">After-school {!aOverridden && <span className="text-ink-faint/70">(weekly: {AFTER_SCHOOL_LABEL[weeklyAfterSchool]})</span>}</div>
                         <div className="flex gap-1.5 flex-wrap">
                             <Btn active={!aOverridden} onClick={() => onSetAfterSchool(undefined)}>Weekly default</Btn>
                             <Btn active={aOverridden && (marker.afterSchool == null)} onClick={() => onSetAfterSchool('none')}>None</Btn>
@@ -147,9 +147,9 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
                 </div>
             ) : marker.nonTerm ? (
                 <div>
-                    <div className="text-xs text-gray-500 mb-1">Holiday club {ICON.holiday}</div>
+                    <div className="text-xs text-ink-soft mb-1">Holiday club {ICON.holiday}</div>
                     {holidayClubs.length === 0 ? (
-                        <p className="text-xs text-gray-400">No holiday clubs yet — add one in the Holiday Club panel.</p>
+                        <p className="text-xs text-ink-faint">No holiday clubs yet — add one in the Holiday Club panel.</p>
                     ) : (
                         <div className="flex gap-1.5 flex-wrap">
                             {holidayClubs.map(club => (
@@ -159,10 +159,10 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
                             ))}
                         </div>
                     )}
-                    <p className="text-[11px] text-gray-400 mt-1.5">Breakfast/after-school don’t run on non-term days.</p>
+                    <p className="text-[11px] text-ink-faint mt-1.5">Breakfast/after-school don’t run on non-term days.</p>
                 </div>
             ) : (
-                <p className="text-xs text-gray-500">Weekend — no sessions.</p>
+                <p className="text-xs text-ink-soft">Weekend — no sessions.</p>
             )}
         </div>
     );
@@ -302,38 +302,38 @@ const ChildcarePage = ({ onSettingsChange }) => {
             {/* Calendar + cost breakdown, side by side on wide screens */}
             <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-4 items-start">
             {/* Calendar */}
-            <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
+            <div className="bg-card rounded-xl p-5 border border-line">
                 <div className="flex items-center justify-between mb-3 gap-2">
-                    <h2 className="text-lg font-semibold text-gray-800">{formatDate(currentDate, 'MonthYYYY')}</h2>
+                    <h2 className="text-lg font-semibold text-ink">{formatDate(currentDate, 'MonthYYYY')}</h2>
                     {mode.type === 'assign' && (
-                        <button type="button" onClick={() => setMode({ type: 'nonTerm' })} className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-medium">Done assigning</button>
+                        <button type="button" onClick={() => setMode({ type: 'nonTerm' })} className="px-3 py-1 rounded-lg bg-accent text-paper text-xs font-medium">Done assigning</button>
                     )}
                 </div>
                 {mode.type !== 'assign' && (
                     <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                        <div className="inline-flex rounded-lg border border-line overflow-hidden text-xs">
                             {[['nonTerm', 'Non-term'], ['sessions', 'Sessions']].map(([t, label]) => (
                                 <button key={t} type="button" onClick={() => { setMode({ type: t }); setSelectedDay(null); }}
-                                        className={`px-3 py-1 font-medium ${mode.type === t ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{label}</button>
+                                        className={`px-3 py-1 font-medium ${mode.type === t ? 'bg-accent text-paper' : 'bg-card text-ink-soft hover:bg-paper'}`}>{label}</button>
                             ))}
                         </div>
                         <button type="button" onClick={loadSchoolHolidays}
                                 title="Fill non-term days from Skinners' Kent Primary School term dates (2026/27)"
-                                className="text-xs font-medium text-sky-700 hover:text-sky-900 hover:underline">
+                                className="text-xs font-medium text-keith hover:text-keith hover:underline">
                             Load school holidays
                         </button>
                     </div>
                 )}
-                <p className="text-xs text-gray-400 mb-2">
+                <p className="text-xs text-ink-faint mb-2">
                     {mode.type === 'assign'
                         ? <>Assigning days to “{childcare.holidayClubs.find(k => k.id === mode.clubId)?.name}” — click non-term days</>
                         : mode.type === 'sessions'
                             ? 'Click a day to add/remove a breakfast or after-school session'
-                            : <>Click or drag days to mark <span className="text-sky-700 font-medium">non-term</span> time</>}
+                            : <>Click or drag days to mark <span className="text-keith font-medium">non-term</span> time</>}
                 </p>
                 <MonthCalendar currentDate={currentDate} markers={markers} mode={mode} onToggleDay={toggleDay} onSelectDay={setSelectedDay} selectedDay={selectedDay} />
-                <div className="flex gap-3 mt-3 text-xs text-gray-500 flex-wrap">
-                    <span><span className="inline-block w-3 h-3 rounded bg-sky-100 border border-sky-200 align-middle" /> non-term</span>
+                <div className="flex gap-3 mt-3 text-xs text-ink-soft flex-wrap">
+                    <span><span className="inline-block w-3 h-3 rounded bg-keith-soft border border-keith/30 align-middle" /> non-term</span>
                     <span>{ICON.breakfast} breakfast</span>
                     <span>{ICON.short} finishes 4:30</span>
                     <span>{ICON.long} finishes 6:30 (tea)</span>
@@ -361,12 +361,12 @@ const ChildcarePage = ({ onSettingsChange }) => {
             </div>
 
             {/* Cost breakdown */}
-            <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3">Cost breakdown</h2>
+            <div className="bg-card rounded-xl p-5 border border-line">
+                <h2 className="text-lg font-semibold text-ink mb-3">Cost breakdown</h2>
                 <div>
                     <table className="w-full text-sm num [&_td:not(:first-child)]:whitespace-nowrap [&_th]:whitespace-nowrap">
                         <thead>
-                            <tr className="text-gray-500 text-xs text-right">
+                            <tr className="text-ink-soft text-xs text-right">
                                 <th className="text-left font-medium pb-1">Activity</th>
                                 <th className="font-medium pb-1">Gross</th>
                                 <th className="font-medium pb-1">TFC saving</th>
@@ -375,22 +375,22 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         </thead>
                         <tbody>
                             <tr>
-                                <td className="py-1">Breakfast <span className="text-gray-400">({breakfastDays} {breakfastDays === 1 ? 'day' : 'days'})</span></td>
+                                <td className="py-1">Breakfast <span className="text-ink-faint">({breakfastDays} {breakfastDays === 1 ? 'day' : 'days'})</span></td>
                                 <td className="text-right">{money(calc.breakfast.cost)}</td>
-                                <td className="text-right text-emerald-700">−{money(calc.breakfast.saving)}</td>
+                                <td className="text-right text-good">−{money(calc.breakfast.saving)}</td>
                                 <td className="text-right">{money(calc.breakfast.cost - calc.breakfast.saving)}</td>
                             </tr>
                             <tr>
                                 <td className="py-1">After-school</td>
                                 <td className="text-right">{money(calc.afterSchool.cost)}</td>
-                                <td className="text-right text-emerald-700">−{money(calc.afterSchool.saving)}</td>
+                                <td className="text-right text-good">−{money(calc.afterSchool.saving)}</td>
                                 <td className="text-right">{money(calc.afterSchool.cost - calc.afterSchool.saving)}</td>
                             </tr>
                             {calc.holidayClubs.map(h => (
                                 <tr key={h.id}>
                                     <td className="py-1">{h.name || 'Holiday club'}</td>
                                     <td className="text-right">{money(h.cost)}</td>
-                                    <td className="text-right text-emerald-700">−{money(h.saving)}</td>
+                                    <td className="text-right text-good">−{money(h.saving)}</td>
                                     <td className="text-right">{money(h.cost - h.saving)}</td>
                                 </tr>
                             ))}
@@ -419,40 +419,40 @@ const ChildcarePage = ({ onSettingsChange }) => {
 
             <div className="grid md:grid-cols-3 gap-4">
                 {/* Breakfast */}
-                <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 border-t-4 border-t-amber-400">
+                <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-warn">
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-gray-800">Breakfast Club</h3>
+                        <h3 className="text-lg font-semibold text-ink">Breakfast Club</h3>
                         <ConceptTfc checked={childcare.breakfast.tfc} onChange={v => patchConcept('breakfast', { tfc: v })} />
                     </div>
-                    <p className="text-xs text-gray-400 mb-2">£{CHILDCARE_RATES.breakfast.toFixed(2)}/day · term-time</p>
+                    <p className="text-xs text-ink-faint mb-2">£{CHILDCARE_RATES.breakfast.toFixed(2)}/day · term-time</p>
                     <div className="space-y-1.5 mb-3">
                         {DAYS.map((d, i) => (
                             <label key={d} className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600">{d}</span>
+                                <span className="text-ink-soft">{d}</span>
                                 <select value={effBreakfast[i] ? 'yes' : 'no'} onChange={e => setBreakfastDay(i, e.target.value === 'yes')}
-                                        className="rounded-lg border border-gray-200 px-2 py-1 bg-white text-sm">
+                                        className="rounded-lg border border-line px-2 py-1 bg-card text-sm">
                     <option value="no">Not attending</option>
                                     <option value="yes">Attending</option>
                                 </select>
                             </label>
                         ))}
                     </div>
-                    <p className="text-[11px] text-gray-400 border-t border-gray-100 pt-2">One-off changes? Use the calendar’s <span className="font-medium">Sessions</span> mode.</p>
+                    <p className="text-[11px] text-ink-faint border-t border-line pt-2">One-off changes? Use the calendar’s <span className="font-medium">Sessions</span> mode.</p>
                 </div>
 
                 {/* After-school */}
-                <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 border-t-4 border-t-violet-400">
+                <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-accent">
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-gray-800">After-School Club</h3>
+                        <h3 className="text-lg font-semibold text-ink">After-School Club</h3>
                         <ConceptTfc checked={childcare.afterSchool.tfc} onChange={v => patchConcept('afterSchool', { tfc: v })} />
                     </div>
-                    <p className="text-xs text-gray-400 mb-2">£{CHILDCARE_RATES.afterSchool.short}/£{CHILDCARE_RATES.afterSchool.long} per day · term-time</p>
+                    <p className="text-xs text-ink-faint mb-2">£{CHILDCARE_RATES.afterSchool.short}/£{CHILDCARE_RATES.afterSchool.long} per day · term-time</p>
                     <div className="space-y-1.5 mb-3">
                         {DAYS.map((d, i) => (
                             <label key={d} className="flex items-center justify-between text-sm gap-2">
-                                <span className="text-gray-600">{d}</span>
+                                <span className="text-ink-soft">{d}</span>
                                 <select value={effAfterSchool[i]} onChange={e => setAfterSchoolDay(i, e.target.value)}
-                                        className="rounded-lg border border-gray-200 px-2 py-1 bg-white text-sm">
+                                        className="rounded-lg border border-line px-2 py-1 bg-card text-sm">
                     <option value="none">Not attending</option>
                                     <option value="short">3:15–4:30 (£12)</option>
                                     <option value="long">3:15–6:30 (£24)</option>
@@ -460,45 +460,45 @@ const ChildcarePage = ({ onSettingsChange }) => {
                             </label>
                         ))}
                     </div>
-                    <p className="text-[11px] text-gray-400 border-t border-gray-100 pt-2">One-off changes? Use the calendar’s <span className="font-medium">Sessions</span> mode.</p>
+                    <p className="text-[11px] text-ink-faint border-t border-line pt-2">One-off changes? Use the calendar’s <span className="font-medium">Sessions</span> mode.</p>
                 </div>
 
                 {/* Holiday clubs */}
-                <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 border-t-4 border-t-emerald-400">
+                <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-emerald-400">
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-gray-800">Holiday Club</h3>
-                        <button type="button" onClick={addClub} className="text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-1">+ Club</button>
+                        <h3 className="text-lg font-semibold text-ink">Holiday Club</h3>
+                        <button type="button" onClick={addClub} className="text-sm font-medium bg-good hover:bg-accent-strong text-paper rounded-lg px-3 py-1">+ Club</button>
                     </div>
-                    <p className="text-xs text-gray-400 mb-2">Assign non-term days; a full Mon–Fri week bills the week rate.</p>
-                    {childcare.holidayClubs.length === 0 && <p className="text-sm text-gray-400">No holiday clubs yet.</p>}
+                    <p className="text-xs text-ink-faint mb-2">Assign non-term days; a full Mon–Fri week bills the week rate.</p>
+                    {childcare.holidayClubs.length === 0 && <p className="text-sm text-ink-faint">No holiday clubs yet.</p>}
                     <div className="space-y-3">
                         {childcare.holidayClubs.map(club => {
                             const assignedThisMonth = (club.days || []).filter(d => d.startsWith(monthKey));
                             const assigning = mode.type === 'assign' && mode.clubId === club.id;
                             return (
-                                <div key={club.id} className="border border-gray-200 rounded-lg p-3">
+                                <div key={club.id} className="border border-line rounded-lg p-3">
                                     <div className="flex items-center gap-2 mb-2">
                                         <input value={club.name} onChange={e => updateClub(club.id, { name: e.target.value })}
-                                               className="flex-1 rounded-lg border border-gray-200 px-2 py-1 bg-white text-sm font-medium" />
-                                        <button type="button" onClick={() => removeClub(club.id)} className="text-rose-500 hover:text-rose-700 text-base leading-none">×</button>
+                                               className="flex-1 rounded-lg border border-line px-2 py-1 bg-card text-sm font-medium" />
+                                        <button type="button" onClick={() => removeClub(club.id)} className="text-danger hover:text-danger text-base leading-none">×</button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 mb-2">
-                                        <label className="text-xs"><span className="block text-gray-500 mb-0.5">Day rate (£)</span>
-                                            <input type="number" min="0" step="0.01" value={club.dayRate} onChange={e => updateClub(club.id, { dayRate: Number(e.target.value) || 0 })} className="w-full rounded-lg border border-gray-200 px-2 py-1 bg-white text-sm num" /></label>
-                                        <label className="text-xs"><span className="block text-gray-500 mb-0.5">Week rate (£)</span>
-                                            <input type="number" min="0" step="0.01" value={club.weekRate} onChange={e => updateClub(club.id, { weekRate: Number(e.target.value) || 0 })} className="w-full rounded-lg border border-gray-200 px-2 py-1 bg-white text-sm num" /></label>
+                                        <label className="text-xs"><span className="block text-ink-soft mb-0.5">Day rate (£)</span>
+                                            <input type="number" min="0" step="0.01" value={club.dayRate} onChange={e => updateClub(club.id, { dayRate: Number(e.target.value) || 0 })} className="w-full rounded-lg border border-line px-2 py-1 bg-card text-sm num" /></label>
+                                        <label className="text-xs"><span className="block text-ink-soft mb-0.5">Week rate (£)</span>
+                                            <input type="number" min="0" step="0.01" value={club.weekRate} onChange={e => updateClub(club.id, { weekRate: Number(e.target.value) || 0 })} className="w-full rounded-lg border border-line px-2 py-1 bg-card text-sm num" /></label>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <ConceptTfc checked={club.tfc} onChange={v => updateClub(club.id, { tfc: v })} />
                                         <button type="button" onClick={() => setMode(assigning ? { type: 'nonTerm' } : { type: 'assign', clubId: club.id })}
-                                                className={`text-xs font-medium rounded-lg px-3 py-1 ${assigning ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                                                className={`text-xs font-medium rounded-lg px-3 py-1 ${assigning ? 'bg-accent text-paper' : 'bg-line/70 text-ink hover:bg-line'}`}>
                                             {assigning ? 'Done assigning' : 'Assign days'}
                                         </button>
                                     </div>
                                     {assignedThisMonth.length > 0 && (
                                         <div className="mt-2 flex flex-wrap gap-1">
                                             {assignedThisMonth.slice().sort().map(d => (
-                                                <span key={d} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">{d.slice(8)}</span>
+                                                <span key={d} className="text-[10px] px-1.5 py-0.5 rounded bg-good/10 text-good">{d.slice(8)}</span>
                                             ))}
                                         </div>
                                     )}

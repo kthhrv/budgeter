@@ -1,7 +1,38 @@
+@import '@fontsource-variable/karla';
+@import '@fontsource/instrument-serif';
 @import "tailwindcss";
 
+/* Ledger theme: warm paper, ink text, one verdigris accent, hairline rules.
+   Flat by design — no gradients. Chart series use punchier siblings of the
+   UI hues (validated for CVD separation and contrast on the card surface):
+   money green #25835c, water blue #3b82c4, terracotta #a54334. */
 @theme {
-    --font-sans: 'DM Sans', sans-serif;
+    --font-sans: 'Karla Variable', system-ui, sans-serif;
+    --font-serif: 'Instrument Serif', Georgia, serif;
+
+    --color-paper: #f4f2ea;        /* page background */
+    --color-card: #fcfbf5;         /* raised surfaces */
+    --color-ink: #2a2924;          /* primary text */
+    --color-ink-soft: #6e6a5b;     /* secondary text */
+    --color-ink-faint: #a39e8c;    /* hints, disabled, past days */
+    --color-line: #e2ddcd;         /* hairline borders */
+    --color-accent: #2e5f55;       /* verdigris — actions and links */
+    --color-accent-strong: #22483f;
+    --color-keith: #3f6c8f;        /* Keith's slate blue */
+    --color-keith-soft: #dfe8ee;
+    --color-tild: #a05a72;         /* Tild's muted rose */
+    --color-tild-soft: #f0e2e6;
+    --color-good: #25835c;         /* positive deltas, chart green */
+    --color-water: #3b82c4;        /* chart blue */
+    --color-warn: #9a7430;         /* amber ink */
+    --color-warn-soft: #f3ead6;
+    --color-danger: #a54334;       /* terracotta */
+    --color-danger-soft: #f2e0da;
+}
+
+body {
+    background: var(--color-paper);
+    color: var(--color-ink);
 }
 
 /* Line up digits wherever figures are stacked in columns. */
@@ -23,4 +54,11 @@
 
 .animate-slideUp {
     animation: slideUp 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }

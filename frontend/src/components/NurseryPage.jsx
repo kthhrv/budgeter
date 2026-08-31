@@ -61,8 +61,8 @@ const money = (n) => `£${n.toFixed(2)}`;
 function Toggle({ checked, onChange, label }) {
     return (
         <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4 accent-amber-500" />
-            <span className="text-sm text-gray-700">{label}</span>
+            <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4 accent-warn" />
+            <span className="text-sm text-ink">{label}</span>
         </label>
     );
 }
@@ -75,16 +75,16 @@ function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule }) {
     };
 
     return (
-        <div className={`bg-white rounded-xl p-5 shadow-md border border-gray-100 border-t-4 ${accent}`}>
+        <div className={`bg-card rounded-xl p-5 border border-line border-t-4 ${accent}`}>
             <div className="flex items-baseline justify-between mb-3">
-                <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-                <span className="text-xs text-gray-400">Busy Bees Tunbridge Wells</span>
+                <h2 className="text-xl font-semibold text-ink">{title}</h2>
+                <span className="text-xs text-ink-faint">Busy Bees Tunbridge Wells</span>
             </div>
 
             <label className="text-sm block mb-4">
-                <span className="block text-gray-500 mb-1">Age bracket</span>
+                <span className="block text-ink-soft mb-1">Age bracket</span>
                 <select value={child.ageBracket} onChange={e => update({ ageBracket: e.target.value })}
-                        className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white">
+                        className="w-full rounded-lg border border-line px-2 py-1.5 bg-card">
                     <option value="0-2">0–2 Year Olds</option>
                     <option value="2-3">2–3 Year Olds</option>
                     <option value="3-5">3–5 Year Olds</option>
@@ -92,12 +92,12 @@ function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule }) {
             </label>
 
             <div className="space-y-2 mb-3">
-                <div className="text-sm font-medium text-gray-600">Attendance</div>
+                <div className="text-sm font-medium text-ink-soft">Attendance</div>
                 {DAYS.map((d, i) => (
                     <div key={d} className="flex items-center gap-2">
-                        <div className="w-24 text-sm text-gray-600">{d}</div>
+                        <div className="w-24 text-sm text-ink-soft">{d}</div>
                         <select value={child.schedule[i]} onChange={e => setDay(i, e.target.value)}
-                                className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm">
+                                className="flex-1 rounded-lg border border-line px-2 py-1.5 bg-card text-sm">
                             {SESSION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                     </div>
@@ -118,14 +118,14 @@ function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule }) {
 // Placeholder shown in Gaspard's slot once he's left nursery for school.
 function GaspardMovedCard() {
     return (
-        <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 border-t-4 border-t-sky-400">
+        <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-keith">
             <div className="flex items-baseline justify-between mb-3">
-                <h2 className="text-xl font-semibold text-gray-800">Gaspard</h2>
-                <span className="text-xs text-gray-400">At school</span>
+                <h2 className="text-xl font-semibold text-ink">Gaspard</h2>
+                <span className="text-xs text-ink-faint">At school</span>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-ink-soft">
                 Gaspard has left nursery. His breakfast, after-school and holiday-club
-                costs are now on the <span className="font-medium text-indigo-600">Childcare</span> tab.
+                costs are now on the <span className="font-medium text-accent">Childcare</span> tab.
             </p>
         </div>
     );
@@ -139,17 +139,17 @@ const MIL_OPTIONS = [
 
 function MilPanel({ mil, setMil }) {
     return (
-        <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800 mb-1">Mother-in-law contribution</h2>
+        <div className="bg-card rounded-xl p-5 border border-line">
+            <h2 className="text-lg font-semibold text-ink mb-1">Mother-in-law contribution</h2>
             <div className="grid grid-cols-5 gap-2 mt-3">
                 {DAYS.map((d, i) => (
                     <label key={d} className="text-center">
-                        <span className="block text-xs text-gray-500 mb-1">{d.slice(0, 3)}</span>
+                        <span className="block text-xs text-ink-soft mb-1">{d.slice(0, 3)}</span>
                         <select value={mil[i]}
                                 onChange={e => {
                                     const n = [...mil]; n[i] = Number(e.target.value); setMil(n);
                                 }}
-                                className="w-full rounded-lg border border-gray-200 px-2 py-1.5 bg-white text-sm">
+                                className="w-full rounded-lg border border-line px-2 py-1.5 bg-card text-sm">
                             {MIL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                     </label>
@@ -281,20 +281,20 @@ const NurseryPage = ({ onSettingsChange }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 items-stretch">
-                <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-xl p-5 shadow flex flex-col">
-                    <div className="text-amber-50 text-lg font-semibold mb-2">Transfer to TFC</div>
+                <div className="bg-warn text-paper rounded-xl p-5 flex flex-col">
+                    <div className="text-paper/80 text-lg font-semibold mb-2">Transfer to TFC</div>
                     {(() => {
                         const TFCAmount = ({ amount, saving, usedBefore, capped, periodLabel }) => {
                             const periodTotal = usedBefore + saving;
                             return (
                                 <div className="relative inline-block group">
-                                    <div className="text-2xl font-bold num cursor-help underline decoration-amber-50/40 decoration-dotted underline-offset-4">
+                                    <div className="text-2xl font-bold num cursor-help underline decoration-paper/40 decoration-dotted underline-offset-4">
                                         {money(amount)}
                                     </div>
-                                    <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-10 hidden group-hover:block whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs font-normal px-3 py-2 shadow-lg text-left">
+                                    <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-10 hidden group-hover:block whitespace-nowrap rounded-lg bg-ink text-paper text-xs font-normal px-3 py-2 text-left">
                                         <div>£{saving.toFixed(2)} saved this month</div>
-                                        <div className="text-gray-300">£{periodTotal.toFixed(2)} of £{calc.tfc.quarterlyCap} used ({periodLabel})</div>
-                                        {capped && <div className="text-amber-300 mt-1">cap reached</div>}
+                                        <div className="text-ink-faint/70">£{periodTotal.toFixed(2)} of £{calc.tfc.quarterlyCap} used ({periodLabel})</div>
+                                        {capped && <div className="text-paper/70 mt-1">cap reached</div>}
                                     </div>
                                 </div>
                             );
@@ -302,8 +302,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                         return (
                             <div className={`flex-1 grid ${gaspardInNursery ? 'grid-cols-2' : 'grid-cols-1'} gap-3 items-center`}>
                                 <div className="text-center">
-                                    <div className="text-amber-50 text-sm">Ellis</div>
-                                    <div className="text-amber-50/80 text-xs num" title="TFC reference">1100116981235</div>
+                                    <div className="text-paper/80 text-sm">Ellis</div>
+                                    <div className="text-paper/70 text-xs num" title="TFC reference">1100116981235</div>
                                     <div className="mt-1">
                                         <TFCAmount amount={calc.ellisTFC}
                                                    saving={calc.tfc.ellisSaving}
@@ -314,8 +314,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                                 </div>
                                 {gaspardInNursery && (
                                     <div className="text-center">
-                                        <div className="text-amber-50 text-sm">Gaspard</div>
-                                        <div className="text-amber-50/80 text-xs num" title="TFC reference">1100067930356</div>
+                                        <div className="text-paper/80 text-sm">Gaspard</div>
+                                        <div className="text-paper/70 text-xs num" title="TFC reference">1100067930356</div>
                                         <div className="mt-1">
                                             <TFCAmount amount={calc.gaspardTFC}
                                                        saving={calc.tfc.gaspardSaving}
@@ -329,14 +329,14 @@ const NurseryPage = ({ onSettingsChange }) => {
                         );
                     })()}
                 </div>
-                <div className="bg-gradient-to-br from-rose-400 to-rose-500 text-white rounded-xl p-5 shadow flex flex-col">
-                    <div className="text-rose-50 text-lg font-semibold">MIL transfers</div>
+                <div className="bg-tild text-paper rounded-xl p-5 flex flex-col">
+                    <div className="text-paper/80 text-lg font-semibold">MIL transfers</div>
                     <div className="flex-1 flex items-center justify-center">
                         <div className="text-3xl font-bold num">{money(calc.monthly.mil)}</div>
                     </div>
                 </div>
-                <div className="bg-gradient-to-br from-indigo-400 to-indigo-500 text-white rounded-xl p-5 shadow flex flex-col">
-                    <div className="text-indigo-50 text-lg font-semibold">Total bill</div>
+                <div className="bg-accent text-paper rounded-xl p-5 flex flex-col">
+                    <div className="text-paper/80 text-lg font-semibold">Total bill</div>
                     <div className="flex-1 flex items-center justify-center">
                         <div className="text-3xl font-bold num">{money(calc.monthly.gross)}</div>
                     </div>
@@ -345,14 +345,14 @@ const NurseryPage = ({ onSettingsChange }) => {
 
             <div className="grid md:grid-cols-2 gap-4 mb-4 items-start">
                 <ChildCard
-                    title="Ellis" accent="border-t-amber-400"
+                    title="Ellis" accent="border-t-warn"
                     child={{ ...ellis, schedule: effEllisSchedule }}
                     onUpdateChild={(patch) => setEllis(prev => ({ ...prev, ...patch }))}
                     onSetSchedule={setEllisSchedule}
                 />
                 {gaspardInNursery ? (
                     <ChildCard
-                        title="Gaspard" accent="border-t-sky-400"
+                        title="Gaspard" accent="border-t-keith"
                         child={{ ...gaspard, schedule: effGaspardSchedule }}
                         onUpdateChild={(patch) => setGaspard(prev => ({ ...prev, ...patch }))}
                         onSetSchedule={setGaspardSchedule}
@@ -367,12 +367,12 @@ const NurseryPage = ({ onSettingsChange }) => {
             </div>
 
             {showBreakdown && (
-                <div className="bg-white rounded-xl p-5 shadow-md border border-gray-100 mb-4">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-3">Breakdown for {calc.monthLabel}</h2>
+                <div className="bg-card rounded-xl p-5 border border-line mb-4">
+                    <h2 className="text-lg font-semibold text-ink mb-3">Breakdown for {calc.monthLabel}</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-left text-gray-500 border-b">
+                                <tr className="text-left text-ink-soft border-b">
                                     <th className="py-2 pr-3">Day</th>
                                     <th className="py-2 pr-3 text-right">× count</th>
                                     <th className="py-2 pr-3">Sessions</th>
@@ -403,10 +403,10 @@ const NurseryPage = ({ onSettingsChange }) => {
                                         ? <span>
                                             {totalCount}
                                             {(md.nStandard > 0 || md.nBankHols > 0) &&
-                                                <span className="text-gray-400 text-xs"
+                                                <span className="text-ink-faint text-xs"
                                                       title={`${md.nFundNorm} funded normal + ${md.nBankHols} bank hol + ${md.nStandard} standard (1–7 Apr / 25–31 Dec)`}>
                                                     {' '}({md.nFundNorm}
-                                                    {md.nBankHols > 0 && <span className="text-rose-500">+{md.nBankHols}BH</span>}
+                                                    {md.nBankHols > 0 && <span className="text-danger">+{md.nBankHols}BH</span>}
                                                     {md.nStandard > 0 && <span>+<i>{md.nStandard}</i></span>}
                                                     )
                                                 </span>}
@@ -415,11 +415,11 @@ const NurseryPage = ({ onSettingsChange }) => {
                                     return (
                                         <tr key={d} className="border-b last:border-none align-top">
                                             <td className="py-2 pr-3 font-medium">{d}</td>
-                                            <td className="py-2 pr-3 text-right num text-gray-700">{countLabel}</td>
-                                            <td className="py-2 pr-3 text-gray-600 text-xs leading-tight">
+                                            <td className="py-2 pr-3 text-right num text-ink">{countLabel}</td>
+                                            <td className="py-2 pr-3 text-ink-soft text-xs leading-tight">
                                                 {eSession && <div>{eSession}</div>}
                                                 {gSession && <div>{gSession}</div>}
-                                                {!eSession && !gSession && <div className="text-gray-400">–</div>}
+                                                {!eSession && !gSession && <div className="text-ink-faint">–</div>}
                                             </td>
                                             <td className="py-2 pr-3 text-right num">
                                                 {md.eMonthlyGross === 0
@@ -440,24 +440,24 @@ const NurseryPage = ({ onSettingsChange }) => {
                                             {gaspardInNursery && (
                                                 <td className="py-2 pr-3 text-right num font-medium">{md.combined === 0 ? '–' : money(md.combined)}</td>
                                             )}
-                                            <td className="py-2 pr-3 text-right num text-rose-600">{md.milPay > 0 ? `−${money(md.milPay)}` : '–'}</td>
-                                            <td className="py-2 text-right num font-medium text-amber-700">{md.parentPay > 0 ? money(md.parentPay) : '–'}</td>
+                                            <td className="py-2 pr-3 text-right num text-danger">{md.milPay > 0 ? `−${money(md.milPay)}` : '–'}</td>
+                                            <td className="py-2 text-right num font-medium text-warn">{md.parentPay > 0 ? money(md.parentPay) : '–'}</td>
                                         </tr>
                                     );
                                 })}
 
                                 {calc.monthAdhocs.length > 0 && (
-                                    <tr className="bg-amber-50">
-                                        <td colSpan={gaspardInNursery ? 8 : 6} className="py-2 pr-3 text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                                    <tr className="bg-warn-soft">
+                                        <td colSpan={gaspardInNursery ? 8 : 6} className="py-2 pr-3 text-xs font-semibold text-warn uppercase tracking-wide">
                                             Ad-hoc days
                                         </td>
                                     </tr>
                                 )}
                                 {calc.monthAdhocs.map(a => (
-                                    <tr key={a.id} className="border-b last:border-none bg-amber-50/50 align-top">
+                                    <tr key={a.id} className="border-b last:border-none bg-warn-soft/50 align-top">
                                         <td className="py-2 pr-3 font-medium">{a.date}</td>
-                                        <td className="py-2 pr-3 text-right num text-gray-700">1</td>
-                                        <td className="py-2 pr-3 text-gray-600 text-xs leading-tight">
+                                        <td className="py-2 pr-3 text-right num text-ink">1</td>
+                                        <td className="py-2 pr-3 text-ink-soft text-xs leading-tight">
                                             {a.child === 'ellis' ? 'E' : 'G'}: {a.type === 'fullDay' ? 'Full day' : a.type === 'morning' ? 'Morning' : 'Afternoon'} · ad-hoc · {a.ageBracket}
                                         </td>
                                         <td className="py-2 pr-3 text-right num">{a.eGross === 0 ? '–' : (ellis.siblingDiscount ? money(a.eNet) : money(a.eGross))}</td>
@@ -467,8 +467,8 @@ const NurseryPage = ({ onSettingsChange }) => {
                                         {gaspardInNursery && (
                                             <td className="py-2 pr-3 text-right num font-medium">{money(a.combined)}</td>
                                         )}
-                                        <td className="py-2 pr-3 text-right num text-rose-600">{a.milPay > 0 ? `−${money(a.milPay)}` : '–'}</td>
-                                        <td className="py-2 text-right num font-medium text-amber-700">{a.parentPay > 0 ? money(a.parentPay) : '–'}</td>
+                                        <td className="py-2 pr-3 text-right num text-danger">{a.milPay > 0 ? `−${money(a.milPay)}` : '–'}</td>
+                                        <td className="py-2 text-right num font-medium text-warn">{a.parentPay > 0 ? money(a.parentPay) : '–'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -492,16 +492,16 @@ const NurseryPage = ({ onSettingsChange }) => {
                                     {gaspardInNursery && (
                                         <td className="py-2 pr-3 text-right num">{money(calc.monthly.gross)}</td>
                                     )}
-                                    <td className="py-2 pr-3 text-right num text-rose-600">−{money(calc.monthly.mil)}</td>
-                                    <td className="py-2 text-right num text-amber-700">{money(calc.monthly.parentOOP)}</td>
+                                    <td className="py-2 pr-3 text-right num text-danger">−{money(calc.monthly.mil)}</td>
+                                    <td className="py-2 text-right num text-warn">{money(calc.monthly.parentOOP)}</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
 
                     <div className="mt-5">
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                            <div className="text-sm font-semibold text-gray-700 mb-3">Invoice from nursery</div>
+                        <div className="bg-card border border-line rounded-xl p-4">
+                            <div className="text-sm font-semibold text-ink mb-3">Invoice from nursery</div>
                             {(() => {
                                 const eFactor = calc.tfc.ellisFactor;
                                 const gFactor = calc.tfc.gaspardFactor;
@@ -516,7 +516,7 @@ const NurseryPage = ({ onSettingsChange }) => {
                                 return (
                                     <table className="w-full text-sm num">
                                         <thead>
-                                            <tr className="text-gray-500 text-xs">
+                                            <tr className="text-ink-soft text-xs">
                                                 <th className="text-left font-medium pb-1">Child</th>
                                                 <th className="text-right font-medium pb-1">Invoiced</th>
                                                 <th className="text-right font-medium pb-1">Transfer to TFC</th>
@@ -525,17 +525,17 @@ const NurseryPage = ({ onSettingsChange }) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr><td className="py-1">Ellis{calc.tfc.ellisCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.ellisPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.ellisTFC)}</td><td className="text-right py-1 text-rose-600">{money(ellisMIL)}</td><td className="text-right py-1">{money(calc.ellisTFC - ellisMIL)}</td></tr>
+                                            <tr><td className="py-1">Ellis{calc.tfc.ellisCapped && <span className="ml-1 text-[10px] text-warn" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.ellisPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-good">{money(calc.ellisTFC)}</td><td className="text-right py-1 text-danger">{money(ellisMIL)}</td><td className="text-right py-1">{money(calc.ellisTFC - ellisMIL)}</td></tr>
                                             {gaspardInNursery && (
-                                                <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-amber-700" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.gaspardPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-emerald-700">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-rose-600">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
+                                                <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-warn" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.gaspardPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-good">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-danger">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
                                             )}
                                         </tbody>
                                         <tfoot>
                                             <tr className="font-semibold border-t">
                                                 <td className="pt-1">Total</td>
                                                 <td className="text-right pt-1">{money(total)}</td>
-                                                <td className="text-right pt-1 text-emerald-700">{money(calc.totalTFC)}</td>
-                                                <td className="text-right pt-1 text-rose-600">{money(totalMIL)}</td>
+                                                <td className="text-right pt-1 text-good">{money(calc.totalTFC)}</td>
+                                                <td className="text-right pt-1 text-danger">{money(totalMIL)}</td>
                                                 <td className="text-right pt-1">{money(calc.totalTFC - totalMIL)}</td>
                                             </tr>
                                         </tfoot>

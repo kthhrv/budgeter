@@ -141,7 +141,7 @@ describe('TabsPage', () => {
         await waitFor(() => screen.getByText('Expenses'));
         const buttons = screen.getAllByRole('button');
         // First + button is for Expenses
-        const addItemBtn = buttons.find(b => b.closest('.bg-white')?.textContent.includes('Expenses') && b.querySelector('svg'));
+        const addItemBtn = buttons.find(b => b.closest('.bg-card')?.textContent.includes('Expenses') && b.querySelector('svg'));
         await user.click(addItemBtn);
         expect(screen.getByPlaceholderText('Description')).toBeInTheDocument();
     });

@@ -18,9 +18,9 @@ import {
 
 // Series colors, validated for CVD separation and contrast on white
 // (dataviz palette check): pension = indigo, accessible = emerald.
-const COLOR_PENSION = '#4f46e5';
-const COLOR_ACCESSIBLE = '#059669';
-const COLOR_MORTGAGE = '#e11d48';
+const COLOR_PENSION = '#3b82c4';
+const COLOR_ACCESSIBLE = '#25835c';
+const COLOR_MORTGAGE = '#a54334';
 
 const OWNER_LABELS = { keith: 'Keith', tild: 'Tild', joint: 'Joint' };
 const KIND_LABELS = { pension: 'Pension', isa: 'ISA', cash: 'Cash savings', gia: 'General investment' };
@@ -38,35 +38,35 @@ const fmtMonth = (ym) => {
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
-const inputCls = 'w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-400';
-const primaryBtnCls = 'py-2 px-4 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700';
+const inputCls = 'w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-accent';
+const primaryBtnCls = 'py-2 px-4 text-sm font-semibold text-paper bg-accent rounded-lg hover:bg-accent-strong';
 
 const StatTile = (props) => {
     // Destructured in the body: eslint's varsIgnorePattern covers uppercase
     // variables but not function parameters, and there's no jsx-uses-vars rule.
     const { label, value, sub, Icon } = props;
     return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-4">
-        <div className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-1">
-            <Icon className="h-4 w-4 text-indigo-500" /> {label}
+    <div className="bg-card rounded-xl border border-line p-4">
+        <div className="flex items-center gap-2 text-xs font-medium text-ink-soft mb-1">
+            <Icon className="h-4 w-4 text-accent" /> {label}
         </div>
-        <p className="text-2xl font-extrabold text-gray-800">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+        <p className="text-2xl font-extrabold text-ink">{value}</p>
+        {sub && <p className="text-xs text-ink-faint mt-1">{sub}</p>}
     </div>
     );
 };
 
 const ChartCard = ({ title, children, empty }) => (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-        <h3 className="text-lg font-bold text-gray-800 mb-3">{title}</h3>
-        {empty ? <p className="text-sm text-gray-400 text-center py-10">{empty}</p> : children}
+    <div className="bg-card rounded-xl border border-line p-5">
+        <h3 className="text-lg font-bold text-ink mb-3">{title}</h3>
+        {empty ? <p className="text-sm text-ink-faint text-center py-10">{empty}</p> : children}
     </div>
 );
 
 const chartTooltipProps = {
     formatter: (value, name) => [fmtMoney(value), name],
     labelFormatter: fmtMonth,
-    contentStyle: { fontSize: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' },
+    contentStyle: { fontSize: '12px', borderRadius: '8px', border: '1px solid #e2ddcd', backgroundColor: '#fcfbf5' },
 };
 
 const FirePage = ({ showToast }) => {
@@ -426,7 +426,7 @@ const FirePage = ({ showToast }) => {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
             </div>
         );
     }
@@ -437,10 +437,10 @@ const FirePage = ({ showToast }) => {
         <div className="space-y-6">
             {/* View toggle */}
             <div className="flex justify-center">
-                <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+                <div className="inline-flex rounded-lg border border-line bg-card p-1 shadow-sm">
                     {['joint', 'keith', 'tild'].map(v => (
                         <button key={v} onClick={() => setView(v)}
-                            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${view === v ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${view === v ? 'bg-accent text-paper' : 'text-ink-soft hover:bg-paper'}`}>
                             {OWNER_LABELS[v]}
                         </button>
                     ))}
@@ -471,9 +471,9 @@ const FirePage = ({ showToast }) => {
                 <ChartCard title="Net worth history" empty={history.length < 2 ? 'Record balances over time to build this chart' : null}>
                     <ResponsiveContainer width="100%" height={280}>
                         <AreaChart data={history} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                            <XAxis dataKey="month" tickFormatter={fmtMonth} tick={{ fontSize: 11, fill: '#6b7280' }} minTickGap={40} />
-                            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11, fill: '#6b7280' }} width={52} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#eae5d6" vertical={false} />
+                            <XAxis dataKey="month" tickFormatter={fmtMonth} tick={{ fontSize: 11, fill: '#6e6a5b' }} minTickGap={40} />
+                            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11, fill: '#6e6a5b' }} width={52} />
                             <Tooltip {...chartTooltipProps} />
                             <Legend wrapperStyle={{ fontSize: '12px' }} />
                             <Area type="monotone" dataKey="pension" name="Pension" stackId="1"
@@ -488,22 +488,22 @@ const FirePage = ({ showToast }) => {
                     empty={!projectionChartData.length ? 'Set assumptions and record balances to project' : null}>
                     <ResponsiveContainer width="100%" height={280}>
                         <AreaChart data={projectionChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                            <XAxis dataKey="date" tickFormatter={(d) => d.slice(0, 4)} tick={{ fontSize: 11, fill: '#6b7280' }} minTickGap={40} />
-                            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11, fill: '#6b7280' }} width={52} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#eae5d6" vertical={false} />
+                            <XAxis dataKey="date" tickFormatter={(d) => d.slice(0, 4)} tick={{ fontSize: 11, fill: '#6e6a5b' }} minTickGap={40} />
+                            <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11, fill: '#6e6a5b' }} width={52} />
                             <Tooltip {...chartTooltipProps} />
                             <Legend wrapperStyle={{ fontSize: '12px' }} />
                             {fiTarget && fiTarget !== Infinity && (
                                 <ReferenceLine y={fiTarget} stroke="#6b7280" strokeDasharray="6 4"
-                                    label={{ value: `FI ${fmtCompact(fiTarget)}`, position: 'insideTopRight', fontSize: 11, fill: '#6b7280' }} />
+                                    label={{ value: `FI ${fmtCompact(fiTarget)}`, position: 'insideTopRight', fontSize: 11, fill: '#6e6a5b' }} />
                             )}
                             {fiDate && (
                                 <ReferenceLine x={fiDate} stroke="#6b7280" strokeDasharray="6 4"
-                                    label={{ value: `Retire ${fmtMonth(fiDate)}`, position: 'insideTopLeft', fontSize: 11, fill: '#6b7280' }} />
+                                    label={{ value: `Retire ${fmtMonth(fiDate)}`, position: 'insideTopLeft', fontSize: 11, fill: '#6e6a5b' }} />
                             )}
                             {bridge?.accessDates.map((a, idx) => (
-                                <ReferenceLine key={a.owner} x={a.date} stroke="#9ca3af" strokeDasharray="2 4"
-                                    label={{ value: `${OWNER_LABELS[a.owner]} pension`, position: 'insideBottomLeft', fontSize: 10, fill: '#9ca3af', dy: -idx * 14 }} />
+                                <ReferenceLine key={a.owner} x={a.date} stroke="#a39e8c" strokeDasharray="2 4"
+                                    label={{ value: `${OWNER_LABELS[a.owner]} pension`, position: 'insideBottomLeft', fontSize: 10, fill: '#a39e8c', dy: -idx * 14 }} />
                             ))}
                             <Area type="monotone" dataKey="pension" name="Pension" stackId="1"
                                 stroke={COLOR_PENSION} strokeWidth={2} fill={COLOR_PENSION} fillOpacity={0.25} />
@@ -511,7 +511,7 @@ const FirePage = ({ showToast }) => {
                                 stroke={COLOR_ACCESSIBLE} strokeWidth={2} fill={COLOR_ACCESSIBLE} fillOpacity={0.25} />
                         </AreaChart>
                     </ResponsiveContainer>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-ink-faint mt-2">
                         In today's money at {viewSettings ? parseFloat(viewSettings.expected_real_return_pct).toFixed(1) : '—'}% real return,
                         contributing {fmtMoney(monthlyPension)}/mo pension + {fmtMoney(avgMonthlySavings)}/mo savings until retirement.
                         {bridge
@@ -523,16 +523,16 @@ const FirePage = ({ showToast }) => {
 
             <div className="grid lg:grid-cols-2 gap-6">
                 {/* Accounts */}
-                <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
+                <div className="bg-card rounded-xl border border-line p-5">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-800">Accounts</h3>
-                        <button onClick={() => setShowAccountForm(f => !f)} className="p-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all">
+                        <h3 className="text-lg font-bold text-ink">Accounts</h3>
+                        <button onClick={() => setShowAccountForm(f => !f)} className="p-2 rounded-lg bg-accent text-paper hover:bg-accent-strong active:scale-[0.98] transition-all">
                             <PlusCircle className="h-4 w-4" />
                         </button>
                     </div>
 
                     {showAccountForm && (
-                        <form onSubmit={handleAddAccount} className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
+                        <form onSubmit={handleAddAccount} className="mb-4 p-4 bg-paper rounded-lg space-y-3">
                             <input type="text" placeholder="Name, e.g. Royal London pension" value={accountForm.name}
                                 onChange={e => setAccountForm(f => ({ ...f, name: e.target.value }))} className={inputCls} required />
                             <div className="grid grid-cols-3 gap-3">
@@ -548,35 +548,35 @@ const FirePage = ({ showToast }) => {
                                     onChange={e => setAccountForm(f => ({ ...f, provider: e.target.value }))} className={inputCls} />
                             </div>
                             <div className="flex gap-2">
-                                <button type="button" onClick={() => setShowAccountForm(false)} className="flex-1 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
+                                <button type="button" onClick={() => setShowAccountForm(false)} className="flex-1 py-2 text-sm font-semibold text-ink-soft border border-line rounded-lg hover:bg-paper">Cancel</button>
                                 <button type="submit" className={`flex-1 ${primaryBtnCls}`}>Add</button>
                             </div>
                         </form>
                     )}
 
                     <div className="space-y-2">
-                        {accountsForList.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No accounts yet — add your pension, ISAs and savings</p>}
+                        {accountsForList.length === 0 && <p className="text-sm text-ink-faint text-center py-4">No accounts yet — add your pension, ISAs and savings</p>}
                         {accountsForList.map(account => {
                             const snap = account.snapshots[0];
                             const form = balanceForms[account.id];
                             return (
-                                <div key={account.id} className="p-3 rounded-lg border border-gray-100 hover:shadow-sm transition-shadow group">
+                                <div key={account.id} className="p-3 rounded-lg border border-line hover:shadow-sm transition-shadow group">
                                     <div className="flex items-center justify-between">
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-semibold text-sm text-gray-800 truncate">{account.name}</span>
-                                                <span className={`px-1.5 py-0.5 text-xs font-semibold rounded-full ${account.owner === 'keith' ? 'bg-blue-100 text-blue-800' : account.owner === 'tild' ? 'bg-pink-100 text-pink-800' : 'bg-purple-100 text-purple-800'}`}>{account.owner}</span>
-                                                <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">{KIND_LABELS[account.kind]}</span>
-                                                {account.monzo_pot_id && <span className="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">Monzo</span>}
+                                                <span className="font-semibold text-sm text-ink truncate">{account.name}</span>
+                                                <span className={`px-1.5 py-0.5 text-xs font-semibold rounded-full ${account.owner === 'keith' ? 'bg-keith-soft text-keith' : account.owner === 'tild' ? 'bg-tild-soft text-tild' : 'bg-accent/10 text-accent-strong'}`}>{account.owner}</span>
+                                                <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-line/70 text-ink-soft">{KIND_LABELS[account.kind]}</span>
+                                                {account.monzo_pot_id && <span className="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-danger-soft text-danger">Monzo</span>}
                                             </div>
-                                            <p className="text-xs text-gray-400 mt-0.5">{snap ? `${fmtMoney(snap.balance, 2)} on ${snap.date}` : 'No balance recorded'}</p>
+                                            <p className="text-xs text-ink-faint mt-0.5">{snap ? `${fmtMoney(snap.balance, 2)} on ${snap.date}` : 'No balance recorded'}</p>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <button onClick={() => setBalanceForms(f => ({ ...f, [account.id]: f[account.id] ? undefined : { date: today(), balance: snap ? snap.balance : '' } }))}
-                                                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1">
+                                                className="text-xs text-accent hover:text-accent-strong font-semibold px-2 py-1">
                                                 {form ? 'Close' : 'Update balance'}
                                             </button>
-                                            <button onClick={() => handleDeleteAccount(account.id)} className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button onClick={() => handleDeleteAccount(account.id)} className="p-1 text-ink-faint/70 hover:text-danger opacity-0 group-hover:opacity-100 transition-all">
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </button>
                                         </div>
@@ -585,7 +585,7 @@ const FirePage = ({ showToast }) => {
                                         <form onSubmit={handleSetBalance(account.id)} className="mt-2 flex gap-2 items-center">
                                             <input type="date" value={form.date} onChange={e => setBalanceForms(f => ({ ...f, [account.id]: { ...form, date: e.target.value } }))} className={inputCls} required />
                                             <div className="relative w-full">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">£</span>
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint text-sm">£</span>
                                                 <input type="number" step="0.01" placeholder="0.00" value={form.balance}
                                                     onChange={e => setBalanceForms(f => ({ ...f, [account.id]: { ...form, balance: e.target.value } }))}
                                                     className={`${inputCls} pl-7`} required />
@@ -597,56 +597,56 @@ const FirePage = ({ showToast }) => {
                             );
                         })}
                     </div>
-                    <p className="text-xs text-gray-400 mt-3">Re-entering a balance for the same date corrects it; a new date supersedes older entries.</p>
+                    <p className="text-xs text-ink-faint mt-3">Re-entering a balance for the same date corrects it; a new date supersedes older entries.</p>
 
                     {/* Monzo sync */}
                     {monzoStatus && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="mt-4 pt-4 border-t border-line">
                             {!monzoStatus.configured ? (
-                                <p className="text-xs text-gray-400">Monzo sync is available once <code>MONZO_CLIENT_ID</code> / <code>MONZO_CLIENT_SECRET</code> are set (see the FIRE PR for setup).</p>
+                                <p className="text-xs text-ink-faint">Monzo sync is available once <code>MONZO_CLIENT_ID</code> / <code>MONZO_CLIENT_SECRET</code> are set (see the FIRE PR for setup).</p>
                             ) : !monzoStatus.connected ? (
                                 <button onClick={() => { window.location.href = `${API_BASE_URL}/fire/monzo/connect/`; }}
-                                    className="w-full py-2 text-sm font-semibold text-white bg-gradient-to-r from-rose-500 to-red-500 rounded-lg hover:from-rose-600 hover:to-red-600 flex items-center justify-center gap-2">
+                                    className="w-full py-2 text-sm font-semibold text-paper bg-danger rounded-lg hover:bg-danger/90 flex items-center justify-center gap-2">
                                     <Link2 className="h-4 w-4" /> Connect Monzo
                                 </button>
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                                        <p className="text-xs text-gray-500">
-                                            <span className="font-semibold text-rose-600">Monzo connected</span>
+                                        <p className="text-xs text-ink-soft">
+                                            <span className="font-semibold text-danger">Monzo connected</span>
                                             {monzoStatus.last_synced_at ? ` · synced ${new Date(monzoStatus.last_synced_at).toLocaleString('en-GB')}` : ' · never synced'}
                                         </p>
                                         <div className="flex items-center gap-2">
                                             <button onClick={() => handleMonzoSync(false)} disabled={isSyncing}
-                                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 disabled:opacity-50">
+                                                className="text-xs font-semibold text-accent hover:text-accent-strong flex items-center gap-1 disabled:opacity-50">
                                                 <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} /> Sync now
                                             </button>
-                                            <button onClick={handleTogglePotLinks} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                                            <button onClick={handleTogglePotLinks} className="text-xs font-semibold text-accent hover:text-accent-strong">
                                                 {showPotLinks ? 'Hide pots' : 'Link pots'}
                                             </button>
-                                            <button onClick={handleMonzoDisconnect} className="text-xs text-gray-400 hover:text-red-500">Disconnect</button>
+                                            <button onClick={handleMonzoDisconnect} className="text-xs text-ink-faint hover:text-danger">Disconnect</button>
                                         </div>
                                     </div>
                                     {showPotLinks && monzoPots && (
                                         <div className="mt-3 space-y-2">
-                                            {monzoPots.length === 0 && <p className="text-sm text-gray-400 text-center py-2">No open pots found</p>}
+                                            {monzoPots.length === 0 && <p className="text-sm text-ink-faint text-center py-2">No open pots found</p>}
                                             {monzoPots.map(pot => {
                                                 const linkedAccount = accounts.find(a => a.monzo_pot_id === pot.id);
                                                 return (
-                                                    <div key={pot.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-gray-50">
+                                                    <div key={pot.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-paper">
                                                         <div className="min-w-0">
-                                                            <span className="text-sm font-semibold text-gray-700 truncate">{pot.name}</span>
-                                                            <span className="text-xs text-gray-400 ml-2">{fmtMoney(pot.balance, 2)}</span>
+                                                            <span className="text-sm font-semibold text-ink truncate">{pot.name}</span>
+                                                            <span className="text-xs text-ink-faint ml-2">{fmtMoney(pot.balance, 2)}</span>
                                                         </div>
                                                         <select value={linkedAccount?.id || ''} onChange={e => handleLinkPot(pot, e.target.value)}
-                                                            className="rounded-lg border border-gray-200 px-2 py-1 text-xs outline-none focus:border-indigo-400">
+                                                            className="rounded-lg border border-line px-2 py-1 text-xs outline-none focus:border-accent">
                                                             <option value="">Not linked</option>
                                                             {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.owner})</option>)}
                                                         </select>
                                                     </div>
                                                 );
                                             })}
-                                            <p className="text-xs text-gray-400">Each sync writes today's pot balance onto the linked account. Balances auto-sync when you open this tab if the last sync is over a day old.</p>
+                                            <p className="text-xs text-ink-faint">Each sync writes today's pot balance onto the linked account. Balances auto-sync when you open this tab if the last sync is over a day old.</p>
                                         </div>
                                     )}
                                 </>
@@ -656,50 +656,50 @@ const FirePage = ({ showToast }) => {
                 </div>
 
                 {/* Earnings */}
-                <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
+                <div className="bg-card rounded-xl border border-line p-5">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-800">Earnings & pension contributions</h3>
-                        <button onClick={() => setShowEarningsForm(f => !f)} className="p-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all">
+                        <h3 className="text-lg font-bold text-ink">Earnings & pension contributions</h3>
+                        <button onClick={() => setShowEarningsForm(f => !f)} className="p-2 rounded-lg bg-accent text-paper hover:bg-accent-strong active:scale-[0.98] transition-all">
                             <PlusCircle className="h-4 w-4" />
                         </button>
                     </div>
 
                     {showEarningsForm && (
-                        <form onSubmit={handleAddEarnings} className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
+                        <form onSubmit={handleAddEarnings} className="mb-4 p-4 bg-paper rounded-lg space-y-3">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Who</label>
+                                    <label className="text-xs text-ink-soft mb-1 block">Who</label>
                                     <select value={earningsForm.owner} onChange={e => setEarningsForm(f => ({ ...f, owner: e.target.value }))} className={inputCls}>
                                         <option value="keith">Keith</option>
                                         <option value="tild">Tild</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Effective from</label>
+                                    <label className="text-xs text-ink-soft mb-1 block">Effective from</label>
                                     <input type="date" value={earningsForm.effective_from} onChange={e => setEarningsForm(f => ({ ...f, effective_from: e.target.value }))} className={inputCls} required />
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Gross annual</label>
+                                    <label className="text-xs text-ink-soft mb-1 block">Gross annual</label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">£</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint text-sm">£</span>
                                         <input type="number" step="1" placeholder="60000" value={earningsForm.gross_annual_salary}
                                             onChange={e => setEarningsForm(f => ({ ...f, gross_annual_salary: e.target.value }))} className={`${inputCls} pl-7`} required />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Employee %</label>
+                                    <label className="text-xs text-ink-soft mb-1 block">Employee %</label>
                                     <input type="number" step="0.1" placeholder="5" value={earningsForm.employee_pension_pct}
                                         onChange={e => setEarningsForm(f => ({ ...f, employee_pension_pct: e.target.value }))} className={inputCls} />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Employer %</label>
+                                    <label className="text-xs text-ink-soft mb-1 block">Employer %</label>
                                     <input type="number" step="0.1" placeholder="3" value={earningsForm.employer_pension_pct}
                                         onChange={e => setEarningsForm(f => ({ ...f, employer_pension_pct: e.target.value }))} className={inputCls} />
                                 </div>
                             </div>
-                            <label className="flex items-center gap-2 text-sm text-gray-600">
+                            <label className="flex items-center gap-2 text-sm text-ink-soft">
                                 <input type="checkbox" checked={earningsForm.employee_pension_is_salary_sacrifice}
                                     onChange={e => setEarningsForm(f => ({ ...f, employee_pension_is_salary_sacrifice: e.target.checked }))} />
                                 Employee contribution is salary sacrifice
@@ -707,91 +707,91 @@ const FirePage = ({ showToast }) => {
                             <input type="text" placeholder="Note (optional), e.g. promotion" value={earningsForm.note}
                                 onChange={e => setEarningsForm(f => ({ ...f, note: e.target.value }))} className={inputCls} />
                             <div className="flex gap-2">
-                                <button type="button" onClick={() => setShowEarningsForm(false)} className="flex-1 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
+                                <button type="button" onClick={() => setShowEarningsForm(false)} className="flex-1 py-2 text-sm font-semibold text-ink-soft border border-line rounded-lg hover:bg-paper">Cancel</button>
                                 <button type="submit" className={`flex-1 ${primaryBtnCls}`}>Add</button>
                             </div>
                         </form>
                     )}
 
                     <div className="space-y-2">
-                        {earnings.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No earnings recorded — add gross salary and pension %</p>}
+                        {earnings.length === 0 && <p className="text-sm text-ink-faint text-center py-4">No earnings recorded — add gross salary and pension %</p>}
                         {earnings
                             .filter(e => view === 'joint' || e.owner === view)
                             .map(e => (
-                                <div key={e.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:shadow-sm transition-shadow group">
+                                <div key={e.id} className="flex items-center justify-between p-3 rounded-lg border border-line hover:shadow-sm transition-shadow group">
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-sm text-gray-800">{fmtMoney(e.gross_annual_salary)}/yr</span>
-                                            <span className={`px-1.5 py-0.5 text-xs font-semibold rounded-full ${e.owner === 'keith' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'}`}>{e.owner}</span>
-                                            {e.employee_pension_is_salary_sacrifice && <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">salary sacrifice</span>}
+                                            <span className="font-semibold text-sm text-ink">{fmtMoney(e.gross_annual_salary)}/yr</span>
+                                            <span className={`px-1.5 py-0.5 text-xs font-semibold rounded-full ${e.owner === 'keith' ? 'bg-keith-soft text-keith' : 'bg-tild-soft text-tild'}`}>{e.owner}</span>
+                                            {e.employee_pension_is_salary_sacrifice && <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-line/70 text-ink-soft">salary sacrifice</span>}
                                         </div>
-                                        <p className="text-xs text-gray-400 mt-0.5">
+                                        <p className="text-xs text-ink-faint mt-0.5">
                                             From {e.effective_from} · {parseFloat(e.employee_pension_pct)}% you + {parseFloat(e.employer_pension_pct)}% employer
                                             {` · ≈ ${fmtMoney(monthlyTakeHome(e))}/mo take-home`}
                                             {e.note ? ` · ${e.note}` : ''}
                                         </p>
                                     </div>
-                                    <button onClick={() => handleDeleteEarnings(e.id)} className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button onClick={() => handleDeleteEarnings(e.id)} className="p-1 text-ink-faint/70 hover:text-danger opacity-0 group-hover:opacity-100 transition-all">
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </button>
                                 </div>
                             ))}
                     </div>
-                    <p className="text-xs text-gray-400 mt-3">A pay or contribution change is a new row with its effective date — history stays intact.</p>
+                    <p className="text-xs text-ink-faint mt-3">A pay or contribution change is a new row with its effective date — history stays intact.</p>
                 </div>
             </div>
 
             <div>
                 {/* Assumptions */}
-                <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4"><Settings2 className="h-5 w-5 text-indigo-500" /> Assumptions</h3>
+                <div className="bg-card rounded-xl border border-line p-5">
+                    <h3 className="text-lg font-bold text-ink flex items-center gap-2 mb-4"><Settings2 className="h-5 w-5 text-accent" /> Assumptions</h3>
                     <div className="space-y-4">
                         {['keith', 'tild'].map(owner => {
                             const form = settingsForms[owner];
                             if (!form) return null;
                             return (
-                                <form key={owner} onSubmit={handleSaveSettings(owner)} className="p-4 bg-gray-50 rounded-lg space-y-3">
+                                <form key={owner} onSubmit={handleSaveSettings(owner)} className="p-4 bg-paper rounded-lg space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${owner === 'keith' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'}`}>{OWNER_LABELS[owner]}</span>
-                                        <button type="submit" className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">Save</button>
+                                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${owner === 'keith' ? 'bg-keith-soft text-keith' : 'bg-tild-soft text-tild'}`}>{OWNER_LABELS[owner]}</span>
+                                        <button type="submit" className="text-xs text-accent hover:text-accent-strong font-semibold">Save</button>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                         <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">Date of birth</label>
+                                            <label className="text-xs text-ink-soft mb-1 block">Date of birth</label>
                                             <input type="date" value={form.date_of_birth}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, date_of_birth: e.target.value } }))} className={inputCls} />
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">Real return %</label>
+                                            <label className="text-xs text-ink-soft mb-1 block">Real return %</label>
                                             <input type="number" step="0.1" value={form.expected_real_return_pct}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, expected_real_return_pct: e.target.value } }))} className={inputCls} required />
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">SWR %</label>
+                                            <label className="text-xs text-ink-soft mb-1 block">SWR %</label>
                                             <input type="number" step="0.1" value={form.safe_withdrawal_rate_pct}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, safe_withdrawal_rate_pct: e.target.value } }))} className={inputCls} required />
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">Target retire age</label>
+                                            <label className="text-xs text-ink-soft mb-1 block">Target retire age</label>
                                             <input type="number" step="1" placeholder="e.g. 55" value={form.target_retirement_age}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, target_retirement_age: e.target.value } }))} className={inputCls} />
                                         </div>
                                     </div>
                                     <div className="flex items-end gap-4 flex-wrap">
                                         <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">Pension access age</label>
+                                            <label className="text-xs text-ink-soft mb-1 block">Pension access age</label>
                                             <input type="number" step="1" value={form.pension_access_age}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, pension_access_age: e.target.value } }))} className={inputCls} required />
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 mb-1 block" title="How much you actually invest per year. Blank = use the budget's savings lines.">Expected savings £/yr</label>
+                                            <label className="text-xs text-ink-soft mb-1 block" title="How much you actually invest per year. Blank = use the budget's savings lines.">Expected savings £/yr</label>
                                             <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">£</span>
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint text-sm">£</span>
                                                 <input type="number" step="100" placeholder="from budget" value={form.expected_annual_savings}
                                                     onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, expected_annual_savings: e.target.value } }))} className={`${inputCls} pl-7`} />
                                             </div>
                                         </div>
-                                        <label className="flex items-center gap-2 text-sm text-gray-600 pb-2">
+                                        <label className="flex items-center gap-2 text-sm text-ink-soft pb-2">
                                             <input type="checkbox" checked={form.include_state_pension}
                                                 onChange={e => setSettingsForms(f => ({ ...f, [owner]: { ...form, include_state_pension: e.target.checked } }))} />
                                             Include state pension ({fmtCompact(STATE_PENSION_ANNUAL)}/yr from {STATE_PENSION_AGE})
@@ -801,7 +801,7 @@ const FirePage = ({ showToast }) => {
                             );
                         })}
                     </div>
-                    <p className="text-xs text-gray-400 mt-3">
+                    <p className="text-xs text-ink-faint mt-3">
                         Return is after inflation, so all projections read in today's money. The joint view blends both people's assumptions.
                         Spending averages come from the last {monthlyTotals.length || 12} months of the budget; savings do too unless
                         "Expected savings" is set — use it when the budget's savings lines include money that gets spent.
