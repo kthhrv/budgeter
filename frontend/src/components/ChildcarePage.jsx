@@ -396,6 +396,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
             : {
                 key: 'gaspard', label: 'Gaspard · school clubs',
                 gross: calc.gross, saving: calc.tfcSaving, net: calc.net,
+                // Anything with no attendance this month stays out of the breakdown.
                 children: [
                     {
                         key: 'g-term', label: 'Term clubs',
@@ -406,7 +407,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         children: [
                             { key: 'g-breakfast', label: 'Breakfast', days: breakfastDays, gross: calc.breakfast.cost, saving: calc.breakfast.saving, net: calc.breakfast.cost - calc.breakfast.saving },
                             { key: 'g-after', label: 'After-school', days: afterSchoolDays, gross: calc.afterSchool.cost, saving: calc.afterSchool.saving, net: calc.afterSchool.cost - calc.afterSchool.saving },
-                        ],
+                        ].filter(row => row.days > 0),
                     },
                     {
                         key: 'g-holiday', label: 'Holiday clubs',
@@ -414,7 +415,6 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         gross: calc.holidayClubs.reduce((s, h) => s + h.cost, 0),
                         saving: calc.holidayClubs.reduce((s, h) => s + h.saving, 0),
                         net: calc.holidayNet,
-                        // Clubs with no days assigned this month stay out of the breakdown
                         children: calc.holidayClubs
                             .filter(h => clubDaysThisMonth(h.id) > 0)
                             .map(h => ({
@@ -423,7 +423,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                                 gross: h.cost, saving: h.saving, net: h.cost - h.saving,
                             })),
                     },
-                ],
+                ].filter(group => group.days > 0),
             };
         return [ellis, gaspard];
         // eslint-disable-next-line react-hooks/exhaustive-deps -- clubDaysThisMonth reads childcare/monthKey, both covered
