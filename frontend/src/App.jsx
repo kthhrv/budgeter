@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, CalendarDays, Flame, Menu } from 'lucide-react';
+import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, CalendarDays, Flame, Coins, Menu } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
 import { computeMonthSummary, applyChildcareLinks } from './utils/nurseryCalc';
 import apiService from './services/api';
@@ -14,6 +14,7 @@ import TabsPage from './components/TabsPage';
 import NurseryPage from './components/NurseryPage';
 import ChildcarePage from './components/ChildcarePage';
 import FirePage from './components/FirePage';
+import AllowancePage from './components/AllowancePage';
 
 const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
     const t = useBudgetTotals(items);
@@ -293,7 +294,7 @@ const App = () => {
                     </button>
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center grow">
                         <Wallet className="mr-3 h-7 w-7 md:h-8 md:w-8" />
-                        {{ budget: 'Budget', tabs: 'Tabs', nursery: 'Cost calculator', childcare: 'Childcare', fire: 'FIRE' }[activePage] || 'Budget'}
+                        {{ budget: 'Budget', tabs: 'Tabs', nursery: 'Cost calculator', childcare: 'Childcare', fire: 'FIRE', allowance: 'Allowance breakdown' }[activePage] || 'Budget'}
                     </h1>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-indigo-100 text-sm">Signed in as {user.username}</span>
@@ -310,6 +311,7 @@ const App = () => {
                             { id: 'nursery', label: 'Nursery', Icon: Baby },
                             { id: 'childcare', label: 'Childcare', Icon: CalendarDays },
                             { id: 'fire',    label: 'FIRE',    Icon: Flame },
+                            { id: 'allowance', label: 'Allowance', Icon: Coins },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -324,7 +326,9 @@ const App = () => {
             </header>
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
-                {activePage === 'fire' ? (
+                {activePage === 'allowance' ? (
+                    <AllowancePage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
+                ) : activePage === 'fire' ? (
                     <FirePage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 ) : activePage === 'childcare' ? (
                     <ChildcarePage onSettingsChange={setNurserySettings} />

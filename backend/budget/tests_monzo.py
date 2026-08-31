@@ -202,3 +202,41 @@ class MonzoAPITestCase(TestCase):
         resp = self.client.post('/api/fire/monzo/disconnect/')
         self.assertEqual(resp.status_code, 204)
         self.assertEqual(MonzoConnection.objects.count(), 0)
+
+    # --- Joint balance (Allowance tab) ---
+
+    def _mock_accounts_and_balance(self, accounts, balances):
+        def fake_get(url, params=None, headers=None, timeout=None):
+            if url.endswith('/accounts'):
+                return _fake_response(200, {'accounts': accounts})
+            if url.endswith('/balance'):
+                return _fake_response(200, {'balance': balances[params['account_id']]})
+            raise AssertionError(f'unexpected URL {url}')
+        return fake_get
+
+    def test_joint_balance_returns_joint_account_in_pounds(self):
+        self._connect()
+        accounts = [
+            {'id': 'acc_personal', 'type': 'uk_retail', 'closed': False},
+            {'id': 'acc_joint', 'type': 'uk_retail_joint', 'closed': False, 'description': 'Joint account'},
+        ]
+        with mock.patch.dict(os.environ, MONZO_ENV), \
+                mock.patch('budget.monzo.requests.get',
+                           side_effect=self._mock_accounts_and_balance(accounts, {'acc_joint': 38412})):
+            resp = self.client.get('/api/fire/monzo/joint-balance/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertAlmostEqual(resp.json()['balance'], 384.12)
+
+    def test_joint_balance_404_without_joint_account(self):
+        self._connect()
+        accounts = [{'id': 'acc_personal', 'type': 'uk_retail', 'closed': False}]
+        with mock.patch.dict(os.environ, MONZO_ENV), \
+                mock.patch('budget.monzo.requests.get',
+                           side_effect=self._mock_accounts_and_balance(accounts, {})):
+            resp = self.client.get('/api/fire/monzo/joint-balance/')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_joint_balance_requires_connection(self):
+        with mock.patch.dict(os.environ, MONZO_ENV):
+            resp = self.client.get('/api/fire/monzo/joint-balance/')
+        self.assertEqual(resp.status_code, 400)
