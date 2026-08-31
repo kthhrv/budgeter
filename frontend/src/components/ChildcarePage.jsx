@@ -299,6 +299,36 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 <MonthSelector currentDate={currentDate} />
             </div>
 
+            {/* Headline cards — mirrors the Nursery section's summary row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+                <div className="bg-warn text-paper rounded-xl p-5 flex flex-col">
+                    <div className="text-paper/80 text-lg font-semibold">Transfer to TFC</div>
+                    <div className="text-paper/70 text-xs num" title="TFC reference">Gaspard · 1100067930356</div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-3xl font-bold num">{money(calc.net)}</div>
+                    </div>
+                    <div className="text-paper/70 text-xs text-center">−{money(calc.tfcSaving)} TFC top-up on {money(calc.gross)} gross</div>
+                </div>
+                <div className="bg-accent text-paper rounded-xl p-5 flex flex-col">
+                    <div className="text-paper/80 text-lg font-semibold">After-school & breakfast</div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-3xl font-bold num">{money(calc.termNet)}</div>
+                    </div>
+                    <div className="text-paper/70 text-xs text-center">
+                        {money(calc.afterSchool.cost - calc.afterSchool.saving)} after-school · {money(calc.breakfast.cost - calc.breakfast.saving)} breakfast
+                    </div>
+                </div>
+                <div className="bg-keith text-paper rounded-xl p-5 flex flex-col">
+                    <div className="text-paper/80 text-lg font-semibold">Holiday clubs</div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-3xl font-bold num">{money(calc.holidayNet)}</div>
+                    </div>
+                    <div className="text-paper/70 text-xs text-center">
+                        {calc.holidayClubs.length === 0 ? 'No clubs this month' : calc.holidayClubs.map(h => h.name || 'Club').join(' · ')}
+                    </div>
+                </div>
+            </div>
+
             {/* Calendar + cost breakdown, side by side on wide screens */}
             <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-4 items-start">
             {/* Calendar */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, CalendarDays, Flame, Coins, Home, Menu } from 'lucide-react';
+import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Flame, Coins, Home, Menu } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
 import { computeMonthSummary, applyChildcareLinks } from './utils/nurseryCalc';
 import apiService from './services/api';
@@ -11,8 +11,7 @@ import { useBudgetTotals } from './hooks/useBudgetTotals';
 import OwnerCard from './components/OwnerCard';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
-import NurseryPage from './components/NurseryPage';
-import ChildcarePage from './components/ChildcarePage';
+import ChildcareHubPage from './components/ChildcareHubPage';
 import FirePage from './components/FirePage';
 import ReportsPage from './components/ReportsPage';
 import MortgagePage from './components/MortgagePage';
@@ -294,7 +293,7 @@ const App = () => {
                         <Menu className="h-6 w-6" />
                     </button>
                     <h1 className="font-serif italic text-2xl md:text-3xl leading-none text-accent-strong grow">
-                        {{ budget: 'Budget', tabs: 'Tabs', nursery: 'Cost calculator', childcare: 'Childcare', fire: 'FIRE', reports: 'Reports', mortgage: 'Mortgage' }[activePage] || 'Budget'}
+                        {{ budget: 'Budget', tabs: 'Tabs', childcare: 'Childcare', fire: 'FIRE', reports: 'Reports', mortgage: 'Mortgage' }[activePage] || 'Budget'}
                     </h1>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-ink-soft text-sm">Signed in as {user.username}</span>
@@ -308,8 +307,7 @@ const App = () => {
                         {[
                             { id: 'budget',  label: 'Budget',  Icon: LayoutDashboard },
                             { id: 'tabs',    label: 'Tabs',    Icon: ArrowRightLeft },
-                            { id: 'nursery', label: 'Nursery', Icon: Baby },
-                            { id: 'childcare', label: 'Childcare', Icon: CalendarDays },
+                            { id: 'childcare', label: 'Childcare', Icon: Baby },
                             { id: 'fire',    label: 'FIRE',    Icon: Flame },
                             { id: 'reports', label: 'Reports', Icon: Coins },
                             { id: 'mortgage', label: 'Mortgage', Icon: Home },
@@ -334,9 +332,7 @@ const App = () => {
                 ) : activePage === 'fire' ? (
                     <FirePage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 ) : activePage === 'childcare' ? (
-                    <ChildcarePage onSettingsChange={setNurserySettings} />
-                ) : activePage === 'nursery' ? (
-                    <NurseryPage onSettingsChange={setNurserySettings} />
+                    <ChildcareHubPage onSettingsChange={setNurserySettings} />
                 ) : activePage === 'budget' ? (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] md:items-center gap-3 mb-6">

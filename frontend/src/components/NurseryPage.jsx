@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import apiService from '../services/api';
-import { formatDate, getInitialDate } from '../utils/helpers';
+import { getInitialDate } from '../utils/helpers';
 import MonthSelector from './MonthSelector';
-import { DAYS, SESSION_OPTIONS, computeMonthSummary, findEffectiveOverride } from '../utils/nurseryCalc';
+import { computeMonthSummary } from '../utils/nurseryCalc';
 
 // ------------------------- Persistent state -------------------------
 
 const STORAGE_VERSION = 1;
-const STORAGE_KEYS = ['ellis', 'gaspard', 'mil', 'taxFree', 'fullWeekModel', 'showBreakdown', 'adhoc'];
+const STORAGE_KEYS = ['ellis', 'gaspard', 'taxFree', 'fullWeekModel', 'showBreakdown', 'adhoc'];
 const storageKey = (k) => `nursery-calc-v${STORAGE_VERSION}:${k}`;
 
 function readLocalStorageBlob() {
@@ -36,22 +36,15 @@ const DEFAULTS = {
     ellis: {
         ageBracket: '2-3',
         scheme: '30hr',
-        schedule: ['fullDay', 'fullDay', 'fullDay', 'fullDay', 'fullDay'],
         siblingDiscount: false,
         showSibling: false,
     },
     gaspard: {
         ageBracket: '3-5',
         scheme: '30hr',
-        schedule: ['fullDay', 'fullDay', 'fullDay', 'fullDay', 'fullDay'],
         siblingDiscount: true,
         showSibling: true,
     },
-    mil: [0, 0, 0, 100, 50],
-    taxFree: true,
-    fullWeekModel: true,
-    showBreakdown: true,
-    adhoc: [],
 };
 
 const money = (n) => `£${n.toFixed(2)}`;
@@ -67,19 +60,18 @@ function Toggle({ checked, onChange, label }) {
     );
 }
 
-function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule }) {
+// Attendance is fixed — full week, full days — so a child card is just the
+// age bracket and (where relevant) the sibling discount.
+function ChildCard({ title, accent, child, onUpdateChild }) {
     const update = (patch) => onUpdateChild(patch);
-    const setDay = (i, v) => {
-        const s = [...child.schedule]; s[i] = v;
-        onSetSchedule(s);
-    };
 
     return (
         <div className={`bg-card rounded-xl p-5 border border-line border-t-4 ${accent}`}>
-            <div className="flex items-baseline justify-between mb-3">
+            <div className="flex items-baseline justify-between mb-1">
                 <h2 className="text-xl font-semibold text-ink">{title}</h2>
                 <span className="text-xs text-ink-faint">Busy Bees Tunbridge Wells</span>
             </div>
+            <p className="text-xs text-ink-soft mb-4">Full week · Mon–Fri, full days (8am–6pm)</p>
 
             <label className="text-sm block mb-4">
                 <span className="block text-ink-soft mb-1">Age bracket</span>
@@ -91,21 +83,8 @@ function ChildCard({ title, accent, child, onUpdateChild, onSetSchedule }) {
                 </select>
             </label>
 
-            <div className="space-y-2 mb-3">
-                <div className="text-sm font-medium text-ink-soft">Attendance</div>
-                {DAYS.map((d, i) => (
-                    <div key={d} className="flex items-center gap-2">
-                        <div className="w-24 text-sm text-ink-soft">{d}</div>
-                        <select value={child.schedule[i]} onChange={e => setDay(i, e.target.value)}
-                                className="flex-1 rounded-lg border border-line px-2 py-1.5 bg-card text-sm">
-                            {SESSION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                    </div>
-                ))}
-            </div>
-
             {child.showSibling && (
-                <div className="mb-3">
+                <div className="mb-1">
                     <Toggle checked={child.siblingDiscount}
                             onChange={v => update({ siblingDiscount: v })}
                             label="Apply 10% sibling discount" />
@@ -125,36 +104,8 @@ function GaspardMovedCard() {
             </div>
             <p className="text-sm text-ink-soft">
                 Gaspard has left nursery. His breakfast, after-school and holiday-club
-                costs are now on the <span className="font-medium text-accent">Childcare</span> tab.
+                costs are in the <span className="font-medium text-accent">School clubs</span> section.
             </p>
-        </div>
-    );
-}
-
-const MIL_OPTIONS = [
-    { value: 0,   label: 'None' },
-    { value: 50,  label: 'Half day' },
-    { value: 100, label: 'Full day' },
-];
-
-function MilPanel({ mil, setMil }) {
-    return (
-        <div className="bg-card rounded-xl p-5 border border-line">
-            <h2 className="text-lg font-semibold text-ink mb-1">Mother-in-law contribution</h2>
-            <div className="grid grid-cols-5 gap-2 mt-3">
-                {DAYS.map((d, i) => (
-                    <label key={d} className="text-center">
-                        <span className="block text-xs text-ink-soft mb-1">{d.slice(0, 3)}</span>
-                        <select value={mil[i]}
-                                onChange={e => {
-                                    const n = [...mil]; n[i] = Number(e.target.value); setMil(n);
-                                }}
-                                className="w-full rounded-lg border border-line px-2 py-1.5 bg-card text-sm">
-                            {MIL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                    </label>
-                ))}
-            </div>
         </div>
     );
 }
@@ -162,21 +113,13 @@ function MilPanel({ mil, setMil }) {
 // ------------------------- Main page -------------------------
 
 const NurseryPage = ({ onSettingsChange }) => {
-    const [ellis, setEllis]                 = useState(DEFAULTS.ellis);
-    const [gaspard, setGaspard]             = useState(DEFAULTS.gaspard);
-    const [mil, setMil]                     = useState(DEFAULTS.mil);
-    const [adhoc, setAdhoc]                 = useState(DEFAULTS.adhoc);
-    // Billing model is fixed: always full-week model + tax-free childcare, and
-    // the detailed monthly breakdown is always shown (the toggle panel was removed).
-    const taxFree = true;
-    const fullWeekModel = true;
-    const showBreakdown = true;
-    const [monthOverrides, setMonthOverrides] = useState({});
+    const [ellis, setEllis]     = useState(DEFAULTS.ellis);
+    const [gaspard, setGaspard] = useState(DEFAULTS.gaspard);
     // Non-nursery blob keys (e.g. `childcare`, owned by the Childcare tab) are
     // preserved verbatim so saving the nursery settings never wipes them.
-    const [otherBlob, setOtherBlob]         = useState({});
-    const [loaded, setLoaded]               = useState(false);
-    const [currentDate, setCurrentDate]     = useState(() => getInitialDate());
+    const [otherBlob, setOtherBlob] = useState({});
+    const [loaded, setLoaded]       = useState(false);
+    const [currentDate, setCurrentDate] = useState(() => getInitialDate());
 
     // Stay in sync with the URL hash so the Budget tab and Nursery tab
     // always show the same month.
@@ -189,44 +132,15 @@ const NurseryPage = ({ onSettingsChange }) => {
         return () => window.removeEventListener('hashchange', sync);
     }, []);
 
-    const saveTimeout                       = useRef(null);
-
-    // Currently displayed month, as YYYY-MM
-    const monthKey = useMemo(() => formatDate(currentDate, 'YYYY-MM'), [currentDate]);
-
-    // Latest override at or before the displayed month — edits propagate forward.
-    const effEllisOverride   = findEffectiveOverride(monthOverrides, monthKey, 'ellis');
-    const effGaspardOverride = findEffectiveOverride(monthOverrides, monthKey, 'gaspard');
-    const effMilOverride     = findEffectiveOverride(monthOverrides, monthKey, 'mil');
-
-    const effEllisSchedule   = effEllisOverride?.schedule   ?? ellis.schedule;
-    const effGaspardSchedule = effGaspardOverride?.schedule ?? gaspard.schedule;
-    const effMil             = effMilOverride               ?? mil;
-
-    const setOverride = (key, value) => setMonthOverrides(prev => ({
-        ...prev,
-        [monthKey]: { ...(prev[monthKey] || {}), [key]: value },
-    }));
-
-    // Dispatch handlers — every edit creates/updates an override at the current month
-    // so the change applies from this month forward (until the next override).
-    const setEllisSchedule = (s) =>
-        setOverride('ellis', { ...(effEllisOverride || {}), schedule: s });
-    const setGaspardSchedule = (s) =>
-        setOverride('gaspard', { ...(effGaspardOverride || {}), schedule: s });
-    const setMilEffective = (m) =>
-        setOverride('mil', m);
+    const saveTimeout = useRef(null);
 
     // Load from server on mount; migrate any localStorage values found.
     useEffect(() => {
         let cancelled = false;
         const applyBlob = (blob) => {
             if (cancelled || !blob) return;
-            if (blob.ellis)         setEllis(blob.ellis);
-            if (blob.gaspard)       setGaspard(blob.gaspard);
-            if (Array.isArray(blob.mil))       setMil(blob.mil);
-            if (Array.isArray(blob.adhoc))     setAdhoc(blob.adhoc);
-            if (blob.monthOverrides && typeof blob.monthOverrides === 'object') setMonthOverrides(blob.monthOverrides);
+            if (blob.ellis)   setEllis(prev => ({ ...prev, ...blob.ellis }));
+            if (blob.gaspard) setGaspard(prev => ({ ...prev, ...blob.gaspard }));
             setOtherBlob(blob); // keep the whole blob so we don't drop other tabs' keys
         };
 
@@ -257,7 +171,7 @@ const NurseryPage = ({ onSettingsChange }) => {
     // so keys owned by other tabs (childcare) survive the save.
     useEffect(() => {
         if (!loaded) return;
-        const blob = { ...otherBlob, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides };
+        const blob = { ...otherBlob, ellis, gaspard };
         if (onSettingsChange) onSettingsChange(blob);
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
         saveTimeout.current = setTimeout(() => {
@@ -265,12 +179,12 @@ const NurseryPage = ({ onSettingsChange }) => {
                 .catch(err => console.error('Nursery settings save failed', err));
         }, 500);
         return () => { if (saveTimeout.current) clearTimeout(saveTimeout.current); };
-    }, [loaded, otherBlob, ellis, gaspard, mil, taxFree, fullWeekModel, showBreakdown, adhoc, monthOverrides, onSettingsChange]);
+    }, [loaded, otherBlob, ellis, gaspard, onSettingsChange]);
 
     const calc = useMemo(() => {
-        const settings = { ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides, childcare: otherBlob.childcare };
+        const settings = { ellis, gaspard, adhoc: otherBlob.adhoc || [], childcare: otherBlob.childcare };
         return computeMonthSummary(settings, currentDate);
-    }, [ellis, gaspard, mil, taxFree, fullWeekModel, adhoc, monthOverrides, otherBlob, currentDate]);
+    }, [ellis, gaspard, otherBlob, currentDate]);
 
     const gaspardInNursery = calc.effective.gaspardInNursery;
 
@@ -280,7 +194,7 @@ const NurseryPage = ({ onSettingsChange }) => {
                 <MonthSelector currentDate={currentDate} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 items-stretch">
                 <div className="bg-warn text-paper rounded-xl p-5 flex flex-col">
                     <div className="text-paper/80 text-lg font-semibold mb-2">Transfer to TFC</div>
                     {(() => {
@@ -329,12 +243,6 @@ const NurseryPage = ({ onSettingsChange }) => {
                         );
                     })()}
                 </div>
-                <div className="bg-tild text-paper rounded-xl p-5 flex flex-col">
-                    <div className="text-paper/80 text-lg font-semibold">MIL transfers</div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-3xl font-bold num">{money(calc.monthly.mil)}</div>
-                    </div>
-                </div>
                 <div className="bg-accent text-paper rounded-xl p-5 flex flex-col">
                     <div className="text-paper/80 text-lg font-semibold">Total bill</div>
                     <div className="flex-1 flex items-center justify-center">
@@ -343,210 +251,22 @@ const NurseryPage = ({ onSettingsChange }) => {
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4 mb-4 items-start">
+            <div className="grid md:grid-cols-2 gap-4 items-start">
                 <ChildCard
                     title="Ellis" accent="border-t-warn"
-                    child={{ ...ellis, schedule: effEllisSchedule }}
+                    child={ellis}
                     onUpdateChild={(patch) => setEllis(prev => ({ ...prev, ...patch }))}
-                    onSetSchedule={setEllisSchedule}
                 />
                 {gaspardInNursery ? (
                     <ChildCard
                         title="Gaspard" accent="border-t-keith"
-                        child={{ ...gaspard, schedule: effGaspardSchedule }}
+                        child={gaspard}
                         onUpdateChild={(patch) => setGaspard(prev => ({ ...prev, ...patch }))}
-                        onSetSchedule={setGaspardSchedule}
                     />
                 ) : (
                     <GaspardMovedCard />
                 )}
             </div>
-
-            <div className="mb-4">
-                <MilPanel mil={effMil} setMil={setMilEffective} />
-            </div>
-
-            {showBreakdown && (
-                <div className="bg-card rounded-xl p-5 border border-line mb-4">
-                    <h2 className="text-lg font-semibold text-ink mb-3">Breakdown for {calc.monthLabel}</h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left text-ink-soft border-b">
-                                    <th className="py-2 pr-3">Day</th>
-                                    <th className="py-2 pr-3 text-right">× count</th>
-                                    <th className="py-2 pr-3">Sessions</th>
-                                    <th className="py-2 pr-3 text-right">Ellis</th>
-                                    {gaspardInNursery && <th className="py-2 pr-3 text-right">Gaspard</th>}
-                                    {gaspardInNursery && <th className="py-2 pr-3 text-right">Combined</th>}
-                                    <th className="py-2 pr-3 text-right">MIL transfers</th>
-                                    <th className="py-2 text-right">You pay</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {DAYS.map((d, i) => {
-                                    const md = calc.monthlyDaily[i];
-                                    const eType = md.eFundedType;
-                                    const gType = md.gFundedType;
-                                    const eFunded = md.eFundedHrs;
-                                    const gFunded = md.gFundedHrs;
-                                    const labelFor = (type, hrs, who) => {
-                                        if (type === 'none') return null;
-                                        const short = type === 'fullDay' ? 'Full day' : type === 'morning' ? 'Morning' : 'Afternoon';
-                                        const hrsLabel = hrs ? ` · ${(+hrs.toFixed(2)).toString()}h funded` : '';
-                                        return `${who}: ${short}${hrsLabel}`;
-                                    };
-                                    const eSession = labelFor(eType, eFunded, 'E');
-                                    const gSession = labelFor(gType, gFunded, 'G');
-                                    const totalCount = md.nFunded + md.nStandard;
-                                    const countLabel = (md.nStandard > 0 || md.nBankHols > 0)
-                                        ? <span>
-                                            {totalCount}
-                                            {(md.nStandard > 0 || md.nBankHols > 0) &&
-                                                <span className="text-ink-faint text-xs"
-                                                      title={`${md.nFundNorm} funded normal + ${md.nBankHols} bank hol + ${md.nStandard} standard (1–7 Apr / 25–31 Dec)`}>
-                                                    {' '}({md.nFundNorm}
-                                                    {md.nBankHols > 0 && <span className="text-danger">+{md.nBankHols}BH</span>}
-                                                    {md.nStandard > 0 && <span>+<i>{md.nStandard}</i></span>}
-                                                    )
-                                                </span>}
-                                        </span>
-                                        : <span>{md.nFunded}</span>;
-                                    return (
-                                        <tr key={d} className="border-b last:border-none align-top">
-                                            <td className="py-2 pr-3 font-medium">{d}</td>
-                                            <td className="py-2 pr-3 text-right num text-ink">{countLabel}</td>
-                                            <td className="py-2 pr-3 text-ink-soft text-xs leading-tight">
-                                                {eSession && <div>{eSession}</div>}
-                                                {gSession && <div>{gSession}</div>}
-                                                {!eSession && !gSession && <div className="text-ink-faint">–</div>}
-                                            </td>
-                                            <td className="py-2 pr-3 text-right num">
-                                                {md.eMonthlyGross === 0
-                                                    ? '–'
-                                                    : ellis.siblingDiscount
-                                                        ? <span title={`Before 10% sibling discount: ${money(md.eMonthlyGross)}`}>{money(md.eMonthlyNet)}</span>
-                                                        : money(md.eMonthlyGross)}
-                                            </td>
-                                            {gaspardInNursery && (
-                                                <td className="py-2 pr-3 text-right num">
-                                                    {md.gMonthlyGross === 0
-                                                        ? '–'
-                                                        : gaspard.siblingDiscount
-                                                            ? <span title={`Before 10% sibling discount: ${money(md.gMonthlyGross)}`}>{money(md.gMonthlyNet)}</span>
-                                                            : money(md.gMonthlyGross)}
-                                                </td>
-                                            )}
-                                            {gaspardInNursery && (
-                                                <td className="py-2 pr-3 text-right num font-medium">{md.combined === 0 ? '–' : money(md.combined)}</td>
-                                            )}
-                                            <td className="py-2 pr-3 text-right num text-danger">{md.milPay > 0 ? `−${money(md.milPay)}` : '–'}</td>
-                                            <td className="py-2 text-right num font-medium text-warn">{md.parentPay > 0 ? money(md.parentPay) : '–'}</td>
-                                        </tr>
-                                    );
-                                })}
-
-                                {calc.monthAdhocs.length > 0 && (
-                                    <tr className="bg-warn-soft">
-                                        <td colSpan={gaspardInNursery ? 8 : 6} className="py-2 pr-3 text-xs font-semibold text-warn uppercase tracking-wide">
-                                            Ad-hoc days
-                                        </td>
-                                    </tr>
-                                )}
-                                {calc.monthAdhocs.map(a => (
-                                    <tr key={a.id} className="border-b last:border-none bg-warn-soft/50 align-top">
-                                        <td className="py-2 pr-3 font-medium">{a.date}</td>
-                                        <td className="py-2 pr-3 text-right num text-ink">1</td>
-                                        <td className="py-2 pr-3 text-ink-soft text-xs leading-tight">
-                                            {a.child === 'ellis' ? 'E' : 'G'}: {a.type === 'fullDay' ? 'Full day' : a.type === 'morning' ? 'Morning' : 'Afternoon'} · ad-hoc · {a.ageBracket}
-                                        </td>
-                                        <td className="py-2 pr-3 text-right num">{a.eGross === 0 ? '–' : (ellis.siblingDiscount ? money(a.eNet) : money(a.eGross))}</td>
-                                        {gaspardInNursery && (
-                                            <td className="py-2 pr-3 text-right num">{a.gGross === 0 ? '–' : (gaspard.siblingDiscount ? money(a.gNet) : money(a.gGross))}</td>
-                                        )}
-                                        {gaspardInNursery && (
-                                            <td className="py-2 pr-3 text-right num font-medium">{money(a.combined)}</td>
-                                        )}
-                                        <td className="py-2 pr-3 text-right num text-danger">{a.milPay > 0 ? `−${money(a.milPay)}` : '–'}</td>
-                                        <td className="py-2 text-right num font-medium text-warn">{a.parentPay > 0 ? money(a.parentPay) : '–'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="font-semibold border-t-2">
-                                    <td className="py-2 pr-3" colSpan="3">{calc.monthLabel} total</td>
-                                    <td className="py-2 pr-3 text-right num">
-                                        {money(
-                                            calc.monthlyDaily.reduce((a, m) => a + m.eMonthlyNet, 0)
-                                            + calc.monthAdhocs.reduce((a, x) => a + x.eNet, 0)
-                                        )}
-                                    </td>
-                                    {gaspardInNursery && (
-                                        <td className="py-2 pr-3 text-right num">
-                                            {money(
-                                                calc.monthlyDaily.reduce((a, m) => a + m.gMonthlyNet, 0)
-                                                + calc.monthAdhocs.reduce((a, x) => a + x.gNet, 0)
-                                            )}
-                                        </td>
-                                    )}
-                                    {gaspardInNursery && (
-                                        <td className="py-2 pr-3 text-right num">{money(calc.monthly.gross)}</td>
-                                    )}
-                                    <td className="py-2 pr-3 text-right num text-danger">−{money(calc.monthly.mil)}</td>
-                                    <td className="py-2 text-right num text-warn">{money(calc.monthly.parentOOP)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <div className="mt-5">
-                        <div className="bg-card border border-line rounded-xl p-4">
-                            <div className="text-sm font-semibold text-ink mb-3">Invoice from nursery</div>
-                            {(() => {
-                                const eFactor = calc.tfc.ellisFactor;
-                                const gFactor = calc.tfc.gaspardFactor;
-                                const ellisMIL = calc.monthlyDaily.reduce((a, m, i) => a + m.eMonthlyNet * (effMil[i] / 100), 0) * eFactor
-                                    + calc.monthAdhocs.reduce((a, x) => a + x.eNet * (x.milPct / 100), 0) * eFactor;
-                                const gaspardMIL = calc.monthlyDaily.reduce((a, m, i) => a + m.gMonthlyNet * (effMil[i] / 100), 0) * gFactor
-                                    + calc.monthAdhocs.reduce((a, x) => a + x.gNet * (x.milPct / 100), 0) * gFactor;
-                                const ellisTotal   = calc.ellisInvoiced;
-                                const gaspardTotal = calc.gaspardInvoiced;
-                                const total        = calc.totalInvoiced;
-                                const totalMIL     = ellisMIL + gaspardMIL;
-                                return (
-                                    <table className="w-full text-sm num">
-                                        <thead>
-                                            <tr className="text-ink-soft text-xs">
-                                                <th className="text-left font-medium pb-1">Child</th>
-                                                <th className="text-right font-medium pb-1">Invoiced</th>
-                                                <th className="text-right font-medium pb-1">Transfer to TFC</th>
-                                                <th className="text-right font-medium pb-1">MIL covers</th>
-                                                <th className="text-right font-medium pb-1">Actual total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr><td className="py-1">Ellis{calc.tfc.ellisCapped && <span className="ml-1 text-[10px] text-warn" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.ellisPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(ellisTotal)}</td><td className="text-right py-1 text-good">{money(calc.ellisTFC)}</td><td className="text-right py-1 text-danger">{money(ellisMIL)}</td><td className="text-right py-1">{money(calc.ellisTFC - ellisMIL)}</td></tr>
-                                            {gaspardInNursery && (
-                                                <tr><td className="py-1">Gaspard{calc.tfc.gaspardCapped && <span className="ml-1 text-[10px] text-warn" title={`TFC cap hit (£${calc.tfc.quarterlyCap} max saving for ${calc.tfc.gaspardPeriodLabel})`}>· capped</span>}</td><td className="text-right py-1">{money(gaspardTotal)}</td><td className="text-right py-1 text-good">{money(calc.gaspardTFC)}</td><td className="text-right py-1 text-danger">{money(gaspardMIL)}</td><td className="text-right py-1">{money(calc.gaspardTFC - gaspardMIL)}</td></tr>
-                                            )}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr className="font-semibold border-t">
-                                                <td className="pt-1">Total</td>
-                                                <td className="text-right pt-1">{money(total)}</td>
-                                                <td className="text-right pt-1 text-good">{money(calc.totalTFC)}</td>
-                                                <td className="text-right pt-1 text-danger">{money(totalMIL)}</td>
-                                                <td className="text-right pt-1">{money(calc.totalTFC - totalMIL)}</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                );
-                            })()}
-                        </div>
-                    </div>
-                </div>
-            )}
-
         </div>
     );
 };
