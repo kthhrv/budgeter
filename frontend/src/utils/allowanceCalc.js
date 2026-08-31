@@ -44,3 +44,31 @@ export const dailyAllowanceSeries = (buffer, period) =>
             expected: expectedRemaining(buffer, i + 1, period.totalDays),
         };
     });
+
+/** Weekly burn-down for the groceries pot: shopping happens once a week (on
+ *  the budget's weekly_payment_day, 1=Mon..7=Sun), so the expected balance
+ *  steps down by one shop's worth on each shop day instead of daily.
+ *  Returns { series: [{ day, date, label, expected, isShopDay }], totalShops,
+ *  shopsDone } — shopsDone counted up to and including `period.dayIndex`. */
+export const weeklyBurndownSeries = (total, period, shopWeekday) => {
+    const jsWeekday = shopWeekday % 7; // budget 1=Mon..7=Sun → JS 0=Sun..6=Sat
+    const days = Array.from({ length: period.totalDays }, (_, i) => {
+        const date = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate() + i);
+        return { day: i + 1, date, isShopDay: date.getDay() === jsWeekday };
+    });
+    const totalShops = days.filter(d => d.isShopDay).length || 1;
+    let shops = 0;
+    let shopsDone = 0;
+    const series = days.map(d => {
+        if (d.isShopDay) {
+            shops += 1;
+            if (d.day <= period.dayIndex) shopsDone = shops;
+        }
+        return {
+            ...d,
+            label: d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            expected: total * (totalShops - shops) / totalShops,
+        };
+    });
+    return { series, totalShops, shopsDone };
+};

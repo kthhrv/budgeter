@@ -414,6 +414,22 @@ export const mortgageStats = (property, mortgages) => {
     };
 };
 
+/** Treat several loans on one property as a single loan: combined balance and
+ *  payment, balance-weighted average rate, and the latest stated balance date.
+ *  Used by the overpayment calculator, where the household makes one combined
+ *  payment rather than reasoning per part. */
+export const aggregateLoans = (loans) => {
+    const balance = loans.reduce((sum, m) => sum + toNumber(m.balance), 0);
+    return {
+        balance,
+        monthly_payment: loans.reduce((sum, m) => sum + toNumber(m.monthly_payment), 0),
+        interest_rate_pct: balance > 0
+            ? loans.reduce((sum, m) => sum + toNumber(m.balance) * toNumber(m.interest_rate_pct), 0) / balance
+            : 0,
+        balance_date: loans.map(m => m.balance_date).sort().at(-1) ?? null,
+    };
+};
+
 /** Sum several amortisation schedules into one combined-balance series.
  *  Loans start on different dates: before a loan's schedule begins it
  *  contributes its opening balance; after it ends, its final balance
