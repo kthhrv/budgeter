@@ -134,7 +134,7 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
     );
     const sessionsAllowed = !marker.nonTerm && !marker.weekend;
     return (
-        <div className="mt-3 border-t border-line pt-3">
+        <div>
             <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-semibold text-ink">{iso} <span className="text-xs font-normal text-ink-faint">{marker.nonTerm ? '· non-term' : marker.weekend ? '· weekend' : ''}</span></div>
                 <button type="button" onClick={onClose} className="text-ink-faint hover:text-ink text-sm">Close</button>
@@ -224,7 +224,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
     const [otherBlob, setOtherBlob] = useState({});
     const [loaded, setLoaded] = useState(false);
     const [currentDate, setCurrentDate] = useState(() => getInitialDate());
-    const [mode, setMode] = useState({ type: 'nonTerm' });
+    const [mode, setMode] = useState({ type: 'sessions' });
     const saveTimeout = useRef(null);
 
     useEffect(() => {
@@ -568,25 +568,6 @@ const ChildcarePage = ({ onSettingsChange }) => {
                     <span>{ICON.long} finishes 6:30 (tea)</span>
                     <span>{ICON.holiday} holiday club</span>
                 </div>
-                {mode.type === 'sessions' && selectedDay && (() => {
-                    const mk = markers[selectedDay] || {};
-                    const wd = (new Date(selectedDay + 'T00:00:00').getDay() + 6) % 7;
-                    return (
-                        <DaySessionEditor
-                            iso={selectedDay}
-                            marker={mk}
-                            bOverridden={selectedDay in (childcare.breakfast.overrides || {})}
-                            aOverridden={selectedDay in (childcare.afterSchool.overrides || {})}
-                            weeklyBreakfast={wd <= 4 && effBreakfast[wd] === true}
-                            weeklyAfterSchool={wd <= 4 ? effAfterSchool[wd] : 'none'}
-                            holidayClubs={childcare.holidayClubs}
-                            onToggleClubDay={toggleClubDay}
-                            onSetBreakfast={(v) => setOverride('breakfast', selectedDay, v)}
-                            onSetAfterSchool={(v) => setOverride('afterSchool', selectedDay, v)}
-                            onClose={() => setSelectedDay(null)}
-                        />
-                    );
-                })()}
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -673,6 +654,32 @@ const ChildcarePage = ({ onSettingsChange }) => {
                     </div>
                 </div>
             </div>
+            {/* Day editor modal (Sessions mode) */}
+            {mode.type === 'sessions' && selectedDay && (() => {
+                const mk = markers[selectedDay] || {};
+                const wd = (new Date(selectedDay + 'T00:00:00').getDay() + 6) % 7;
+                return (
+                    <div className="fixed inset-0 z-50 bg-ink/40 flex items-center justify-center p-4"
+                         onClick={() => setSelectedDay(null)}>
+                        <div className="bg-card rounded-xl border border-line p-5 w-full max-w-md animate-slideUp"
+                             onClick={e => e.stopPropagation()}>
+                            <DaySessionEditor
+                                iso={selectedDay}
+                                marker={mk}
+                                bOverridden={selectedDay in (childcare.breakfast.overrides || {})}
+                                aOverridden={selectedDay in (childcare.afterSchool.overrides || {})}
+                                weeklyBreakfast={wd <= 4 && effBreakfast[wd] === true}
+                                weeklyAfterSchool={wd <= 4 ? effAfterSchool[wd] : 'none'}
+                                holidayClubs={childcare.holidayClubs}
+                                onToggleClubDay={toggleClubDay}
+                                onSetBreakfast={(v) => setOverride('breakfast', selectedDay, v)}
+                                onSetAfterSchool={(v) => setOverride('afterSchool', selectedDay, v)}
+                                onClose={() => setSelectedDay(null)}
+                            />
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };
