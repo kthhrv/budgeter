@@ -3,6 +3,7 @@ import apiService from '../services/api';
 import { formatDate, getInitialDate } from '../utils/helpers';
 import MonthSelector from './MonthSelector';
 import { computeChildcare, childcareDayMarkers, getChildcare, effectiveSchedule, CHILDCARE_RATES, SCHOOL_HOLIDAY_RANGES, expandDateRanges } from '../utils/childcareCalc';
+import { computeMonthSummary, ageBracketFor, ELLIS_DOB } from '../utils/nurseryCalc';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const WEEK_HEAD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -13,6 +14,18 @@ const newId = () => Date.now() + Math.random();
 
 const AFTER_SCHOOL_LABEL = { none: 'Not attending', short: '3:15–4:30 (£12)', long: '3:15–6:30 (£24)' };
 const ICON = { breakfast: '🥐', short: '🛝', long: '🍽️', holiday: '🏖️' };
+
+const CHILD_DEFAULTS = {
+    ellis: {
+        scheme: '30hr',
+        siblingDiscount: false,
+    },
+    gaspard: {
+        ageBracket: '3-5',
+        scheme: '30hr',
+        siblingDiscount: true,
+    },
+};
 
 // ------------------------- Month calendar -------------------------
 
@@ -168,9 +181,81 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
     );
 }
 
+// ------------------------- Nursery cards -------------------------
+
+function SiblingToggle({ checked, onChange }) {
+    return (
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4 accent-warn" />
+            <span className="text-sm text-ink">Apply 10% sibling discount</span>
+        </label>
+    );
+}
+
+// Ellis: attendance and age bracket are both fixed rules — full week, and the
+// bracket follows his birthday — so his card is purely informative.
+function EllisCard({ monthKey }) {
+    const bracket = ageBracketFor(ELLIS_DOB, monthKey);
+    return (
+        <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-warn">
+            <div className="flex items-baseline justify-between mb-1">
+                <h2 className="text-xl font-semibold text-ink">Ellis</h2>
+                <span className="text-xs text-ink-faint">Busy Bees Tunbridge Wells</span>
+            </div>
+            <p className="text-xs text-ink-soft mb-3">Full week · Mon–Fri, full days (8am–6pm)</p>
+            <p className="text-sm text-ink">
+                Age bracket: <span className="font-semibold">{bracket === '0-2' ? '0–2' : bracket === '2-3' ? '2–3' : '3–5'} year olds</span>
+            </p>
+            <p className="text-xs text-ink-faint mt-1">
+                Born 23 May 2024 — the 3–5 rate applies from June 2027, the month after he turns 3.
+            </p>
+        </div>
+    );
+}
+
+function GaspardNurseryCard({ child, onUpdateChild }) {
+    return (
+        <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-keith">
+            <div className="flex items-baseline justify-between mb-1">
+                <h2 className="text-xl font-semibold text-ink">Gaspard</h2>
+                <span className="text-xs text-ink-faint">Busy Bees Tunbridge Wells</span>
+            </div>
+            <p className="text-xs text-ink-soft mb-4">Full week · Mon–Fri, full days (8am–6pm)</p>
+            <label className="text-sm block mb-4">
+                <span className="block text-ink-soft mb-1">Age bracket</span>
+                <select value={child.ageBracket} onChange={e => onUpdateChild({ ageBracket: e.target.value })}
+                        className="w-full rounded-lg border border-line px-2 py-1.5 bg-card">
+                    <option value="0-2">0–2 Year Olds</option>
+                    <option value="2-3">2–3 Year Olds</option>
+                    <option value="3-5">3–5 Year Olds</option>
+                </select>
+            </label>
+            <SiblingToggle checked={child.siblingDiscount} onChange={v => onUpdateChild({ siblingDiscount: v })} />
+        </div>
+    );
+}
+
+// Placeholder shown in Gaspard's slot once he's left nursery for school.
+function GaspardMovedCard() {
+    return (
+        <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-keith">
+            <div className="flex items-baseline justify-between mb-3">
+                <h2 className="text-xl font-semibold text-ink">Gaspard</h2>
+                <span className="text-xs text-ink-faint">At school</span>
+            </div>
+            <p className="text-sm text-ink-soft">
+                Gaspard has left nursery — his costs below are the school breakfast,
+                after-school and holiday clubs configured on the calendar.
+            </p>
+        </div>
+    );
+}
+
 // ------------------------- Page -------------------------
 
 const ChildcarePage = ({ onSettingsChange }) => {
+    const [ellis, setEllis] = useState(CHILD_DEFAULTS.ellis);
+    const [gaspard, setGaspard] = useState(CHILD_DEFAULTS.gaspard);
     const [childcare, setChildcare] = useState(() => getChildcare(null));
     const [otherBlob, setOtherBlob] = useState({});
     const [loaded, setLoaded] = useState(false);
@@ -189,12 +274,15 @@ const ChildcarePage = ({ onSettingsChange }) => {
 
     const monthKey = useMemo(() => formatDate(currentDate, 'YYYY-MM'), [currentDate]);
 
-    // Load the shared nursery-settings blob; own only the `childcare` subtree.
+    // Load the shared settings blob: this page owns `ellis`, `gaspard` and
+    // `childcare`; everything else is preserved verbatim on save.
     useEffect(() => {
         let cancelled = false;
         apiService.getNurserySettings().then(serverData => {
             if (cancelled) return;
             const blob = serverData && typeof serverData === 'object' ? serverData : {};
+            if (blob.ellis)   setEllis(prev => ({ ...prev, ...blob.ellis }));
+            if (blob.gaspard) setGaspard(prev => ({ ...prev, ...blob.gaspard }));
             setChildcare(getChildcare(blob));
             setOtherBlob(blob);
             setLoaded(true);
@@ -208,7 +296,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
     // Debounced save, preserving every key we don't own.
     useEffect(() => {
         if (!loaded) return;
-        const blob = { ...otherBlob, childcare };
+        const blob = { ...otherBlob, ellis, gaspard, childcare };
         if (onSettingsChange) onSettingsChange(blob);
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
         saveTimeout.current = setTimeout(() => {
@@ -216,10 +304,18 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 .catch(err => console.error('Childcare settings save failed', err));
         }, 500);
         return () => { if (saveTimeout.current) clearTimeout(saveTimeout.current); };
-    }, [loaded, otherBlob, childcare, onSettingsChange]);
+    }, [loaded, otherBlob, ellis, gaspard, childcare, onSettingsChange]);
 
     const markers = useMemo(() => childcareDayMarkers({ childcare }, monthKey), [childcare, monthKey]);
     const calc = useMemo(() => computeChildcare({ childcare }, monthKey), [childcare, monthKey]);
+    const nursery = useMemo(
+        () => computeMonthSummary({ ellis, gaspard, adhoc: otherBlob.adhoc || [], childcare }, currentDate),
+        [ellis, gaspard, otherBlob, childcare, currentDate]
+    );
+    const gaspardInNursery = nursery.effective.gaspardInNursery;
+    // Gaspard's TFC transfer: nursery invoice net before the school switch,
+    // school clubs net after.
+    const gaspardTfcTransfer = gaspardInNursery ? nursery.gaspardTFC : calc.net;
 
     // Weekly pattern effective for the displayed month (forward-filled).
     const effBreakfast = effectiveSchedule(childcare, monthKey, 'breakfast');
@@ -293,21 +389,61 @@ const ChildcarePage = ({ onSettingsChange }) => {
 
     const breakfastDays = Math.round(calc.breakfast.cost / CHILDCARE_RATES.breakfast);
 
+    // Tooltip'd TFC amount with the £500-per-period cap diagnostics (nursery).
+    const TFCAmount = ({ amount, saving, usedBefore, capped, periodLabel }) => {
+        const periodTotal = usedBefore + saving;
+        return (
+            <div className="relative inline-block group">
+                <div className="text-xl font-bold num cursor-help underline decoration-paper/40 decoration-dotted underline-offset-4">
+                    {money(amount)}
+                </div>
+                <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-10 hidden group-hover:block whitespace-nowrap rounded-lg bg-ink text-paper text-xs font-normal px-3 py-2 text-left">
+                    <div>£{saving.toFixed(2)} saved this month</div>
+                    <div className="text-ink-faint/70">£{periodTotal.toFixed(2)} of £{nursery.tfc.quarterlyCap} used ({periodLabel})</div>
+                    {capped && <div className="text-paper/70 mt-1">cap reached</div>}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex justify-center">
                 <MonthSelector currentDate={currentDate} />
             </div>
 
-            {/* Headline cards — mirrors the Nursery section's summary row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+            {/* Headline cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch">
                 <div className="bg-warn text-paper rounded-xl p-5 flex flex-col">
-                    <div className="text-paper/80 text-lg font-semibold">Transfer to TFC</div>
-                    <div className="text-paper/70 text-xs num" title="TFC reference">Gaspard · 1100067930356</div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-3xl font-bold num">{money(calc.net)}</div>
+                    <div className="text-paper/80 text-lg font-semibold mb-2">Transfer to TFC</div>
+                    <div className="flex-1 flex flex-col justify-center gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                            <div>
+                                <div className="text-paper/80 text-sm leading-tight">Ellis</div>
+                                <div className="text-paper/60 text-[10px] num" title="TFC reference">1100116981235</div>
+                            </div>
+                            <TFCAmount amount={nursery.ellisTFC}
+                                       saving={nursery.tfc.ellisSaving}
+                                       usedBefore={nursery.tfc.ellisUsedBefore}
+                                       capped={nursery.tfc.ellisCapped}
+                                       periodLabel={nursery.tfc.ellisPeriodLabel} />
+                        </div>
+                        <div className="flex items-center justify-between gap-2 border-t border-paper/20 pt-2">
+                            <div>
+                                <div className="text-paper/80 text-sm leading-tight">Gaspard</div>
+                                <div className="text-paper/60 text-[10px] num" title="TFC reference">1100067930356</div>
+                            </div>
+                            {gaspardInNursery ? (
+                                <TFCAmount amount={nursery.gaspardTFC}
+                                           saving={nursery.tfc.gaspardSaving}
+                                           usedBefore={nursery.tfc.gaspardUsedBefore}
+                                           capped={nursery.tfc.gaspardCapped}
+                                           periodLabel={nursery.tfc.gaspardPeriodLabel} />
+                            ) : (
+                                <div className="text-xl font-bold num">{money(gaspardTfcTransfer)}</div>
+                            )}
+                        </div>
                     </div>
-                    <div className="text-paper/70 text-xs text-center">−{money(calc.tfcSaving)} TFC top-up on {money(calc.gross)} gross</div>
                 </div>
                 <div className="bg-accent text-paper rounded-xl p-5 flex flex-col">
                     <div className="text-paper/80 text-lg font-semibold">After-school & breakfast</div>
@@ -327,6 +463,23 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         {calc.holidayClubs.length === 0 ? 'No clubs this month' : calc.holidayClubs.map(h => h.name || 'Club').join(' · ')}
                     </div>
                 </div>
+                <div className="bg-ink text-paper rounded-xl p-5 flex flex-col">
+                    <div className="text-paper/80 text-lg font-semibold">Total nursery bill</div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-3xl font-bold num">{money(nursery.monthly.gross)}</div>
+                    </div>
+                    <div className="text-paper/70 text-xs text-center">before the TFC top-up</div>
+                </div>
+            </div>
+
+            {/* Nursery child cards */}
+            <div className="grid md:grid-cols-2 gap-4 items-start">
+                <EllisCard monthKey={monthKey} />
+                {gaspardInNursery ? (
+                    <GaspardNurseryCard child={gaspard} onUpdateChild={(patch) => setGaspard(prev => ({ ...prev, ...patch }))} />
+                ) : (
+                    <GaspardMovedCard />
+                )}
             </div>
 
             {/* Calendar + cost breakdown, side by side on wide screens */}
@@ -392,7 +545,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
 
             {/* Cost breakdown */}
             <div className="bg-card rounded-xl p-5 border border-line">
-                <h2 className="text-lg font-semibold text-ink mb-3">Cost breakdown</h2>
+                <h2 className="text-lg font-semibold text-ink mb-3">School clubs breakdown</h2>
                 <div>
                     <table className="w-full text-sm num [&_td:not(:first-child)]:whitespace-nowrap [&_th]:whitespace-nowrap">
                         <thead>
@@ -461,7 +614,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                                 <span className="text-ink-soft">{d}</span>
                                 <select value={effBreakfast[i] ? 'yes' : 'no'} onChange={e => setBreakfastDay(i, e.target.value === 'yes')}
                                         className="rounded-lg border border-line px-2 py-1 bg-card text-sm">
-                    <option value="no">Not attending</option>
+                                    <option value="no">Not attending</option>
                                     <option value="yes">Attending</option>
                                 </select>
                             </label>
@@ -483,7 +636,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                                 <span className="text-ink-soft">{d}</span>
                                 <select value={effAfterSchool[i]} onChange={e => setAfterSchoolDay(i, e.target.value)}
                                         className="rounded-lg border border-line px-2 py-1 bg-card text-sm">
-                    <option value="none">Not attending</option>
+                                    <option value="none">Not attending</option>
                                     <option value="short">3:15–4:30 (£12)</option>
                                     <option value="long">3:15–6:30 (£24)</option>
                                 </select>
@@ -494,7 +647,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 </div>
 
                 {/* Holiday clubs */}
-                <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-emerald-400">
+                <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-good">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-semibold text-ink">Holiday Club</h3>
                         <button type="button" onClick={addClub} className="text-sm font-medium bg-good hover:bg-accent-strong text-paper rounded-lg px-3 py-1">+ Club</button>

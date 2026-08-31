@@ -11,7 +11,7 @@ import { useBudgetTotals } from './hooks/useBudgetTotals';
 import OwnerCard from './components/OwnerCard';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
-import ChildcareHubPage from './components/ChildcareHubPage';
+import ChildcarePage from './components/ChildcarePage';
 import FirePage from './components/FirePage';
 import ReportsPage from './components/ReportsPage';
 import MortgagePage from './components/MortgagePage';
@@ -332,7 +332,7 @@ const App = () => {
                 ) : activePage === 'fire' ? (
                     <FirePage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 ) : activePage === 'childcare' ? (
-                    <ChildcareHubPage onSettingsChange={setNurserySettings} />
+                    <ChildcarePage onSettingsChange={setNurserySettings} />
                 ) : activePage === 'budget' ? (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] md:items-center gap-3 mb-6">

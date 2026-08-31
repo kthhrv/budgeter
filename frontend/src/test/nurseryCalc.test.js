@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     computeMonthSummary, effectiveForMonth, applyChildcareLinks,
-    tfcSavingForMonth, TFC_QUARTERLY_CAP,
+    tfcSavingForMonth, TFC_QUARTERLY_CAP, ageBracketFor, ELLIS_DOB,
 } from '../utils/nurseryCalc';
 
 const baseSettings = () => ({
@@ -301,5 +301,23 @@ describe('nursery → childcare switchover at startMonth', () => {
         // Post-switch: care line = breakfast/after-school net; holiday line separate.
         expect(sep.gaspardCareNet).toBeGreaterThan(0);
         expect(sep.gaspardHolidayNet).toBeGreaterThan(0); // one non-term Sat day @ £40
+    });
+});
+
+describe('ageBracketFor (Ellis, born 23 May 2024)', () => {
+    it('moves brackets the month after each birthday', () => {
+        expect(ageBracketFor(ELLIS_DOB, '2026-04')).toBe('0-2'); // still 1 on 1 Apr 2026
+        expect(ageBracketFor(ELLIS_DOB, '2026-05')).toBe('0-2'); // turns 2 on the 23rd — 1 on the 1st
+        expect(ageBracketFor(ELLIS_DOB, '2026-06')).toBe('2-3');
+        expect(ageBracketFor(ELLIS_DOB, '2027-05')).toBe('2-3'); // turns 3 on the 23rd
+        expect(ageBracketFor(ELLIS_DOB, '2027-06')).toBe('3-5');
+        expect(ageBracketFor(ELLIS_DOB, '2028-01')).toBe('3-5');
+    });
+
+    it('drives the effective settings regardless of the stored bracket', () => {
+        const s = baseSettings();
+        s.ellis.ageBracket = '0-2'; // stale stored value
+        expect(effectiveForMonth(s, '2026-06').ellis.ageBracket).toBe('2-3');
+        expect(effectiveForMonth(s, '2027-07').ellis.ageBracket).toBe('3-5');
     });
 });

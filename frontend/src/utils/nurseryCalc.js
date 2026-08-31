@@ -23,6 +23,21 @@ export const FOOD_CONSUMABLES = {
 // costs are computed by childcareCalc.js and shown on the Childcare tab.
 export const GASPARD_CARE_START_DEFAULT = '2026-09';
 
+// Ellis's date of birth — his nursery age bracket (and therefore the rate) is
+// derived from it per displayed month, so the 2–3 → 3–5 move happens by
+// itself the month after he turns 3 (June 2027).
+export const ELLIS_DOB = '2024-05-23';
+
+/** Nursery age bracket for a child on the 1st of `monthKey`, from an ISO DOB. */
+export function ageBracketFor(dobIso, monthKey) {
+    const [by, bm, bd] = dobIso.split('-').map(Number);
+    const [y, m] = monthKey.split('-').map(Number);
+    const first = new Date(y, m - 1, 1);
+    let age = first.getFullYear() - by;
+    if (first.getMonth() + 1 < bm || (first.getMonth() + 1 === bm && 1 < bd)) age -= 1;
+    return age < 2 ? '0-2' : age < 3 ? '2-3' : '3-5';
+}
+
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 export const SESSION_OPTIONS = [
@@ -141,7 +156,8 @@ export function effectiveForMonth(settings, monthKey) {
     const gaspardInNursery = monthKey < startMonth;
 
     return {
-        ellis:           settings.ellis,
+        // Ellis's bracket follows his birthday rather than a setting.
+        ellis:           { ...settings.ellis, ageBracket: ageBracketFor(ELLIS_DOB, monthKey) },
         gaspard:         settings.gaspard,
         ellisSchedule:   FULL_WEEK,
         gaspardSchedule: gaspardInNursery ? FULL_WEEK : NO_SCHEDULE,

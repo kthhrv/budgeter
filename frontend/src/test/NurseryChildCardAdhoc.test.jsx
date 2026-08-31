@@ -14,7 +14,7 @@ vi.mock('../services/api', () => ({
     },
 }));
 
-import NurseryPage from '../components/NurseryPage';
+import ChildcarePage from '../components/ChildcarePage';
 
 describe('Nursery cards (ad-hoc removed)', () => {
     // Pin to a pre-September month so Gaspard is still in nursery regardless of
@@ -22,13 +22,13 @@ describe('Nursery cards (ad-hoc removed)', () => {
     beforeEach(() => { window.location.hash = '#2026-06'; });
 
     it('no longer renders an "Ad-hoc days in {month}" section on nursery cards', async () => {
-        render(<NurseryPage />);
+        render(<ChildcarePage />);
         await screen.findAllByText('Ellis');
         expect(screen.queryByText(/Ad-hoc days in /)).toBeNull();
     });
 
     it('renders Ellis and Gaspard nursery cards before the care start month', async () => {
-        render(<NurseryPage />);
+        render(<ChildcarePage />);
         // Card titles are <h2> headings (the summary cards use plain divs), so a
         // Gaspard nursery card present means he hasn't switched to school care.
         expect(await screen.findByRole('heading', { name: 'Ellis' })).toBeInTheDocument();
