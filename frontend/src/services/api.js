@@ -183,6 +183,7 @@ const apiService = {
     getFireMonthlyItems(count = 12) { return this._fireGet(`/fire/monthly-items/?count=${count}`, 'Failed to fetch budget history'); },
     getMonzoStatus() { return this._fireGet('/fire/monzo/status/', 'Failed to fetch Monzo status'); },
     getMonzoPots() { return this._fireGet('/fire/monzo/pots/', 'Failed to fetch Monzo pots'); },
+    getMonzoJointBalance() { return this._fireGet('/fire/monzo/joint-balance/', 'Failed to fetch the Monzo joint balance'); },
     syncMonzo() { return this._fireSend('POST', '/fire/monzo/sync/', {}, 'Monzo sync failed'); },
     disconnectMonzo() { return this._fireSend('POST', '/fire/monzo/disconnect/', {}, 'Failed to disconnect Monzo'); }
 };

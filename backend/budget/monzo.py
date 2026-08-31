@@ -118,17 +118,27 @@ def _api_get(connection, path, params=None, _retried=False):
     return response.json()
 
 
+def list_accounts(connection):
+    """The user's open Monzo accounts (personal and joint)."""
+    accounts = _api_get(connection, "/accounts").get("accounts", [])
+    return [a for a in accounts if not a.get("closed")]
+
+
+def get_balance(connection, account_id):
+    """Account balance in pounds (Monzo reports pence). Pot money is held
+    outside the account balance, so this is the freely-spendable amount."""
+    payload = _api_get(connection, "/balance", {"account_id": account_id})
+    return payload.get("balance", 0) / 100
+
+
 def list_pots(connection):
     """Every non-deleted pot across the user's Monzo accounts.
 
     Returns [{id, name, balance, currency}] with balance in pounds (Monzo
     reports pence).
     """
-    accounts = _api_get(connection, "/accounts").get("accounts", [])
     pots, seen = [], set()
-    for account in accounts:
-        if account.get("closed"):
-            continue
+    for account in list_accounts(connection):
         for pot in _api_get(connection, "/pots", {"current_account_id": account["id"]}).get("pots", []):
             if pot.get("deleted") or pot["id"] in seen:
                 continue

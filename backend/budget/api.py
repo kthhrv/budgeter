@@ -979,6 +979,31 @@ def monzo_sync(request):
     return 200, {"synced": synced, "skipped": skipped}
 
 
+class MonzoJointBalanceSchema(Schema):
+    balance: float
+    description: str
+
+
+@api.get("/fire/monzo/joint-balance/", response={200: MonzoJointBalanceSchema, 400: dict, 404: dict})
+def monzo_joint_balance(request):
+    """Live balance of the Monzo joint account (pots excluded — this is the
+    freely-spendable amount), for the Allowance tab's buffer comparison."""
+    connection = _monzo_connection(request)
+    if not connection:
+        return 400, {"detail": "Monzo is not connected."}
+    try:
+        accounts = monzo.list_accounts(connection)
+        joint = next((a for a in accounts if a.get("type") == "uk_retail_joint"), None)
+        if joint is None:
+            return 404, {"detail": "No Monzo joint account found on this connection."}
+        return 200, {
+            "balance": monzo.get_balance(connection, joint["id"]),
+            "description": joint.get("description", "Joint account"),
+        }
+    except monzo.MonzoError as exc:
+        return 400, {"detail": str(exc)}
+
+
 @api.post("/fire/monzo/disconnect/", response={204: None})
 def monzo_disconnect(request):
     MonzoConnection.objects.filter(user=request.user).delete()
