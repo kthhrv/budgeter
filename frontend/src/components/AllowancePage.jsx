@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import apiService from '../services/api';
 import { formatDate } from '../utils/helpers';
-import { dailyAllowanceSeries, daysInMonth, expectedRemaining } from '../utils/allowanceCalc';
+import { currentPeriod, fundedMonthDate, dailyAllowanceSeries, expectedRemaining, RESET_DAY } from '../utils/allowanceCalc';
 
 const COLOR_EXPECTED = '#4f46e5';
 const COLOR_ACTUAL = '#059669';
@@ -36,16 +36,16 @@ const AllowancePage = ({ showToast }) => {
     const [jointBalance, setJointBalance] = useState(null); // {balance, description}
     const [balanceError, setBalanceError] = useState(null);
 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const today = now.getDate();
-    const totalDays = daysInMonth(year, month);
+    // The buffer runs pay day to pay day (28th → 27th), not calendar months.
+    const period = currentPeriod(new Date());
 
     const fetchData = useCallback(async () => {
         try {
-            await apiService.createOrGetMonth(new Date());
-            const items = await apiService.getBudgetItemsForMonth(formatDate(new Date(), 'YYYY-MM'));
+            // Pay on the 28th funds the FOLLOWING month's budget — read the
+            // buffer from that month.
+            const funded = fundedMonthDate(currentPeriod(new Date()));
+            await apiService.createOrGetMonth(funded);
+            const items = await apiService.getBudgetItemsForMonth(formatDate(funded, 'YYYY-MM'));
             // The buffer is the auto-balance Extra (the joint Remaining target);
             // fall back to the sum of any manual Extra lines.
             const autoExtra = items.find(i => i.is_auto_extra);
@@ -71,8 +71,9 @@ const AllowancePage = ({ showToast }) => {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const series = useMemo(
-        () => (buffer ? dailyAllowanceSeries(buffer, year, month) : []),
-        [buffer, year, month]
+        () => (buffer ? dailyAllowanceSeries(buffer, period) : []),
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- period is derived from the clock, stable within a render
+        [buffer, period.start.getTime()]
     );
 
     if (isLoading) {
@@ -91,18 +92,19 @@ const AllowancePage = ({ showToast }) => {
         );
     }
 
-    const expectedToday = expectedRemaining(buffer, today, totalDays);
+    const expectedToday = expectedRemaining(buffer, period.dayIndex, period.totalDays);
     const actual = jointBalance?.balance ?? null;
     const delta = actual !== null ? actual - expectedToday : null;
-    const dailyRate = buffer / totalDays;
+    const dailyRate = buffer / period.totalDays;
+    const daysLeft = period.totalDays - period.dayIndex;
 
     return (
         <div className="space-y-6 animate-fadeIn">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatTile Icon={Coins} label="Buffer this month" value={fmtMoney(buffer)}
-                    sub={`≈ ${fmtMoney(dailyRate, 2)}/day over ${totalDays} days`} />
-                <StatTile Icon={TrendingDown} label={`Should have left (day ${today})`} value={fmtMoney(expectedToday)}
-                    sub={`${totalDays - today} day${totalDays - today === 1 ? '' : 's'} of the month left`} />
+                <StatTile Icon={Coins} label="Buffer this period" value={fmtMoney(buffer)}
+                    sub={`≈ ${fmtMoney(dailyRate, 2)}/day over ${period.totalDays} days · resets on the ${RESET_DAY}th`} />
+                <StatTile Icon={TrendingDown} label={`Should have left (day ${period.dayIndex} of ${period.totalDays})`} value={fmtMoney(expectedToday)}
+                    sub={`${daysLeft} day${daysLeft === 1 ? '' : 's'} until pay day`} />
                 <StatTile Icon={Wallet} label="Joint account balance"
                     value={actual !== null ? fmtMoney(actual, 2) : '—'}
                     sub={actual !== null ? jointBalance.description : balanceError || 'Connect Monzo on the FIRE tab'} />
@@ -115,41 +117,44 @@ const AllowancePage = ({ showToast }) => {
             </div>
 
             <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                <h3 className="text-lg font-bold text-gray-800 mb-3">Buffer burn-down · {now.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">
+                    Buffer burn-down · {series[0].label} – {series.at(-1).label} {period.end.getFullYear()}
+                </h3>
                 <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={series} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                        <XAxis dataKey="day" type="number" domain={[1, totalDays]} tickCount={11}
+                        <XAxis dataKey="day" type="number" domain={[1, period.totalDays]} tickCount={11}
+                            tickFormatter={(d) => series[Math.round(d) - 1]?.label ?? ''}
                             tick={{ fontSize: 11, fill: '#6b7280' }} />
                         <YAxis tickFormatter={(v) => fmtMoney(v)} tick={{ fontSize: 11, fill: '#6b7280' }} width={56} />
                         <Tooltip
                             formatter={(value) => [fmtMoney(value, 2), 'Should have left']}
-                            labelFormatter={(day) => `Day ${day}`}
+                            labelFormatter={(day) => series[day - 1]?.label ?? `Day ${day}`}
                             contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                        <ReferenceLine x={today} stroke="#9ca3af" strokeDasharray="4 4"
+                        <ReferenceLine x={period.dayIndex} stroke="#9ca3af" strokeDasharray="4 4"
                             label={{ value: 'Today', position: 'insideTopRight', fontSize: 11, fill: '#6b7280' }} />
                         <Line type="linear" dataKey="expected" name="Should have left"
                             stroke={COLOR_EXPECTED} strokeWidth={2} dot={false} />
                         {actual !== null && (
-                            <ReferenceDot x={today} y={Math.min(actual, buffer)} r={5}
+                            <ReferenceDot x={period.dayIndex} y={Math.min(actual, buffer)} r={5}
                                 fill={delta >= 0 ? COLOR_ACTUAL : COLOR_BEHIND} stroke="#fff" strokeWidth={2}
                                 label={{ value: `Actual ${fmtMoney(actual)}`, position: delta >= 0 ? 'top' : 'bottom', fontSize: 11, fill: delta >= 0 ? COLOR_ACTUAL : COLOR_BEHIND }} />
                         )}
                     </LineChart>
                 </ResponsiveContainer>
                 <p className="text-xs text-gray-400 mt-2">
-                    The line spreads the buffer evenly across the month. The dot is the live Monzo joint-account balance
-                    (pot money excluded) — above the line means you're spending slower than plan.
+                    The line spreads the buffer evenly from pay day to pay day (the {RESET_DAY}th). The dot is the live Monzo
+                    joint-account balance (pot money excluded) — above the line means you're spending slower than plan.
                 </p>
             </div>
 
             <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
                 <h3 className="text-lg font-bold text-gray-800 mb-3">Day by day</h3>
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
-                    {series.map(({ day, expected }) => (
+                    {series.map(({ day, label, expected }) => (
                         <div key={day}
-                            className={`px-2 py-1.5 rounded-lg text-center text-xs ${day === today ? 'bg-indigo-600 text-white font-semibold' : day < today ? 'bg-gray-50 text-gray-400' : 'bg-gray-50 text-gray-600'}`}>
-                            <span className="block text-[10px] opacity-70">{day}</span>
+                            className={`px-2 py-1.5 rounded-lg text-center text-xs ${day === period.dayIndex ? 'bg-indigo-600 text-white font-semibold' : day < period.dayIndex ? 'bg-gray-50 text-gray-400' : 'bg-gray-50 text-gray-600'}`}>
+                            <span className="block text-[10px] opacity-70">{label}</span>
                             {fmtMoney(expected)}
                         </div>
                     ))}
