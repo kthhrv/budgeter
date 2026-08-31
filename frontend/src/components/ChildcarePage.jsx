@@ -3,7 +3,7 @@ import apiService from '../services/api';
 import { formatDate, getInitialDate } from '../utils/helpers';
 import MonthSelector from './MonthSelector';
 import { computeChildcare, childcareDayMarkers, getChildcare, effectiveSchedule, CHILDCARE_RATES, SCHOOL_HOLIDAY_RANGES, expandDateRanges } from '../utils/childcareCalc';
-import { computeMonthSummary, ageBracketFor, ELLIS_DOB } from '../utils/nurseryCalc';
+import { computeMonthSummary } from '../utils/nurseryCalc';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const WEEK_HEAD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -177,76 +177,6 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
             ) : (
                 <p className="text-xs text-ink-soft">Weekend — no sessions.</p>
             )}
-        </div>
-    );
-}
-
-// ------------------------- Nursery cards -------------------------
-
-function SiblingToggle({ checked, onChange }) {
-    return (
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4 accent-warn" />
-            <span className="text-sm text-ink">Apply 10% sibling discount</span>
-        </label>
-    );
-}
-
-// Ellis: attendance and age bracket are both fixed rules — full week, and the
-// bracket follows his birthday — so his card is purely informative.
-function EllisCard({ monthKey }) {
-    const bracket = ageBracketFor(ELLIS_DOB, monthKey);
-    return (
-        <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-warn">
-            <div className="flex items-baseline justify-between mb-1">
-                <h2 className="text-xl font-semibold text-ink">Ellis</h2>
-                <span className="text-xs text-ink-faint">Busy Bees Tunbridge Wells</span>
-            </div>
-            <p className="text-xs text-ink-soft mb-3">Full week · Mon–Fri, full days (8am–6pm)</p>
-            <p className="text-sm text-ink">
-                Age bracket: <span className="font-semibold">{bracket === '0-2' ? '0–2' : bracket === '2-3' ? '2–3' : '3–5'} year olds</span>
-            </p>
-            <p className="text-xs text-ink-faint mt-1">
-                Born 23 May 2024 — the 3–5 rate applies from June 2027, the month after he turns 3.
-            </p>
-        </div>
-    );
-}
-
-function GaspardNurseryCard({ child, onUpdateChild }) {
-    return (
-        <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-keith">
-            <div className="flex items-baseline justify-between mb-1">
-                <h2 className="text-xl font-semibold text-ink">Gaspard</h2>
-                <span className="text-xs text-ink-faint">Busy Bees Tunbridge Wells</span>
-            </div>
-            <p className="text-xs text-ink-soft mb-4">Full week · Mon–Fri, full days (8am–6pm)</p>
-            <label className="text-sm block mb-4">
-                <span className="block text-ink-soft mb-1">Age bracket</span>
-                <select value={child.ageBracket} onChange={e => onUpdateChild({ ageBracket: e.target.value })}
-                        className="w-full rounded-lg border border-line px-2 py-1.5 bg-card">
-                    <option value="0-2">0–2 Year Olds</option>
-                    <option value="2-3">2–3 Year Olds</option>
-                    <option value="3-5">3–5 Year Olds</option>
-                </select>
-            </label>
-            <SiblingToggle checked={child.siblingDiscount} onChange={v => onUpdateChild({ siblingDiscount: v })} />
-        </div>
-    );
-}
-
-// Placeholder shown in Gaspard's slot once he's left nursery for school.
-function GaspardMovedCard() {
-    return (
-        <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-keith">
-            <div className="flex items-baseline justify-between mb-3">
-                <h2 className="text-xl font-semibold text-ink">Gaspard</h2>
-                <span className="text-xs text-ink-faint">At school</span>
-            </div>
-            <p className="text-sm text-ink-soft">
-                Gaspard has left nursery — his costs below are the school breakfast,
-                after-school and holiday clubs configured on the calendar.
-            </p>
         </div>
     );
 }
@@ -470,16 +400,6 @@ const ChildcarePage = ({ onSettingsChange }) => {
                     </div>
                     <div className="text-paper/70 text-xs text-center">before the TFC top-up</div>
                 </div>
-            </div>
-
-            {/* Nursery child cards */}
-            <div className="grid md:grid-cols-2 gap-4 items-start">
-                <EllisCard monthKey={monthKey} />
-                {gaspardInNursery ? (
-                    <GaspardNurseryCard child={gaspard} onUpdateChild={(patch) => setGaspard(prev => ({ ...prev, ...patch }))} />
-                ) : (
-                    <GaspardMovedCard />
-                )}
             </div>
 
             {/* Calendar + cost breakdown, side by side on wide screens */}

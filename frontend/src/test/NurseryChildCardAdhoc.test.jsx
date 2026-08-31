@@ -27,14 +27,11 @@ describe('Nursery cards (ad-hoc removed)', () => {
         expect(screen.queryByText(/Ad-hoc days in /)).toBeNull();
     });
 
-    it('renders Ellis and Gaspard nursery cards before the care start month', async () => {
+    it('shows the summary cards with a TFC row per child', async () => {
         render(<ChildcarePage />);
-        // Card titles are <h2> headings (the summary cards use plain divs), so a
-        // Gaspard nursery card present means he hasn't switched to school care.
-        expect(await screen.findByRole('heading', { name: 'Ellis' })).toBeInTheDocument();
-        expect(await screen.findByRole('heading', { name: 'Gaspard' })).toBeInTheDocument();
-        // Both cards show the nursery provider label.
-        const providerLabels = await screen.findAllByText('Busy Bees Tunbridge Wells');
-        expect(providerLabels.length).toBe(2);
+        expect(await screen.findByText('Transfer to TFC')).toBeInTheDocument();
+        expect(await screen.findByText('Ellis')).toBeInTheDocument();
+        expect(await screen.findByText('Gaspard')).toBeInTheDocument();
+        expect(await screen.findByText('Total nursery bill')).toBeInTheDocument();
     });
 });
