@@ -603,13 +603,13 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         Breakfast £{CHILDCARE_RATES.breakfast.toFixed(2)}/day · after-school £{CHILDCARE_RATES.afterSchool.short}/£{CHILDCARE_RATES.afterSchool.long} per day · term-time
                     </p>
                     <div className="space-y-1.5 mb-3">
-                        <div className="grid grid-cols-[6rem_auto_minmax(0,1fr)] gap-2 items-center text-xs text-ink-soft font-medium">
+                        <div className="grid grid-cols-[6rem_auto_10rem] gap-3 items-center text-xs text-ink-soft font-medium">
                             <span></span>
                             <span>{ICON.breakfast} Breakfast</span>
                             <span>After-school</span>
                         </div>
                         {DAYS.map((d, i) => (
-                            <div key={d} className="grid grid-cols-[6rem_auto_minmax(0,1fr)] gap-2 items-center text-sm">
+                            <div key={d} className="grid grid-cols-[6rem_auto_10rem] gap-3 items-center text-sm">
                                 <span className="text-ink-soft">{d}</span>
                                 <label className="flex justify-center cursor-pointer">
                                     <input type="checkbox" checked={effBreakfast[i] === true}
@@ -619,8 +619,8 @@ const ChildcarePage = ({ onSettingsChange }) => {
                                 <select value={effAfterSchool[i]} onChange={e => setAfterSchoolDay(i, e.target.value)}
                                         className="rounded-lg border border-line px-2 py-1 bg-card text-sm">
                                     <option value="none">Not attending</option>
-                                    <option value="short">3:15–4:30 (£12)</option>
-                                    <option value="long">3:15–6:30 (£24)</option>
+                                    <option value="short">3:15–4:30</option>
+                                    <option value="long">3:15–6:30</option>
                                 </select>
                             </div>
                         ))}
