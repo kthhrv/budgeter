@@ -32,6 +32,6 @@ describe('Nursery cards (ad-hoc removed)', () => {
         expect(await screen.findByText('Transfer to TFC')).toBeInTheDocument();
         expect(await screen.findByText('Ellis')).toBeInTheDocument();
         expect(await screen.findByText('Gaspard')).toBeInTheDocument();
-        expect(await screen.findByText('Total nursery bill')).toBeInTheDocument();
+        expect(await screen.findByText('Nursery bill')).toBeInTheDocument();
     });
 });

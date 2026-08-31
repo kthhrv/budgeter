@@ -377,8 +377,9 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 </div>
                 <div className="bg-accent text-paper rounded-xl p-5 flex flex-col">
                     <div className="text-paper/80 text-lg font-semibold">After-school & breakfast</div>
-                    <div className="flex-1 flex items-center justify-center">
+                    <div className="flex-1 flex flex-col items-center justify-center">
                         <div className="text-3xl font-bold num">{money(calc.termNet)}</div>
+                        <div className="text-paper/70 text-sm num">{money(calc.breakfast.cost + calc.afterSchool.cost)} without TFC</div>
                     </div>
                     <div className="text-paper/70 text-xs text-center">
                         {money(calc.afterSchool.cost - calc.afterSchool.saving)} after-school · {money(calc.breakfast.cost - calc.breakfast.saving)} breakfast
@@ -386,19 +387,21 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 </div>
                 <div className="bg-keith text-paper rounded-xl p-5 flex flex-col">
                     <div className="text-paper/80 text-lg font-semibold">Holiday clubs</div>
-                    <div className="flex-1 flex items-center justify-center">
+                    <div className="flex-1 flex flex-col items-center justify-center">
                         <div className="text-3xl font-bold num">{money(calc.holidayNet)}</div>
+                        <div className="text-paper/70 text-sm num">{money(calc.holidayClubs.reduce((s, h) => s + h.cost, 0))} without TFC</div>
                     </div>
                     <div className="text-paper/70 text-xs text-center">
                         {calc.holidayClubs.length === 0 ? 'No clubs this month' : calc.holidayClubs.map(h => h.name || 'Club').join(' · ')}
                     </div>
                 </div>
                 <div className="bg-ink text-paper rounded-xl p-5 flex flex-col">
-                    <div className="text-paper/80 text-lg font-semibold">Total nursery bill</div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-3xl font-bold num">{money(nursery.monthly.gross)}</div>
+                    <div className="text-paper/80 text-lg font-semibold">Nursery bill</div>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                        <div className="text-3xl font-bold num">{money(nursery.totalTFC)}</div>
+                        <div className="text-paper/70 text-sm num">{money(nursery.monthly.gross)} without TFC</div>
                     </div>
-                    <div className="text-paper/70 text-xs text-center">before the TFC top-up</div>
+                    <div className="text-paper/70 text-xs text-center">net is what you transfer via TFC</div>
                 </div>
             </div>
 
