@@ -28,6 +28,19 @@ export const currentPeriod = (now = new Date()) => {
  *  FOLLOWING calendar month (the month the period mostly falls in). */
 export const fundedMonthDate = (period) => new Date(period.end.getFullYear(), period.end.getMonth(), 1);
 
+/** A plain calendar-month period (same shape as currentPeriod) — the
+ *  groceries pot refills on the 1st, unlike the buffer's pay-day cycle. */
+export const calendarMonthPeriod = (now = new Date()) => {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return {
+        start,
+        end,
+        totalDays: dayNumber(end) - dayNumber(start),
+        dayIndex: now.getDate(),
+    };
+};
+
 /** Expected remaining buffer after day `day` (1..D) of a D-day period. */
 export const expectedRemaining = (buffer, day, totalDays) =>
     buffer * Math.max(0, totalDays - day) / totalDays;

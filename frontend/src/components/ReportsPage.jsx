@@ -7,7 +7,7 @@ import {
 import apiService from '../services/api';
 import { formatDate } from '../utils/helpers';
 import {
-    currentPeriod, fundedMonthDate, dailyAllowanceSeries, weeklyBurndownSeries,
+    currentPeriod, calendarMonthPeriod, fundedMonthDate, dailyAllowanceSeries, weeklyBurndownSeries,
     expectedRemaining, RESET_DAY,
 } from '../utils/allowanceCalc';
 
@@ -74,24 +74,34 @@ const ReportsPage = ({ showToast }) => {
     const [potError, setPotError] = useState(null);
     const [potsRequested, setPotsRequested] = useState(false);
 
-    // Both reports run pay day to pay day (28th → 27th), not calendar months.
+    // The buffer runs pay day to pay day (28th → 27th); the groceries pot
+    // refills on the 1st, so its report runs on calendar months.
     const period = currentPeriod(new Date());
+    const gPeriod = calendarMonthPeriod(new Date());
 
     const fetchData = useCallback(async () => {
         try {
-            // Pay on the 28th funds the FOLLOWING month's budget — read the
-            // buffer and groceries budget from that month.
+            // Pay on the 28th funds the FOLLOWING month's budget — the buffer
+            // comes from that month. Groceries reset on the 1st, so their
+            // budget is the CURRENT calendar month's (a different month only
+            // between the 28th and month end).
             const funded = fundedMonthDate(currentPeriod(new Date()));
             await apiService.createOrGetMonth(funded);
-            const items = await apiService.getBudgetItemsForMonth(formatDate(funded, 'YYYY-MM'));
+            const fundedItems = await apiService.getBudgetItemsForMonth(formatDate(funded, 'YYYY-MM'));
+            const current = new Date();
+            let currentItems = fundedItems;
+            if (formatDate(current, 'YYYY-MM') !== formatDate(funded, 'YYYY-MM')) {
+                await apiService.createOrGetMonth(current);
+                currentItems = await apiService.getBudgetItemsForMonth(formatDate(current, 'YYYY-MM'));
+            }
 
-            const autoExtra = items.find(i => i.is_auto_extra);
-            const extras = items.filter(i => i.is_extra);
+            const autoExtra = fundedItems.find(i => i.is_auto_extra);
+            const extras = fundedItems.filter(i => i.is_extra);
             setBuffer(autoExtra
                 ? parseFloat(autoExtra.effective_value)
                 : extras.reduce((sum, i) => sum + (parseFloat(i.effective_value) || 0), 0));
 
-            const groceryItems = items.filter(i => i.expense_pot === 'groceries');
+            const groceryItems = currentItems.filter(i => i.expense_pot === 'groceries');
             const weeklyItem = groceryItems.find(i => i.calculation_type === 'weekly_count' && i.weekly_payment_day);
             setGroceries({
                 total: groceryItems.reduce((sum, i) => sum + (parseFloat(i.effective_value) || 0), 0),
@@ -136,11 +146,11 @@ const ReportsPage = ({ showToast }) => {
     const weekly = useMemo(
         () => (groceries?.total
             // Without a weekly_count groceries item, assume shopping on the
-            // pay-day weekday so the staircase still renders.
-            ? weeklyBurndownSeries(groceries.total, period, groceries.shopDay ?? ((period.start.getDay() + 6) % 7) + 1)
+            // 1st's weekday so the staircase still renders.
+            ? weeklyBurndownSeries(groceries.total, gPeriod, groceries.shopDay ?? ((gPeriod.start.getDay() + 6) % 7) + 1)
             : null),
         // eslint-disable-next-line react-hooks/exhaustive-deps -- period is derived from the clock, stable within a render
-        [groceries, period.start.getTime()]
+        [groceries, gPeriod.start.getTime()]
     );
 
     if (isLoading) {
@@ -233,7 +243,7 @@ const ReportsPage = ({ showToast }) => {
         );
     }
     const { series, totalShops, shopsDone } = weekly;
-    const expectedToday = series[period.dayIndex - 1]?.expected ?? 0;
+    const expectedToday = series[gPeriod.dayIndex - 1]?.expected ?? 0;
     const actual = groceriesPot?.balance ?? null;
     const delta = actual !== null ? actual - expectedToday : null;
     const shopValue = groceries.total / totalShops;
@@ -242,10 +252,10 @@ const ReportsPage = ({ showToast }) => {
         <div className="space-y-6 animate-fadeIn">
             {sourceToggle}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatTile Icon={ShoppingCart} label="Groceries this period" value={fmtMoney(groceries.total)}
-                    sub={`${totalShops} shops of ≈ ${fmtMoney(shopValue, 2)} · resets on the ${RESET_DAY}th`} />
+                <StatTile Icon={ShoppingCart} label="Groceries this month" value={fmtMoney(groceries.total)}
+                    sub={`${totalShops} shops of ≈ ${fmtMoney(shopValue, 2)} · resets on the 1st`} />
                 <StatTile Icon={TrendingDown} label={`Should have left (${shopsDone} of ${totalShops} shops done)`} value={fmtMoney(expectedToday)}
-                    sub={`${totalShops - shopsDone} shop${totalShops - shopsDone === 1 ? '' : 's'} until pay day`} />
+                    sub={`${totalShops - shopsDone} shop${totalShops - shopsDone === 1 ? '' : 's'} left this month`} />
                 <StatTile Icon={Wallet} label="Groceries pot balance"
                     value={actual !== null ? fmtMoney(actual, 2) : '—'}
                     sub={actual !== null ? groceriesPot.name : potError || 'Connect Monzo on the FIRE tab'} />
@@ -258,9 +268,9 @@ const ReportsPage = ({ showToast }) => {
             </div>
 
             <BurndownChart
-                title={`Groceries burn-down · ${series[0].label} – ${series.at(-1).label} ${period.end.getFullYear()}`}
-                footnote={`One step per weekly shop (${totalShops} this period). The dot is the live Monzo groceries pot balance — above the staircase means the shops are coming in under budget.`}
-                series={series} period={period} actual={actual} delta={delta} ceiling={groceries.total} stepped={true} />
+                title={`Groceries burn-down · ${gPeriod.start.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}`}
+                footnote={`One step per weekly shop (${totalShops} this month; the pot refills on the 1st). The dot is the live Monzo groceries pot balance — above the staircase means the shops are coming in under budget.`}
+                series={series} period={gPeriod} actual={actual} delta={delta} ceiling={groceries.total} stepped={true} />
 
             <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
                 <h3 className="text-lg font-bold text-gray-800 mb-3">Shop by shop</h3>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RESET_DAY, currentPeriod, fundedMonthDate, expectedRemaining, dailyAllowanceSeries, weeklyBurndownSeries } from '../utils/allowanceCalc';
+import { RESET_DAY, currentPeriod, calendarMonthPeriod, fundedMonthDate, expectedRemaining, dailyAllowanceSeries, weeklyBurndownSeries } from '../utils/allowanceCalc';
 
 describe('currentPeriod', () => {
     it('starts on the 28th of the current month once pay day has passed', () => {
@@ -88,5 +88,26 @@ describe('weeklyBurndownSeries', () => {
         const firstShop = series.find(d => d.isShopDay);
         expect(firstShop.date.getDay()).toBe(0); // JS Sunday
         expect(firstShop.label).toBe('30 Aug');
+    });
+});
+
+describe('calendarMonthPeriod', () => {
+    it('runs from the 1st to the end of the month', () => {
+        const p = calendarMonthPeriod(new Date(2026, 7, 31)); // 31 Aug
+        expect(p.start).toEqual(new Date(2026, 7, 1));
+        expect(p.end).toEqual(new Date(2026, 8, 1));
+        expect(p.totalDays).toBe(31);
+        expect(p.dayIndex).toBe(31);
+    });
+
+    it('is day 1 on the 1st and handles February', () => {
+        expect(calendarMonthPeriod(new Date(2026, 8, 1)).dayIndex).toBe(1);
+        expect(calendarMonthPeriod(new Date(2027, 1, 15)).totalDays).toBe(28);
+    });
+
+    it('feeds the weekly staircase with calendar-month shops', () => {
+        // August 2026 has 5 Saturdays (1, 8, 15, 22, 29)
+        const { totalShops } = weeklyBurndownSeries(500, calendarMonthPeriod(new Date(2026, 7, 31)), 6);
+        expect(totalShops).toBe(5);
     });
 });
