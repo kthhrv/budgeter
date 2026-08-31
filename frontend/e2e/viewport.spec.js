@@ -20,10 +20,10 @@ test('mobile: the navigation menu opens from the hamburger', async ({ page }, te
     test.skip(testInfo.project.name !== 'mobile', 'nav toggle is the primary mobile navigation');
 
     await page.getByRole('button', { name: 'Toggle navigation' }).click();
-    for (const item of ['Budget', 'Tabs', 'Nursery', 'Childcare']) {
+    for (const item of ['Budget', 'Tabs', 'Childcare', 'FIRE', 'Reports', 'Mortgage']) {
         await expect(page.getByRole('button', { name: item, exact: true })).toBeVisible();
     }
     // Navigating away and back works.
-    await page.getByRole('button', { name: 'Nursery', exact: true }).click();
+    await page.getByRole('button', { name: 'Childcare', exact: true }).click();
     await expect(page.getByText('Transfer to TFC').first()).toBeVisible();
 });

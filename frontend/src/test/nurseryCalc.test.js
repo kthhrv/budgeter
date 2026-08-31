@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     computeMonthSummary, effectiveForMonth, applyChildcareLinks,
-    tfcSavingForMonth, TFC_QUARTERLY_CAP,
+    tfcSavingForMonth, TFC_QUARTERLY_CAP, ageBracketFor, ELLIS_DOB,
 } from '../utils/nurseryCalc';
 
 const baseSettings = () => ({
@@ -252,37 +252,21 @@ describe('TFC quarterly cap', () => {
 });
 
 describe('effectiveForMonth', () => {
-    it('falls through to defaults when no override applies', () => {
+    it('pins full-week attendance and the fixed billing model', () => {
         const s = baseSettings();
         const eff = effectiveForMonth(s, '2026-06');
-        expect(eff.ellisSchedule).toEqual(s.ellis.schedule);
+        expect(eff.ellisSchedule).toEqual(['fullDay', 'fullDay', 'fullDay', 'fullDay', 'fullDay']);
         expect(eff.taxFree).toBe(true);
-        expect(eff.mil).toEqual([0, 0, 0, 100, 50]);
+        expect(eff.fullWeekModel).toBe(true);
     });
 
-    it('propagates an override forward to later months', () => {
+    it('ignores stored schedule overrides — attendance is always full week', () => {
         const s = baseSettings();
         s.monthOverrides = {
-            '2026-06': { mil: [0, 0, 0, 50, 50] },
+            '2026-06': { ellis: { schedule: ['none', 'none', 'none', 'none', 'none'] } },
         };
-        const may = effectiveForMonth(s, '2026-05');
         const june = effectiveForMonth(s, '2026-06');
-        const aug = effectiveForMonth(s, '2026-08');
-        expect(may.mil).toEqual([0, 0, 0, 100, 50]);   // before override → default
-        expect(june.mil).toEqual([0, 0, 0, 50, 50]);   // override applies
-        expect(aug.mil).toEqual([0, 0, 0, 50, 50]);    // and propagates forward
-    });
-
-    it('a later override supersedes an earlier one from its month onwards', () => {
-        const s = baseSettings();
-        s.monthOverrides = {
-            '2026-06': { mil: [0, 0, 0, 50, 50] },
-            '2026-08': { mil: [0, 0, 0, 100, 100] },
-        };
-        const july = effectiveForMonth(s, '2026-07');
-        const aug  = effectiveForMonth(s, '2026-08');
-        expect(july.mil).toEqual([0, 0, 0, 50, 50]);
-        expect(aug.mil).toEqual([0, 0, 0, 100, 100]);
+        expect(june.ellisSchedule).toEqual(['fullDay', 'fullDay', 'fullDay', 'fullDay', 'fullDay']);
     });
 });
 
@@ -317,5 +301,23 @@ describe('nursery → childcare switchover at startMonth', () => {
         // Post-switch: care line = breakfast/after-school net; holiday line separate.
         expect(sep.gaspardCareNet).toBeGreaterThan(0);
         expect(sep.gaspardHolidayNet).toBeGreaterThan(0); // one non-term Sat day @ £40
+    });
+});
+
+describe('ageBracketFor (Ellis, born 23 May 2024)', () => {
+    it('moves brackets the month after each birthday', () => {
+        expect(ageBracketFor(ELLIS_DOB, '2026-04')).toBe('0-2'); // still 1 on 1 Apr 2026
+        expect(ageBracketFor(ELLIS_DOB, '2026-05')).toBe('0-2'); // turns 2 on the 23rd — 1 on the 1st
+        expect(ageBracketFor(ELLIS_DOB, '2026-06')).toBe('2-3');
+        expect(ageBracketFor(ELLIS_DOB, '2027-05')).toBe('2-3'); // turns 3 on the 23rd
+        expect(ageBracketFor(ELLIS_DOB, '2027-06')).toBe('3-5');
+        expect(ageBracketFor(ELLIS_DOB, '2028-01')).toBe('3-5');
+    });
+
+    it('drives the effective settings regardless of the stored bracket', () => {
+        const s = baseSettings();
+        s.ellis.ageBracket = '0-2'; // stale stored value
+        expect(effectiveForMonth(s, '2026-06').ellis.ageBracket).toBe('2-3');
+        expect(effectiveForMonth(s, '2027-07').ellis.ageBracket).toBe('3-5');
     });
 });

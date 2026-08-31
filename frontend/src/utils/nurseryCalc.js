@@ -23,6 +23,21 @@ export const FOOD_CONSUMABLES = {
 // costs are computed by childcareCalc.js and shown on the Childcare tab.
 export const GASPARD_CARE_START_DEFAULT = '2026-09';
 
+// Ellis's date of birth — his nursery age bracket (and therefore the rate) is
+// derived from it per displayed month, so the 2–3 → 3–5 move happens by
+// itself the month after he turns 3 (June 2027).
+export const ELLIS_DOB = '2024-05-23';
+
+/** Nursery age bracket for a child on the 1st of `monthKey`, from an ISO DOB. */
+export function ageBracketFor(dobIso, monthKey) {
+    const [by, bm, bd] = dobIso.split('-').map(Number);
+    const [y, m] = monthKey.split('-').map(Number);
+    const first = new Date(y, m - 1, 1);
+    let age = first.getFullYear() - by;
+    if (first.getMonth() + 1 < bm || (first.getMonth() + 1 === bm && 1 < bd)) age -= 1;
+    return age < 2 ? '0-2' : age < 3 ? '2-3' : '3-5';
+}
+
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 export const SESSION_OPTIONS = [
@@ -125,44 +140,28 @@ export function weeklyStandard(schedule, ageBracket) {
 
 // ------------------------- Per-month effective settings -------------------------
 
-// Find the latest override at or before monthKey for a given section. Edits propagate
-// forward: a change in June carries through to July, August, ... until the next edit.
-export function findEffectiveOverride(monthOverrides, monthKey, section) {
-    if (!monthOverrides) return null;
-    const keys = Object.keys(monthOverrides).filter(m => m <= monthKey).sort();
-    for (let i = keys.length - 1; i >= 0; i--) {
-        const v = monthOverrides[keys[i]]?.[section];
-        if (v != null) return v;
-    }
-    return null;
-}
+const NO_SCHEDULE = ['none', 'none', 'none', 'none', 'none'];
+export const FULL_WEEK = ['fullDay', 'fullDay', 'fullDay', 'fullDay', 'fullDay'];
 
 // Given the saved nursery settings blob and a month key (YYYY-MM), produce the
-// effective per-section values for that month (defaults overlaid by the latest
-// applicable override).
-const NO_SCHEDULE = ['none', 'none', 'none', 'none', 'none'];
-
+// effective per-section values for that month. Attendance is fixed: nursery
+// children go full week, full days (the per-day selector and month overrides
+// were removed from the UI — stored overrides are ignored).
 export function effectiveForMonth(settings, monthKey) {
-    const overrides = settings.monthOverrides || {};
-    const ellisOverride   = findEffectiveOverride(overrides, monthKey, 'ellis');
-    const gaspardOverride = findEffectiveOverride(overrides, monthKey, 'gaspard');
-    const milOverride     = findEffectiveOverride(overrides, monthKey, 'mil');
-
     // Gaspard leaves nursery when his school-childcare model kicks in. From
     // startMonth his nursery schedule is forced empty so he drops out of the
-    // invoice, MIL, and the TFC cap engine everywhere at once; before it,
-    // nursery is unchanged. His post-switch costs live on the Childcare tab.
+    // invoice and the TFC cap engine everywhere at once; before it, nursery is
+    // unchanged. His post-switch costs live on the Childcare tab.
     const startMonth = settings.childcare?.startMonth ?? GASPARD_CARE_START_DEFAULT;
     const gaspardInNursery = monthKey < startMonth;
-    const rawGaspardSchedule = gaspardOverride?.schedule ?? settings.gaspard.schedule;
 
     return {
-        ellis:           settings.ellis,
+        // Ellis's bracket follows his birthday rather than a setting.
+        ellis:           { ...settings.ellis, ageBracket: ageBracketFor(ELLIS_DOB, monthKey) },
         gaspard:         settings.gaspard,
-        ellisSchedule:   ellisOverride?.schedule   ?? settings.ellis.schedule,
-        gaspardSchedule: gaspardInNursery ? rawGaspardSchedule : NO_SCHEDULE,
+        ellisSchedule:   FULL_WEEK,
+        gaspardSchedule: gaspardInNursery ? FULL_WEEK : NO_SCHEDULE,
         gaspardInNursery,
-        mil:             milOverride               ?? settings.mil,
         // Billing model is fixed: always the full-week model with tax-free
         // childcare applied (the per-month billing toggle was removed from the UI).
         taxFree:         true,
@@ -370,7 +369,7 @@ export function tfcSavingForMonth(settings, monthKey) {
 //     ellis: {...effective}, gaspard: {...effective},
 //     monthlyDaily: per-weekday breakdown,
 //     monthAdhocs:  per-ad-hoc rows,
-//     monthly:      { gross, milGross, mil, parentBeforeTF, tfSaving, parentOOP },
+//     monthly:      { gross, tfSaving, parentOOP },
 //     ellisInvoiced, gaspardInvoiced, totalInvoiced,
 //     ellisTFC, gaspardTFC, totalTFC,
 //     tfc: per-child saving + cap diagnostics,
@@ -448,8 +447,7 @@ export function computeMonthSummary(settings, date) {
         const [yy, mm, dd] = a.date.split('-').map(Number);
         const dow = new Date(yy, mm - 1, dd).getDay();
         const wd = (dow >= 1 && dow <= 5) ? dow - 1 : -1;
-        const milPct = wd >= 0 ? eff.mil[wd] : 0;
-        return { ...a, wd, milPct, cost, eGross, gGross, eNet, gNet };
+        return { ...a, wd, cost, eGross, gGross, eNet, gNet };
     });
 
     const ellisInvoiced   = rawDaily.reduce((s, m) => s + m.eMonthlyNet, 0) + rawAdhocs.reduce((s, a) => s + a.eNet, 0);
@@ -461,40 +459,27 @@ export function computeMonthSummary(settings, date) {
     const eEffMult = ellisInvoiced   > 0 ? (ellisInvoiced   - cap.ellisSaving)   / ellisInvoiced   : 1;
     const gEffMult = gaspardInvoiced > 0 ? (gaspardInvoiced - cap.gaspardSaving) / gaspardInvoiced : 1;
 
-    // Phase 3: complete per-day / per-adhoc rows with MIL + parent pay.
-    // Per-child TFC factors apply uniformly across the month (the cap is a
+    // Phase 3: complete per-day / per-adhoc rows with parent pay. Per-child
+    // TFC factors apply uniformly across the month (the cap is a
     // monthly/period-level constraint, distributed proportionally per day).
-    // MIL pays her percentage of the post-TFC out-of-pocket combined cost.
-    const monthlyDaily = rawDaily.map((md, i) => {
-        const milPct      = eff.mil[i] / 100;
-        const combined    = md.eMonthlyNet + md.gMonthlyNet;
-        const milGrossPay = combined * milPct;
-        const eAfterTF    = md.eMonthlyNet * eEffMult;
-        const gAfterTF    = md.gMonthlyNet * gEffMult;
-        const milPay      = (eAfterTF + gAfterTF) * milPct;
-        const parentPay   = (eAfterTF + gAfterTF) - milPay;
-        return { ...md, combined, milGrossPay, milPay, parentPay };
+    const monthlyDaily = rawDaily.map((md) => {
+        const combined  = md.eMonthlyNet + md.gMonthlyNet;
+        const parentPay = md.eMonthlyNet * eEffMult + md.gMonthlyNet * gEffMult;
+        return { ...md, combined, parentPay };
     });
 
     const monthAdhocs = rawAdhocs.map(a => {
-        const milPct      = a.milPct / 100;
-        const combined    = a.eNet + a.gNet;
-        const milGrossPay = combined * milPct;
-        const eAfterTF    = a.eNet * eEffMult;
-        const gAfterTF    = a.gNet * gEffMult;
-        const milPay      = (eAfterTF + gAfterTF) * milPct;
-        const parentPay   = (eAfterTF + gAfterTF) - milPay;
-        return { ...a, combined, milGrossPay, milPay, parentPay };
+        const combined  = a.eNet + a.gNet;
+        const parentPay = a.eNet * eEffMult + a.gNet * gEffMult;
+        return { ...a, combined, parentPay };
     });
 
     const sumDaily = (key) => monthlyDaily.reduce((s, m) => s + m[key], 0);
     const sumAdhoc = (key) => monthAdhocs.reduce((s, a) => s + a[key], 0);
 
     const totalInvoiced = ellisInvoiced + gaspardInvoiced;
-    const gross         = sumDaily('combined')    + sumAdhoc('combined');
-    const milGross      = sumDaily('milGrossPay') + sumAdhoc('milGrossPay');
-    const milTotal      = sumDaily('milPay')      + sumAdhoc('milPay');
-    const parentOOP     = sumDaily('parentPay')   + sumAdhoc('parentPay');
+    const gross         = sumDaily('combined')  + sumAdhoc('combined');
+    const parentOOP     = sumDaily('parentPay') + sumAdhoc('parentPay');
     const tfSaving      = cap.ellisSaving + cap.gaspardSaving;
 
     // Gaspard's childcare feeds two budget lines. Before the school switch he's
@@ -510,12 +495,7 @@ export function computeMonthSummary(settings, date) {
         year, monthIdx, monthLabel, daysInMonth, weekdayCounts,
         effective: eff,
         monthlyDaily, monthAdhocs,
-        monthly: {
-            gross, milGross,
-            mil: milTotal,
-            parentBeforeTF: gross - milGross,
-            tfSaving, parentOOP,
-        },
+        monthly: { gross, tfSaving, parentOOP },
         ellisInvoiced, gaspardInvoiced, totalInvoiced,
         ellisTFC:   ellisNurseryNet,
         gaspardTFC: gaspardNurseryNet,
