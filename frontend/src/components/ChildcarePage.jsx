@@ -184,9 +184,11 @@ function DaySessionEditor({ iso, marker, bOverridden, aOverridden, weeklyBreakfa
 
 // ------------------------- Drill-down cost breakdown -------------------------
 
-// One row of the breakdown tree. Rows with children expand on click; every
-// row shows the net (with TFC) bold on the right, with the gross and saving
-// as small print when TFC applies.
+// Column layout shared by the header and every row: label, days attended,
+// gross, TFC cover, net. Gross/TFC collapse on small screens.
+const BREAKDOWN_COLS = 'grid grid-cols-[minmax(0,1fr)_3.5rem_6rem_6rem] sm:grid-cols-[minmax(0,1fr)_3.5rem_6rem_6rem_6rem] gap-2 items-center';
+
+// One row of the breakdown tree. Rows with children expand on click.
 function BreakdownNode({ node, depth, expanded, onToggle }) {
     const hasChildren = (node.children || []).length > 0;
     const open = expanded.has(node.key);
@@ -194,20 +196,17 @@ function BreakdownNode({ node, depth, expanded, onToggle }) {
         <>
             <button type="button" disabled={!hasChildren}
                     onClick={() => hasChildren && onToggle(node.key)}
-                    className={`w-full flex items-center justify-between gap-2 py-2 text-left border-b border-line last:border-none ${hasChildren ? 'cursor-pointer hover:bg-paper/60' : 'cursor-default'}`}
-                    style={{ paddingLeft: depth * 18 }}>
-                <span className="flex items-center gap-1 min-w-0">
+                    className={`w-full ${BREAKDOWN_COLS} py-2 text-left border-b border-line last:border-none ${hasChildren ? 'cursor-pointer hover:bg-paper/60' : 'cursor-default'}`}>
+                <span className="flex items-center gap-1 min-w-0" style={{ paddingLeft: depth * 18 }}>
                     {hasChildren
                         ? <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-ink-faint transition-transform ${open ? 'rotate-90' : ''}`} />
                         : <span className="w-3.5 shrink-0" />}
-                    <span className="min-w-0">
-                        <span className={`block text-sm ${depth === 0 ? 'font-semibold text-ink' : 'text-ink'}`}>{node.label}</span>
-                        {node.saving > 0.005 && (
-                            <span className="block text-[11px] text-ink-faint num">£{node.gross.toFixed(2)} − £{node.saving.toFixed(2)} TFC</span>
-                        )}
-                    </span>
+                    <span className={`truncate text-sm ${depth === 0 ? 'font-semibold text-ink' : 'text-ink'}`}>{node.label}</span>
                 </span>
-                <span className={`num text-sm ${depth === 0 ? 'font-bold' : 'font-medium'} text-ink shrink-0`}>£{node.net.toFixed(2)}</span>
+                <span className="num text-sm text-ink-soft text-right">{node.days != null ? node.days : ''}</span>
+                <span className="num text-sm text-ink-soft text-right hidden sm:block">£{node.gross.toFixed(2)}</span>
+                <span className="num text-sm text-right text-good">{node.saving > 0.005 ? `−£${node.saving.toFixed(2)}` : '–'}</span>
+                <span className={`num text-sm text-right ${depth === 0 ? 'font-bold' : 'font-medium'} text-ink`}>£{node.net.toFixed(2)}</span>
             </button>
             {open && node.children.map(child => (
                 <BreakdownNode key={child.key} node={child} depth={depth + 1} expanded={expanded} onToggle={onToggle} />
@@ -362,11 +361,20 @@ const ChildcarePage = ({ onSettingsChange }) => {
         if (next.has(key)) next.delete(key); else next.add(key);
         return next;
     });
+    const afterSchoolDays = useMemo(
+        () => Object.values(markers).filter(m => m.afterSchool).length,
+        [markers]
+    );
+    const clubDaysThisMonth = (clubId) => {
+        const club = childcare.holidayClubs.find(k => k.id === clubId);
+        return (club?.days || []).filter(d => d.startsWith(monthKey)).length;
+    };
     const breakdownTree = useMemo(() => {
         const ellis = {
             key: 'ellis', label: 'Ellis · nursery',
             gross: nursery.ellisInvoiced, saving: nursery.tfc.ellisSaving, net: nursery.ellisTFC,
         };
+        const holidayDays = calc.holidayClubs.reduce((s, h) => s + clubDaysThisMonth(h.id), 0);
         const gaspard = gaspardInNursery
             ? {
                 key: 'gaspard', label: 'Gaspard · nursery',
@@ -378,28 +386,32 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 children: [
                     {
                         key: 'g-term', label: 'Term clubs',
+                        days: breakfastDays + afterSchoolDays,
                         gross: calc.breakfast.cost + calc.afterSchool.cost,
                         saving: calc.breakfast.saving + calc.afterSchool.saving,
                         net: calc.termNet,
                         children: [
-                            { key: 'g-breakfast', label: `Breakfast (${breakfastDays} ${breakfastDays === 1 ? 'day' : 'days'})`, gross: calc.breakfast.cost, saving: calc.breakfast.saving, net: calc.breakfast.cost - calc.breakfast.saving },
-                            { key: 'g-after', label: 'After-school', gross: calc.afterSchool.cost, saving: calc.afterSchool.saving, net: calc.afterSchool.cost - calc.afterSchool.saving },
+                            { key: 'g-breakfast', label: 'Breakfast', days: breakfastDays, gross: calc.breakfast.cost, saving: calc.breakfast.saving, net: calc.breakfast.cost - calc.breakfast.saving },
+                            { key: 'g-after', label: 'After-school', days: afterSchoolDays, gross: calc.afterSchool.cost, saving: calc.afterSchool.saving, net: calc.afterSchool.cost - calc.afterSchool.saving },
                         ],
                     },
                     {
                         key: 'g-holiday', label: 'Holiday clubs',
+                        days: holidayDays,
                         gross: calc.holidayClubs.reduce((s, h) => s + h.cost, 0),
                         saving: calc.holidayClubs.reduce((s, h) => s + h.saving, 0),
                         net: calc.holidayNet,
                         children: calc.holidayClubs.map(h => ({
                             key: `club-${h.id}`, label: h.name || 'Holiday club',
+                            days: clubDaysThisMonth(h.id),
                             gross: h.cost, saving: h.saving, net: h.cost - h.saving,
                         })),
                     },
                 ],
             };
         return [ellis, gaspard];
-    }, [nursery, calc, gaspardInNursery, breakfastDays]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- clubDaysThisMonth reads childcare/monthKey, both covered
+    }, [nursery, calc, gaspardInNursery, breakfastDays, afterSchoolDays, childcare, monthKey]);
 
     // Tooltip'd TFC amount with the £500-per-period cap diagnostics (nursery).
     const TFCAmount = ({ amount, saving, usedBefore, capped, periodLabel }) => {
@@ -490,14 +502,28 @@ const ChildcarePage = ({ onSettingsChange }) => {
             {/* Cost breakdown */}
             <div className="bg-card rounded-xl p-5 border border-line">
                 <h2 className="text-lg font-semibold text-ink mb-1">Cost breakdown</h2>
-                <p className="text-xs text-ink-faint mb-2">Net you pay, with TFC. Click a row to drill down.</p>
+                <p className="text-xs text-ink-faint mb-2">Click a row to drill down.</p>
                 <div>
+                    <div className={`${BREAKDOWN_COLS} pb-1 border-b border-line text-xs text-ink-soft font-medium`}>
+                        <span></span>
+                        <span className="text-right">Days</span>
+                        <span className="text-right hidden sm:block">Gross</span>
+                        <span className="text-right">TFC cover</span>
+                        <span className="text-right">You pay</span>
+                    </div>
                     {breakdownTree.map(node => (
                         <BreakdownNode key={node.key} node={node} depth={0} expanded={expandedRows} onToggle={toggleRow} />
                     ))}
-                    <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-line">
-                        <span className="text-sm font-bold text-ink">Total you pay</span>
-                        <span className="num text-sm font-bold text-ink">
+                    <div className={`${BREAKDOWN_COLS} pt-2 mt-1 border-t-2 border-line`}>
+                        <span className="text-sm font-bold text-ink">Total</span>
+                        <span></span>
+                        <span className="num text-sm font-bold text-ink text-right hidden sm:block">
+                            £{breakdownTree.reduce((s, n) => s + n.gross, 0).toFixed(2)}
+                        </span>
+                        <span className="num text-sm font-bold text-good text-right">
+                            −£{breakdownTree.reduce((s, n) => s + n.saving, 0).toFixed(2)}
+                        </span>
+                        <span className="num text-sm font-bold text-ink text-right">
                             £{breakdownTree.reduce((s, n) => s + n.net, 0).toFixed(2)}
                         </span>
                     </div>
@@ -563,47 +589,40 @@ const ChildcarePage = ({ onSettingsChange }) => {
                 })()}
             </div>
 
-            <div className="grid md:grid-cols-3 gap-4">
-                {/* Breakfast */}
-                <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-warn">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-ink">Breakfast Club</h3>
-                        <ConceptTfc checked={childcare.breakfast.tfc} onChange={v => patchConcept('breakfast', { tfc: v })} />
-                    </div>
-                    <p className="text-xs text-ink-faint mb-2">£{CHILDCARE_RATES.breakfast.toFixed(2)}/day · term-time</p>
-                    <div className="space-y-1.5 mb-3">
-                        {DAYS.map((d, i) => (
-                            <label key={d} className="flex items-center justify-between text-sm">
-                                <span className="text-ink-soft">{d}</span>
-                                <select value={effBreakfast[i] ? 'yes' : 'no'} onChange={e => setBreakfastDay(i, e.target.value === 'yes')}
-                                        className="rounded-lg border border-line px-2 py-1 bg-card text-sm">
-                                    <option value="no">Not attending</option>
-                                    <option value="yes">Attending</option>
-                                </select>
-                            </label>
-                        ))}
-                    </div>
-                    <p className="text-[11px] text-ink-faint border-t border-line pt-2">One-off changes? Use the calendar’s <span className="font-medium">Sessions</span> mode.</p>
-                </div>
-
-                {/* After-school */}
+            <div className="grid md:grid-cols-2 gap-4">
+                {/* Term clubs: breakfast + after-school weekly pattern in one place */}
                 <div className="bg-card rounded-xl p-5 border border-line border-t-4 border-t-accent">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-ink">After-School Club</h3>
-                        <ConceptTfc checked={childcare.afterSchool.tfc} onChange={v => patchConcept('afterSchool', { tfc: v })} />
+                    <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-ink">Term clubs · weekly pattern</h3>
+                        <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1 text-xs text-ink-soft">{ICON.breakfast} <ConceptTfc checked={childcare.breakfast.tfc} onChange={v => patchConcept('breakfast', { tfc: v })} /></span>
+                            <span className="flex items-center gap-1 text-xs text-ink-soft">{ICON.short} <ConceptTfc checked={childcare.afterSchool.tfc} onChange={v => patchConcept('afterSchool', { tfc: v })} /></span>
+                        </div>
                     </div>
-                    <p className="text-xs text-ink-faint mb-2">£{CHILDCARE_RATES.afterSchool.short}/£{CHILDCARE_RATES.afterSchool.long} per day · term-time</p>
+                    <p className="text-xs text-ink-faint mb-3">
+                        Breakfast £{CHILDCARE_RATES.breakfast.toFixed(2)}/day · after-school £{CHILDCARE_RATES.afterSchool.short}/£{CHILDCARE_RATES.afterSchool.long} per day · term-time
+                    </p>
                     <div className="space-y-1.5 mb-3">
+                        <div className="grid grid-cols-[6rem_auto_minmax(0,1fr)] gap-2 items-center text-xs text-ink-soft font-medium">
+                            <span></span>
+                            <span>{ICON.breakfast} Breakfast</span>
+                            <span>After-school</span>
+                        </div>
                         {DAYS.map((d, i) => (
-                            <label key={d} className="flex items-center justify-between text-sm gap-2">
+                            <div key={d} className="grid grid-cols-[6rem_auto_minmax(0,1fr)] gap-2 items-center text-sm">
                                 <span className="text-ink-soft">{d}</span>
+                                <label className="flex justify-center cursor-pointer">
+                                    <input type="checkbox" checked={effBreakfast[i] === true}
+                                           onChange={e => setBreakfastDay(i, e.target.checked)}
+                                           className="h-4 w-4 accent-warn" />
+                                </label>
                                 <select value={effAfterSchool[i]} onChange={e => setAfterSchoolDay(i, e.target.value)}
                                         className="rounded-lg border border-line px-2 py-1 bg-card text-sm">
                                     <option value="none">Not attending</option>
                                     <option value="short">3:15–4:30 (£12)</option>
                                     <option value="long">3:15–6:30 (£24)</option>
                                 </select>
-                            </label>
+                            </div>
                         ))}
                     </div>
                     <p className="text-[11px] text-ink-faint border-t border-line pt-2">One-off changes? Use the calendar’s <span className="font-medium">Sessions</span> mode.</p>
