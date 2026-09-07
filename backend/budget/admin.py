@@ -1,7 +1,7 @@
 # admin.py for a Django Budget Management Application
 
 from django.contrib import admin
-from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings
+from .models import Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings, SchoolTerm
 
 class BudgetItemVersionInline(admin.TabularInline):
     """
@@ -86,3 +86,10 @@ class TabRepaymentAdmin(admin.ModelAdmin):
 class NurserySettingsAdmin(admin.ModelAdmin):
     list_display = ('user', 'updated_at')
     readonly_fields = ('updated_at',)
+
+
+@admin.register(SchoolTerm)
+class SchoolTermAdmin(admin.ModelAdmin):
+    """Add each academic year's terms here; per_term budget items accrue against them."""
+    list_display = ('name', 'start_date', 'end_date')
+    readonly_fields = ('id',)

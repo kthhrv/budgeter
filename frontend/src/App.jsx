@@ -108,6 +108,7 @@ const App = () => {
             ellis_nursery: summary.ellisNurseryNet,
             gaspard_care: summary.gaspardCareNet,
             gaspard_holiday: summary.gaspardHolidayNet,
+            gaspard_term_club: summary.gaspardTermClubNet,
         };
     }, [nurserySettings, currentDate]);
 

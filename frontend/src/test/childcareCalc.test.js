@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeChildcare, childcareDayMarkers, CHILDCARE_RATES } from '../utils/childcareCalc';
+import { computeChildcare, childcareDayMarkers, termSessionTotals, termClubBills, CHILDCARE_RATES } from '../utils/childcareCalc';
 
 // September 2026 has 22 weekdays: Mon×4, Tue×5, Wed×5, Thu×4, Fri×4.
 const MONTH = '2026-09';
@@ -132,5 +132,111 @@ describe('childcareDayMarkers', () => {
         expect(m['2026-09-07'].clubs.map(c => c.id)).toContain(9);
         expect(m['2026-09-08'].breakfast).toBe(true);   // a Tuesday
         expect(m['2026-09-02'].afterSchool).toBe('long'); // a Wednesday
+    });
+});
+
+describe('computeChildcare — late after-school slot (4:30–6:30)', () => {
+    it('late is £12/day; Wednesdays only = 5 × £12 in Sep 2026', () => {
+        const c = computeChildcare(cc({ afterSchool: { tfc: false, schedule: ['none', 'none', 'late', 'none', 'none'], overrides: {} } }), MONTH);
+        expect(c.afterSchool.cost).toBeCloseTo(5 * CHILDCARE_RATES.afterSchool.late, 2); // £60
+    });
+
+    it('a late override on a none day adds one £12 session', () => {
+        const c = computeChildcare(cc({ afterSchool: { tfc: false, schedule: ALL('none'), overrides: { '2026-09-03': 'late' } } }), MONTH);
+        expect(c.afterSchool.cost).toBeCloseTo(12, 2);
+    });
+});
+
+// French club: Tuesdays, £11/session, no TFC. Term-time Tuesdays (no
+// nonTermDays loaded): autumn 15, spring 12, summer 14.
+const FRENCH = { id: 'fr', name: 'French club', sessionRate: 11, tfc: false, schedule: [false, true, false, false, false], overrides: {} };
+
+describe('computeChildcare — term-time clubs (monthly attendance)', () => {
+    it('bills scheduled term weekdays at the session rate (4 Tuesdays in term-time Sep 2026)', () => {
+        const c = computeChildcare(cc({ termClubs: [{ ...FRENCH }], nonTermDays: ['2026-09-01', '2026-09-02'] }), MONTH);
+        expect(c.termClubs[0].sessions).toBe(4); // Sep 1 is a Tuesday but pre-term
+        expect(c.termClubs[0].cost).toBeCloseTo(44, 2);
+        expect(c.termClubs[0].saving).toBe(0); // no TFC
+        expect(c.termClubMonthNet).toBeCloseTo(44, 2);
+    });
+
+    it('stays out of the gaspard_care/holiday nets', () => {
+        const c = computeChildcare(cc({ termClubs: [{ ...FRENCH }] }), MONTH);
+        expect(c.net).toBe(0);
+        expect(c.termNet).toBe(0);
+    });
+
+    it('overrides add and remove sessions', () => {
+        const c = computeChildcare(cc({
+            termClubs: [{ ...FRENCH, overrides: { '2026-09-08': false, '2026-09-03': true } }],
+        }), MONTH);
+        // 5 scheduled Tuesdays − 1 skipped + 1 ad-hoc Thursday
+        expect(c.termClubs[0].sessions).toBe(5);
+    });
+
+    it('marks attendance on the calendar, never on weekends or non-term days', () => {
+        const markers = childcareDayMarkers(cc({ termClubs: [{ ...FRENCH }], nonTermDays: ['2026-09-08'] }), MONTH);
+        expect(markers['2026-09-15'].termClubs).toEqual([{ id: 'fr', name: 'French club' }]);
+        expect(markers['2026-09-08'].termClubs).toEqual([]); // non-term Tuesday
+        expect(markers['2026-09-05'].termClubs).toEqual([]); // Saturday
+    });
+});
+
+describe('termSessionTotals — whole-term invoice totals', () => {
+    const AUTUMN = { name: 'Autumn 2026', start: '2026-09-03', end: '2026-12-18' };
+
+    it('sums a term-time club across the term (15 Tuesdays in autumn 2026)', () => {
+        const t = termSessionTotals(cc({ termClubs: [{ ...FRENCH }] }), AUTUMN);
+        expect(t.clubs[0].sessions).toBe(15);
+        expect(t.clubs[0].net).toBeCloseTo(165, 2);
+    });
+
+    it('excludes nonTermDays (half-term) from the term total', () => {
+        const t = termSessionTotals(cc({ termClubs: [{ ...FRENCH }], nonTermDays: ['2026-10-20', '2026-10-27'] }), AUTUMN);
+        expect(t.clubs[0].sessions).toBe(13);
+    });
+
+    it('totals the after-school invoice net of TFC', () => {
+        const t = termSessionTotals(cc({ afterSchool: { tfc: true, schedule: ['none', 'long', 'none', 'none', 'none'], overrides: {} } }), AUTUMN);
+        expect(t.afterSchool.sessions).toBe(15);
+        expect(t.afterSchool.gross).toBeCloseTo(15 * 24, 2);
+        expect(t.afterSchool.net).toBeCloseTo(15 * 24 * 0.8, 2);
+    });
+});
+
+describe('termClubBills — the bill lands whole in the half-term start month', () => {
+    // French club Tuesdays across the 2026/27 half-terms:
+    // A1 6 (£66), A2 7 (£77), S1 6 (£66), S2 5 (£55), Sm1 7 (£77), Sm2 6 (£66).
+    const settings = cc({ termClubs: [{ ...FRENCH }] });
+
+    it('September carries the Autumn 1 bill', () => {
+        const b = termClubBills(settings, '2026-09');
+        expect(b.total).toBeCloseTo(66, 2);
+        expect(b.bills[0].term.name).toBe('Autumn 1 2026');
+        expect(b.next.dueMonth).toBe('2026-09');
+    });
+
+    it('October is zero, pointing at the Autumn 2 bill due in November', () => {
+        const b = termClubBills(settings, '2026-10');
+        expect(b.total).toBe(0);
+        expect(b.bills).toEqual([]);
+        expect(b.next.term.name).toBe('Autumn 2 2026');
+        expect(b.next.total).toBeCloseTo(77, 2);
+        expect(b.next.dueMonth).toBe('2026-11');
+    });
+
+    it('November carries the Autumn 2 bill and February the Spring 2 bill', () => {
+        expect(termClubBills(settings, '2026-11').total).toBeCloseTo(77, 2);
+        expect(termClubBills(settings, '2027-02').total).toBeCloseTo(55, 2);
+    });
+
+    it('past the last recorded half-term there is no bill and no next', () => {
+        const b = termClubBills(settings, '2027-08');
+        expect(b.total).toBe(0);
+        expect(b.next).toBeNull();
+    });
+
+    it('is empty with no term clubs', () => {
+        expect(termClubBills(cc(), '2026-09')).toEqual({ total: 0, bills: [], next: null });
     });
 });

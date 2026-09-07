@@ -706,3 +706,107 @@ class CategoryTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['category'], '')
+
+
+class PerTermBillTestCase(TestCase):
+    """calculation_type='per_term': the bill lands whole in its month, zero elsewhere.
+
+    Uses the seeded 2026/27 half-term SchoolTerm rows (migration 0032):
+    Autumn 1  3 Sep – 16 Oct 2026    Autumn 2  2 Nov – 18 Dec 2026
+    Spring 1  5 Jan – 12 Feb 2027    Spring 2  22 Feb – 25 Mar 2027
+    Summer 1  12 Apr – 28 May 2027   Summer 2  8 Jun – 19 Jul 2027
+    So start-paid bills land Sep/Nov/Jan/Feb/Apr/Jun and end-paid bills land
+    Oct/Dec/Feb/Mar/May/Jul.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='termuser', password='password')
+        self.client.login(username='termuser', password='password')
+        self.months = {}
+        for y, m in [(2026, 9), (2026, 10), (2026, 11), (2027, 2), (2027, 3), (2027, 8)]:
+            first = datetime.date(y, m, 1)
+            last = (datetime.date(y + (m == 12), m % 12 + 1, 1) - datetime.timedelta(days=1))
+            self.months[f'{y}-{m:02d}'] = Month.objects.create(
+                month_id=f'{y}-{m:02d}',
+                month_name=first.strftime('%B %Y'),
+                start_date=first,
+                end_date=last,
+            )
+
+    def _make_item(self, timing, value=66):
+        item = BudgetItem.objects.create(
+            item_name=f'Club ({timing})', item_type='expense', owner='shared',
+            calculation_type='per_term', term_payment_timing=timing,
+        )
+        BudgetItemVersion.objects.create(
+            budget_item=item, month=self.months['2026-09'],
+            effective_from_month=self.months['2026-09'], value=value,
+        )
+        return item
+
+    def _effective(self, item, month_id):
+        rows = self.client.get(f'/api/months/{month_id}/items/').json()
+        return next(r for r in rows if r['budget_item_id'] == str(item.budget_item_id))
+
+    def test_start_paid_bill_lands_in_the_half_term_start_month(self):
+        item = self._make_item('start')
+        sep = self._effective(item, '2026-09')  # Autumn 1 starts 3 Sep
+        self.assertEqual(sep['effective_value'], 66.0)
+        self.assertEqual(sep['term_payment_month_name'], 'September 2026')
+        oct_ = self._effective(item, '2026-10')  # no bill; next is Autumn 2
+        self.assertEqual(oct_['effective_value'], 0.0)
+        self.assertEqual(oct_['term_payment_month_name'], 'November 2026')
+        self.assertEqual(self._effective(item, '2026-11')['effective_value'], 66.0)
+        self.assertEqual(self._effective(item, '2027-02')['effective_value'], 66.0)  # Spring 2 starts 22 Feb
+
+    def test_end_paid_bill_lands_in_the_half_term_end_month(self):
+        item = self._make_item('end')
+        self.assertEqual(self._effective(item, '2026-09')['effective_value'], 0.0)
+        oct_ = self._effective(item, '2026-10')  # Autumn 1 ends 16 Oct
+        self.assertEqual(oct_['effective_value'], 66.0)
+        self.assertEqual(oct_['term_payment_month_name'], 'October 2026')
+        feb = self._effective(item, '2027-02')  # Spring 1 ends 12 Feb
+        self.assertEqual(feb['effective_value'], 66.0)
+        mar = self._effective(item, '2027-03')  # Spring 2 ends 25 Mar
+        self.assertEqual(mar['effective_value'], 66.0)
+
+    def test_past_the_last_recorded_term_shows_zero(self):
+        item = self._make_item('start')
+        aug = self._effective(item, '2027-08')
+        self.assertEqual(aug['effective_value'], 0.0)
+        self.assertIsNone(aug['term_payment_month_name'])
+
+    def test_no_terms_falls_back_to_the_raw_value(self):
+        from .models import SchoolTerm
+        SchoolTerm.objects.all().delete()
+        item = self._make_item('start')
+        self.assertEqual(self._effective(item, '2026-10')['effective_value'], 66.0)
+
+    def test_create_and_edit_endpoints_manage_timing(self):
+        payload = {
+            'item_name': 'French club', 'item_type': 'expense', 'owner': 'shared',
+            'calculation_type': 'per_term', 'term_payment_timing': 'start',
+            'value': 66.0,
+        }
+
+        class FakeToday(datetime.date):
+            @classmethod
+            def today(cls):
+                return cls(2026, 9, 7)
+
+        with patch('budget.api.datetime.date', FakeToday):
+            resp = self.client.post(
+                '/api/months/2026-09/budgetitems/',
+                json.dumps(payload), content_type='application/json',
+            )
+        self.assertEqual(resp.status_code, 200, resp.content)
+        body = resp.json()
+        self.assertEqual(body['term_payment_timing'], 'start')
+        # Switching away from per_term clears the timing.
+        resp = self.client.put(
+            f"/api/budgetitems/{body['budget_item_id']}/",
+            json.dumps({'calculation_type': 'fixed'}), content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['term_payment_timing'], '')
