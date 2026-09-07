@@ -6,7 +6,8 @@ import ConfirmationModal from './ConfirmationModal';
 const EMPTY = {
     item_name: '', item_type: 'expense', owner: 'shared', expense_pot: '', category: '',
     is_tab_repayment: false, is_extra: false, childcare_link: '', is_auto_extra: false,
-    calculation_type: 'fixed', weekly_payment_day: '', value: '', is_one_off: false,
+    calculation_type: 'fixed', weekly_payment_day: '', term_payment_timing: '',
+    value: '', is_one_off: false,
     last_payment_month_id: '',
 };
 
@@ -86,6 +87,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
             is_tab_repayment: item.is_tab_repayment || false, is_extra: item.is_extra || false,
             childcare_link: item.childcare_link || '', is_auto_extra: item.is_auto_extra || false,
             calculation_type: item.calculation_type || 'fixed', weekly_payment_day: item.weekly_payment_day || '',
+            term_payment_timing: item.term_payment_timing || '',
             last_payment_month_id: item.last_payment_month_id || '', value: item.value ?? '',
             is_one_off: item.is_one_off || false,
         };
@@ -163,6 +165,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
         if (formData.value === '' || isNaN(parsedValue)) e.value = 'Enter an amount.';
         else if (parsedValue < 0) e.value = 'Amount can’t be negative.';
         if (formData.calculation_type === 'weekly_count' && !formData.weekly_payment_day) e.weekly_payment_day = 'Pick a day.';
+        if (formData.calculation_type === 'per_term' && !formData.term_payment_timing) e.term_payment_timing = 'Pick when the term bill is paid.';
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -173,6 +176,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
         const payload = { ...formData };
         payload.value = parsedValue || 0;
         payload.weekly_payment_day = formData.calculation_type === 'weekly_count' ? parseInt(formData.weekly_payment_day, 10) : null;
+        payload.term_payment_timing = formData.calculation_type === 'per_term' ? formData.term_payment_timing : '';
         onSave(isNew ? payload : item.budget_item_id, payload);
     };
 
@@ -232,7 +236,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                             <div>
                                 <span className={fieldLabel}>Frequency</span>
                                 <Segmented ariaLabel="Frequency" value={formData.calculation_type} onChange={v => update('calculation_type', v)}
-                                    options={[{ value: 'fixed', label: 'Monthly' }, { value: 'weekly_count', label: 'Weekly' }]} />
+                                    options={[{ value: 'fixed', label: 'Monthly' }, { value: 'weekly_count', label: 'Weekly' }, { value: 'per_term', label: 'Per term' }]} />
                                 {formData.calculation_type === 'weekly_count' && (
                                     <div className="mt-2">
                                         <select name="weekly_payment_day" value={formData.weekly_payment_day} onChange={e => update('weekly_payment_day', e.target.value)} className={inputCls}>
@@ -242,12 +246,24 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                         {errors.weekly_payment_day && <p className="text-xs text-danger mt-1">{errors.weekly_payment_day}</p>}
                                     </div>
                                 )}
+                                {formData.calculation_type === 'per_term' && (
+                                    <div className="mt-2">
+                                        <Segmented ariaLabel="Term payment timing" value={formData.term_payment_timing}
+                                            onChange={v => update('term_payment_timing', v)}
+                                            options={[{ value: 'start', label: 'Paid at start of half-term' }, { value: 'end', label: 'Paid at end of half-term' }]} />
+                                        {errors.term_payment_timing && <p className="text-xs text-danger mt-1">{errors.term_payment_timing}</p>}
+                                        <p className="text-xs text-ink-faint mt-1.5">The bill shows in the month it lands (six half-term bills a year); other months show £0.</p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Value */}
                             <div>
                                 <label htmlFor="value" className={fieldLabel}>
-                                    {formData.is_auto_extra ? 'Buffer amount' : formData.calculation_type === 'weekly_count' ? 'Amount per week' : 'Amount'}
+                                    {formData.is_auto_extra ? 'Buffer amount'
+                                        : formData.calculation_type === 'weekly_count' ? 'Amount per week'
+                                        : formData.calculation_type === 'per_term' ? 'Amount per half-term bill'
+                                        : 'Amount'}
                                 </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint font-semibold text-lg">£</span>
@@ -261,6 +277,9 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                 {errors.value && <p className="text-xs text-danger mt-1">{errors.value}</p>}
                                 {weeklyMonthly != null && (
                                     <p className="text-xs text-ink-soft mt-1.5">≈ <span className="num font-semibold text-ink">{money(weeklyMonthly)}</span> in {monthName} ({occurrences} × {money(parsedValue || 0)})</p>
+                                )}
+                                {formData.calculation_type === 'per_term' && !isNaN(parsedValue) && parsedValue > 0 && (
+                                    <p className="text-xs text-ink-soft mt-1.5">≈ <span className="num font-semibold text-ink">{money(parsedValue * 6 / 12)}</span>/month averaged over the year (6 half-term bills)</p>
                                 )}
                                 {formData.is_auto_extra && (
                                     <p className="text-xs text-ink-soft mt-1.5">Joint income covers the bills first, so the joint Remaining holds at this buffer each month.</p>
@@ -327,6 +346,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                                         <option value="ellis_nursery">Ellis nursery</option>
                                                         <option value="gaspard_care">Gaspard breakfast/after-school</option>
                                                         <option value="gaspard_holiday">Gaspard holiday club</option>
+                                                        <option value="gaspard_term_club">Gaspard term-time clubs (accrued)</option>
                                                     </select>
                                                 </div>
                                             )}

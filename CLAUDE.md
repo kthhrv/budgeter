@@ -95,8 +95,16 @@ foreign keys point at them — so month logic means joins, not date arithmetic.
 - `item_type`: `expense`, `income`, or `savings`.
 - `owner`: `shared`, `keith`, or `tild`.
 - `expense_pot`: `bills` or `groceries` — which pot the expense is funded from.
-- `calculation_type`: `fixed` (a monthly amount) or `weekly_count` (value ×
-  the number of times `weekly_payment_day` falls in that month).
+- `calculation_type`: `fixed` (a monthly amount), `weekly_count` (value ×
+  the number of times `weekly_payment_day` falls in that month), or `per_term`
+  (value is the cost per school half-term bill; it lands whole in the month a
+  `SchoolTerm` row starts or ends per `term_payment_timing`, and every other
+  month shows £0 — deliberately no smoothing/accrual, that was tried and
+  dropped as over-complicated). `SchoolTerm` rows are HALF-terms (six a year —
+  the school-club billing cycle), seeded for 2026/27 by migration 0032, next
+  years added via admin; past the last recorded row the item shows £0. The
+  same dates are hardcoded as `SCHOOL_TERMS` in `src/utils/childcareCalc.js`
+  for the childcare calculators — keep the two in step.
 - `is_extra` — funded, but treated as a buffer line: excluded from the joint
   Expenses total and reflected in Remaining instead.
 - `is_auto_extra` — an Extra whose value *rebalances itself* each month to hold
@@ -104,8 +112,13 @@ foreign keys point at them — so month logic means joins, not date arithmetic.
 - `is_tab_repayment` — this item's monthly value is also emitted as an
   automatic repayment on the tabs ledger.
 - `childcare_link` — binds the item to a frontend calculator
-  (`ellis_nursery`, `gaspard_care`, `gaspard_holiday`) for the
-  "Sync from Nursery" action.
+  (`ellis_nursery`, `gaspard_care`, `gaspard_holiday`, `gaspard_term_club`)
+  — linked items have their `effective_value` substituted client-side at
+  render time (`applyChildcareLinks`), never written to the DB.
+  `gaspard_term_club` is the term-time-club bill landing that month, zero in
+  between (paid up front each half-term, `termClubBills`); `gaspard_care`
+  stays the month's breakfast + after-school attendance cost — that invoice
+  arrives at half-term end, and the money accumulates as sessions happen.
 
 **`BudgetItemVersion`** — temporal versioning, and the concept most likely to
 trip you up. A value change is a *new version*, not an update in place.
@@ -164,7 +177,8 @@ savings averages come from `/api/fire/monthly-items/`, re-using
 **Childcare calculators live in the frontend**, not the backend:
 `src/utils/nurseryCalc.js` (Ellis's nursery invoice model, funded hours, TFC
 caps) and `src/utils/childcareCalc.js` (Gaspard's school breakfast/after-school
-and holiday clubs). Both carry hardcoded rates, term dates and bank holidays
+— including the 4:30–6:30 `late` slot — term-time activity clubs like French
+club, and holiday clubs). Both carry hardcoded rates, term dates and bank holidays
 with source comments — update them there, and note that Gaspard transitions
 from the nursery model to the childcare model at `GASPARD_CARE_START_DEFAULT`.
 

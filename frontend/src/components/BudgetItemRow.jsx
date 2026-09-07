@@ -57,12 +57,19 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                         {item.childcare_link === 'ellis_nursery' && <span className={`${chip} bg-good/10 text-good`}>Linked: Ellis nursery</span>}
                         {item.childcare_link === 'gaspard_care' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard clubs</span>}
                         {item.childcare_link === 'gaspard_holiday' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard holiday</span>}
+                        {item.childcare_link === 'gaspard_term_club' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard term clubs</span>}
                         {item.is_one_off && <span className={`${chip} bg-warn-soft text-warn`}>One-off</span>}
                         {isEditingDisabled && !isSynthetic && <span className={`${chip} bg-line/70 text-ink-soft`}>Locked</span>}
                     </div>
                     {item.calculation_type === 'weekly_count' && (
                         <p className="text-[11px] text-ink-faint mt-0.5">
                             Weekly on {DAY_CHOICES[item.weekly_payment_day] || 'unknown day'}{item.occurrences != null ? ` · ${item.occurrences} occurrences` : ''}
+                        </p>
+                    )}
+                    {item.calculation_type === 'per_term' && (
+                        <p className="text-[11px] text-ink-faint mt-0.5">
+                            £{(parseFloat(item.value) || 0).toFixed(2)} per half-term, paid at {item.term_payment_timing === 'start' ? 'start' : 'end'}
+                            {item.term_payment_month_name ? ` · ${parseFloat(item.effective_value) > 0 ? 'bill lands' : 'next bill'} ${item.term_payment_month_name}` : ' · next bill not on record yet'}
                         </p>
                     )}
                 </div>

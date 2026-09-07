@@ -1,7 +1,7 @@
 // Pure helpers for the nursery cost calculator. Used by NurseryPage and by the
 // budget tab's "Sync from Nursery" button on linked items.
 
-import { computeChildcare } from './childcareCalc';
+import { computeChildcare, termClubBills } from './childcareCalc';
 
 // ------------------------- Fee data (Effective 1 Jan 2026) -------------------------
 
@@ -490,6 +490,9 @@ export function computeMonthSummary(settings, date) {
     const childcare         = eff.gaspardInNursery ? null : computeChildcare(settings, monthKey);
     const gaspardCareNet    = eff.gaspardInNursery ? gaspardNurseryNet : childcare.termNet;
     const gaspardHolidayNet = eff.gaspardInNursery ? 0 : childcare.holidayNet;
+    // Term-time clubs are paid up front each half-term, so their line is the
+    // bill landing this month (zero in between), not the attendance cost.
+    const gaspardTermClubNet = eff.gaspardInNursery ? 0 : termClubBills(settings, monthKey).total;
 
     return {
         year, monthIdx, monthLabel, daysInMonth, weekdayCounts,
@@ -503,6 +506,7 @@ export function computeMonthSummary(settings, date) {
         ellisNurseryNet,
         gaspardCareNet,
         gaspardHolidayNet,
+        gaspardTermClubNet,
         tfc: {
             ellisFactor:       eEffMult,
             gaspardFactor:     gEffMult,

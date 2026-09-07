@@ -138,7 +138,7 @@ describe('ItemCategoryModal', () => {
             render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'gaspard_care' }} />);
             const select = getSelect('childcare_link'); // Advanced auto-opens because a link is set
             expect(select).not.toBeNull();
-            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'ellis_nursery', 'gaspard_care', 'gaspard_holiday']);
+            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'ellis_nursery', 'gaspard_care', 'gaspard_holiday', 'gaspard_term_club']);
             expect(select.value).toBe('gaspard_care');
         });
     });

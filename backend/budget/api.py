@@ -19,7 +19,7 @@ from . import monzo
 from .models import (
     Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings,
     FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, Property, FireSettings,
-    MonzoConnection,
+    MonzoConnection, SchoolTerm,
 )
 from django.db.models import Prefetch
 from django.middleware.csrf import get_token
@@ -79,6 +79,7 @@ class BudgetItemSchema(Schema):
     is_auto_extra: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
+    term_payment_timing: str = ''
     last_payment_month_id: Optional[str] = None
 
     @staticmethod
@@ -97,6 +98,7 @@ class BudgetItemInputSchema(Schema):
     is_auto_extra: bool = False
     calculation_type: str
     weekly_payment_day: Optional[int] = None
+    term_payment_timing: str = ''
     last_payment_month_id: Optional[str] = None
     value: float
     is_one_off: bool = False
@@ -113,6 +115,7 @@ class BudgetItemEditSchema(Schema):
     is_auto_extra: Optional[bool] = None
     calculation_type: Optional[str] = None
     weekly_payment_day: Optional[int] = None
+    term_payment_timing: Optional[str] = None
     last_payment_month_id: Optional[str] = None
 
 class BudgetItemVersionSchema(Schema):
@@ -128,11 +131,15 @@ class BudgetItemVersionSchema(Schema):
     is_auto_extra: bool
     calculation_type: str
     weekly_payment_day: Optional[int] = None
+    term_payment_timing: str = ''
     value: float
     effective_value: float
     effective_from_month_name: str
     is_one_off: bool
     occurrences: Optional[int] = None
+    # per_term items: the month this/the next bill lands in (None past the
+    # last recorded SchoolTerm).
+    term_payment_month_name: Optional[str] = None
 
 class BudgetItemVersionInputSchema(Schema):
     value: float
@@ -140,13 +147,49 @@ class BudgetItemVersionInputSchema(Schema):
 
 # --- Helpers ---
 
-def _serialize_version(budget_item, effective_version, month_obj):
+def _school_terms():
+    """All SchoolTerm rows, oldest first — the order the accrual walk requires."""
+    return list(SchoolTerm.objects.order_by('start_date'))
+
+
+def _months_between(a, b):
+    """Whole months from date a's month to date b's month (same month → 0)."""
+    return (b.year - a.year) * 12 + (b.month - a.month)
+
+
+def calculate_per_term_bill(timing, month_obj, terms):
+    """Which per-term bills land in `month_obj`, and the next payment coming.
+
+    A per_term item's stored value is the cost per bill; a bill lands in the
+    month a SchoolTerm starts (timing 'start') or ends ('end') and the other
+    months show zero — no smoothing. Returns (bill_count, next_payment_date)
+    where next_payment_date is this month's bill if one lands, else the next
+    one on record, else None (past the last recorded term). Returns None when
+    no terms exist at all.
+    """
+    if not terms:
+        return None
+    pay_dates = [t.start_date if timing == 'start' else t.end_date for t in terms]
+    bill_count = sum(1 for p in pay_dates if _months_between(month_obj.start_date, p) == 0)
+    next_payment = next((p for p in pay_dates if _months_between(month_obj.start_date, p) >= 0), None)
+    return bill_count, next_payment
+
+
+def _serialize_version(budget_item, effective_version, month_obj, terms=None):
     """Build a BudgetItemVersionSchema payload for the given item + effective version + month."""
     calculated_value = float(effective_version.value)
     occurrences = None
+    term_payment_month_name = None
     if budget_item.calculation_type == 'weekly_count' and budget_item.weekly_payment_day:
         occurrences = calculate_weekly_occurrences(month_obj.start_date.year, month_obj.start_date.month, budget_item.weekly_payment_day)
         calculated_value = float(effective_version.value) * occurrences
+    elif budget_item.calculation_type == 'per_term' and budget_item.term_payment_timing:
+        bill = calculate_per_term_bill(budget_item.term_payment_timing, month_obj, terms or [])
+        if bill is not None:
+            bill_count, pay_date = bill
+            calculated_value = float(effective_version.value) * bill_count
+            if pay_date is not None:
+                term_payment_month_name = pay_date.strftime('%B %Y')
     return BudgetItemVersionSchema(
         budget_item_id=budget_item.budget_item_id,
         item_name=budget_item.item_name,
@@ -160,11 +203,13 @@ def _serialize_version(budget_item, effective_version, month_obj):
         is_auto_extra=budget_item.is_auto_extra,
         calculation_type=budget_item.calculation_type,
         weekly_payment_day=budget_item.weekly_payment_day,
+        term_payment_timing=budget_item.term_payment_timing,
         value=float(effective_version.value),
         effective_value=calculated_value,
         effective_from_month_name=effective_version.effective_from_month.month_name,
         is_one_off=effective_version.is_one_off,
         occurrences=occurrences,
+        term_payment_month_name=term_payment_month_name,
     )
 
 
@@ -280,8 +325,10 @@ def _prefetched_budget_items():
     )
 
 
-def _serialized_items_for_month(items, month_obj):
+def _serialized_items_for_month(items, month_obj, terms=None):
     """Effective, serialized budget items for a month, honouring last_payment_month expiry."""
+    if terms is None:
+        terms = _school_terms()
     out = []
     for item in items:
         if item.last_payment_month and month_obj.start_date > item.last_payment_month.end_date:
@@ -289,7 +336,7 @@ def _serialized_items_for_month(items, month_obj):
         version = _effective_version_for_month(item, month_obj)
         if version is None:
             continue
-        out.append(_serialize_version(item, version, month_obj))
+        out.append(_serialize_version(item, version, month_obj, terms=terms))
     return out
 
 
@@ -316,7 +363,7 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
             defaults={'value': payload.value, 'effective_from_month': month, 'is_one_off': payload.is_one_off}
         )
     budget_item.refresh_from_db()
-    return _serialize_version(budget_item, budget_item_version, month)
+    return _serialize_version(budget_item, budget_item_version, month, terms=_school_terms())
 
 @api.delete("/months/{month_id}/items/{budget_item_id}/", response={204: None, 403: dict})
 def delete_budget_item_from_month(request, month_id: str, budget_item_id: uuid.UUID):
@@ -370,6 +417,8 @@ def create_budget_item(request, month_id: str, payload: BudgetItemInputSchema):
             budget_item_data['last_payment_month'] = get_object_or_404(Month, month_id=payload.last_payment_month_id)
         if budget_item_data.get('calculation_type') != 'weekly_count':
             budget_item_data['weekly_payment_day'] = None
+        if budget_item_data.get('calculation_type') != 'per_term':
+            budget_item_data['term_payment_timing'] = ''
         
         budget_item = BudgetItem.objects.create(**budget_item_data)
         
@@ -395,6 +444,8 @@ def edit_budget_item(request, budget_item_id: uuid.UUID, payload: BudgetItemEdit
     new_calc_type = update_data.get('calculation_type', budget_item.calculation_type)
     if new_calc_type != 'weekly_count':
         update_data['weekly_payment_day'] = None
+    if new_calc_type != 'per_term':
+        update_data['term_payment_timing'] = ''
 
     for attr, value in update_data.items():
         setattr(budget_item, attr, value)
@@ -478,6 +529,7 @@ def get_tabs(request):
         .prefetch_related(Prefetch('versions', queryset=versions_qs))
     )
     all_months = list(Month.objects.filter(start_date__lte=today).order_by('start_date'))
+    terms = _school_terms()
     for bi in auto_items:
         for month_obj in all_months:
             if bi.last_payment_month and month_obj.start_date > bi.last_payment_month.end_date:
@@ -490,6 +542,12 @@ def get_tabs(request):
                 calc_value *= calculate_weekly_occurrences(
                     month_obj.start_date.year, month_obj.start_date.month, bi.weekly_payment_day
                 )
+            elif bi.calculation_type == 'per_term' and bi.term_payment_timing:
+                bill = calculate_per_term_bill(bi.term_payment_timing, month_obj, terms)
+                if bill is not None:
+                    calc_value *= bill[0]
+                if calc_value == 0:
+                    continue
             repayments_list.append({
                 'id': f'auto-{bi.budget_item_id}-{month_obj.month_id}',
                 'amount': calc_value,
@@ -1022,11 +1080,12 @@ def fire_monthly_items(request, count: int = 12):
         Month.objects.filter(start_date__lte=today).order_by('-start_date')[:max(1, min(count, 36))]
     )
     items = list(_prefetched_budget_items())
+    terms = _school_terms()
     return [
         MonthItemsSchema(
             month_id=m.month_id,
             month_name=m.month_name,
-            items=_serialized_items_for_month(items, m),
+            items=_serialized_items_for_month(items, m, terms=terms),
         )
         for m in reversed(months)
     ]

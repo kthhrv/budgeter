@@ -34,6 +34,33 @@ class Month(models.Model):
     def __str__(self):
         return self.month_name
 
+
+class SchoolTerm(models.Model):
+    """
+    One school HALF-term, driving 'per_term' budget items — half-terms because
+    that's the billing cycle for school clubs (six bills a year). A per_term
+    item's value lands in the month a row starts or ends, per the item's
+    term_payment_timing. Rows are added per academic year (via admin); keep
+    them in step with SCHOOL_TERMS in frontend/src/utils/childcareCalc.js,
+    which the childcare calculators use for the same dates.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Display name, e.g. 'Autumn 2026'."
+    )
+    start_date = models.DateField(help_text="First school day of the term.")
+    end_date = models.DateField(help_text="Last school day of the term.")
+
+    class Meta:
+        verbose_name = "School Term"
+        verbose_name_plural = "School Terms"
+        ordering = ['start_date']
+
+    def __str__(self):
+        return f"{self.name} ({self.start_date} – {self.end_date})"
+
 class BudgetItem(models.Model):
     """
     Represents a general category of a budget item, such as 'Rent', 'Groceries', or 'Salary'.
@@ -56,6 +83,13 @@ class BudgetItem(models.Model):
     CALCULATION_TYPE_CHOICES = [
         ('fixed', 'Fixed Monthly Value'),
         ('weekly_count', 'Weekly Value by Occurrence Count'),
+        ('per_term', 'Per School Term'),
+    ]
+
+    TERM_PAYMENT_TIMING_CHOICES = [
+        ('', '—'),
+        ('start', 'Paid at start of term'),
+        ('end', 'Paid at end of term'),
     ]
 
     EXPENSE_POT_CHOICES = [
@@ -120,6 +154,7 @@ class BudgetItem(models.Model):
         ('ellis_nursery', 'Ellis nursery'),
         ('gaspard_care', 'Gaspard breakfast/after-school'),
         ('gaspard_holiday', 'Gaspard holiday club'),
+        ('gaspard_term_club', 'Gaspard term-time clubs'),
     ]
     childcare_link = models.CharField(
         max_length=20,
@@ -128,7 +163,9 @@ class BudgetItem(models.Model):
         default='',
         help_text="If set, this item's monthly value is auto-synced from the childcare "
                   "calculators: 'ellis_nursery' → Ellis's Transfer to TFC, 'gaspard_care' → "
-                  "Gaspard's breakfast + after-school net, 'gaspard_holiday' → his holiday-club net."
+                  "Gaspard's breakfast + after-school net, 'gaspard_holiday' → his holiday-club "
+                  "net, 'gaspard_term_club' → the accrued monthly set-aside for his term-time "
+                  "clubs (paid up front each term)."
     )
     is_auto_extra = models.BooleanField(
         default=False,
@@ -144,6 +181,15 @@ class BudgetItem(models.Model):
         null=True,
         blank=True,
         help_text="Day of the week for weekly_count items (1=Mon, ..., 7=Sun). Only relevant if Calculation Type is 'Weekly Value by Occurrence Count'."
+    )
+    term_payment_timing = models.CharField(
+        max_length=5,
+        choices=TERM_PAYMENT_TIMING_CHOICES,
+        blank=True,
+        default='',
+        help_text="For per_term items: whether the bill lands in the month a SchoolTerm starts "
+                  "or the month it ends. The stored value is the cost per bill; it appears in "
+                  "the budget only in the months a bill lands — no smoothing."
     )
     # This field sets the last month an item is active.
     last_payment_month = models.ForeignKey(
