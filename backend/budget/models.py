@@ -151,10 +151,13 @@ class BudgetItem(models.Model):
     )
     CHILDCARE_LINK_CHOICES = [
         ('', '—'),
-        ('ellis_nursery', 'Ellis nursery'),
-        ('gaspard_care', 'Gaspard breakfast/after-school'),
-        ('gaspard_holiday', 'Gaspard holiday club'),
-        ('gaspard_term_club', 'Gaspard term-time clubs'),
+        ('childcare', 'Childcare (nursery + all clubs)'),
+        # Legacy per-component links: no longer offered in the UI, kept so
+        # expired historical items keep resolving in past months.
+        ('ellis_nursery', 'Ellis nursery (legacy)'),
+        ('gaspard_care', 'Gaspard after-school (legacy)'),
+        ('gaspard_holiday', 'Gaspard holiday club (legacy)'),
+        ('gaspard_term_club', 'Gaspard term-time clubs (legacy)'),
     ]
     childcare_link = models.CharField(
         max_length=20,
@@ -162,10 +165,11 @@ class BudgetItem(models.Model):
         blank=True,
         default='',
         help_text="If set, this item's monthly value is auto-synced from the childcare "
-                  "calculators: 'ellis_nursery' → Ellis's Transfer to TFC, 'gaspard_care' → "
-                  "Gaspard's breakfast + after-school net, 'gaspard_holiday' → his holiday-club "
-                  "net, 'gaspard_term_club' → the accrued monthly set-aside for his term-time "
-                  "clubs (paid up front each term)."
+                  "calculators. 'childcare' → the whole monthly cost: Ellis's nursery net "
+                  "plus Gaspard's after-school, term-time-club and holiday-club attendance "
+                  "for the month (TFC clubs at their net 80%, non-TFC at full price). The "
+                  "other values are legacy per-component links consolidated by migration "
+                  "0034; they remain only on expired items."
     )
     is_auto_extra = models.BooleanField(
         default=False,

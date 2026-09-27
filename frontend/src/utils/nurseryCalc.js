@@ -484,7 +484,7 @@ export function computeMonthSummary(settings, date) {
 
     // Gaspard's childcare feeds two budget lines. Before the school switch he's
     // in nursery, so his nursery net goes to the recurring line and holiday is 0.
-    // After, the recurring line = breakfast + after-school, holiday = its own line.
+    // After, the recurring line = after-school, holiday = its own line.
     const ellisNurseryNet   = ellisInvoiced   - cap.ellisSaving;
     const gaspardNurseryNet = gaspardInvoiced - cap.gaspardSaving;
     const childcare         = eff.gaspardInNursery ? null : computeChildcare(settings, monthKey);
@@ -493,6 +493,10 @@ export function computeMonthSummary(settings, date) {
     // Term-time clubs are paid up front each half-term, so their line is the
     // bill landing this month (zero in between), not the attendance cost.
     const gaspardTermClubNet = eff.gaspardInNursery ? 0 : termClubBills(settings, monthKey).total;
+    // The consolidated 'childcare' budget link: the whole month's cost, with
+    // term-time clubs counted as attendance (sessions that month), not bills.
+    const childcareTotalNet = ellisNurseryNet + gaspardCareNet + gaspardHolidayNet
+        + (eff.gaspardInNursery ? 0 : childcare.termClubMonthNet);
 
     return {
         year, monthIdx, monthLabel, daysInMonth, weekdayCounts,
@@ -507,6 +511,7 @@ export function computeMonthSummary(settings, date) {
         gaspardCareNet,
         gaspardHolidayNet,
         gaspardTermClubNet,
+        childcareTotalNet,
         tfc: {
             ellisFactor:       eEffMult,
             gaspardFactor:     gEffMult,
@@ -527,7 +532,8 @@ export function computeMonthSummary(settings, date) {
 // item whose `childcare_link` targets a computed value, unless that item has an
 // explicit one-off override pinned to the displayed month. Used by the budget
 // tab to keep linked items in sync with the Nursery calculator without a button
-// press. `nets` = { ellis_nursery, gaspard_care }.
+// press. `nets` maps link values to figures: `childcare` (the consolidated
+// line) plus the legacy per-component keys for expired historical items.
 export function applyChildcareLinks(items, nets, currentMonthName) {
     if (!nets) return items;
     return items.map(item => {

@@ -105,6 +105,9 @@ const App = () => {
         if (!nurserySettings?.ellis || !nurserySettings?.gaspard) return null;
         const summary = computeMonthSummary(nurserySettings, currentDate);
         return {
+            childcare: summary.childcareTotalNet,
+            // Legacy per-component links, kept so expired items still resolve
+            // when viewing past months.
             ellis_nursery: summary.ellisNurseryNet,
             gaspard_care: summary.gaspardCareNet,
             gaspard_holiday: summary.gaspardHolidayNet,

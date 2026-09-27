@@ -3,12 +3,10 @@
 // invoice). computeChildcare's `net` feeds the "Childcare Gaspard" budget line.
 
 // Fixed club rates (per day).
-//   Breakfast:    £5/day (attending or not)
 //   After-school: short = 3:15–4:30 (£12), long = 3:15–6:30 (£24),
 //                 late = 4:30–6:30 (£12) — the pick-up-after-a-club slot
 // Holiday clubs and term-time clubs carry their own configurable rates.
 export const CHILDCARE_RATES = {
-    breakfast: 5.00,
     afterSchool: { short: 12.00, long: 24.00, late: 12.00 },
 };
 
@@ -82,7 +80,6 @@ const emptyChildcare = () => ({
     // `schedule` is the baseline recurring weekly pattern; `overrides` are
     // per-date exceptions edited on the calendar (add an ad-hoc session, or
     // remove a day from the recurring pattern). Overrides win over the pattern.
-    breakfast:   { tfc: true, schedule: [false, false, false, false, false], overrides: {} },
     afterSchool: { tfc: true, schedule: ['none', 'none', 'none', 'none', 'none'], overrides: {} },
     holidayClubs: [],
     // Term-time activity clubs (e.g. French club): per-session rate, a static
@@ -90,10 +87,10 @@ const emptyChildcare = () => ({
     // half-term, so their budget line is the bill landing that month
     // (termClubBills), not the month's attendance cost.
     termClubs: [],
-    // Month-scoped weekly patterns. `patterns[YYYY-MM] = { breakfast:[...],
-    // afterSchool:[...] }` — the effective pattern for a month is the latest one
-    // set at or before it (forward-fill, like the Nursery tab). Falls back to
-    // the baseline `schedule` above for months before any pattern was set.
+    // Month-scoped weekly patterns. `patterns[YYYY-MM] = { afterSchool:[...] }`
+    // — the effective pattern for a month is the latest one set at or before it
+    // (forward-fill, like the Nursery tab). Falls back to the baseline
+    // `schedule` above for months before any pattern was set.
     patterns: {},
 });
 
@@ -104,7 +101,6 @@ export function getChildcare(settings) {
     return {
         startMonth:   c.startMonth ?? d.startMonth,
         nonTermDays:  Array.isArray(c.nonTermDays) ? c.nonTermDays : [],
-        breakfast:    { ...d.breakfast, ...(c.breakfast || {}), overrides: (c.breakfast && c.breakfast.overrides) || {} },
         afterSchool:  { ...d.afterSchool, ...(c.afterSchool || {}), overrides: (c.afterSchool && c.afterSchool.overrides) || {} },
         holidayClubs: Array.isArray(c.holidayClubs) ? c.holidayClubs : [],
         termClubs:    Array.isArray(c.termClubs) ? c.termClubs : [],
@@ -126,7 +122,7 @@ export function effectiveSchedule(childcare, monthKey, concept) {
 
 // Per-date attendance map for the displayed month. Powers both the calendar
 // overlay and the cost breakdown so they can never disagree.
-//   { 'YYYY-MM-DD': { nonTerm, weekend, breakfast: bool,
+//   { 'YYYY-MM-DD': { nonTerm, weekend,
 //                     afterSchool: 'short'|'long'|'late'|null,
 //                     termClubs: [{id,name}], clubs: [{id,name}] } }
 export function childcareDayMarkers(settings, monthKey) {
@@ -134,9 +130,7 @@ export function childcareDayMarkers(settings, monthKey) {
     const [y, m] = monthKey.split('-').map(Number);
     const m0 = m - 1;
     const nonTerm = new Set(c.nonTermDays);
-    const bOv = c.breakfast.overrides || {};
     const aOv = c.afterSchool.overrides || {};
-    const bSchedule = effectiveSchedule(c, monthKey, 'breakfast');
     const aSchedule = effectiveSchedule(c, monthKey, 'afterSchool');
 
     const map = {};
@@ -149,19 +143,17 @@ export function childcareDayMarkers(settings, monthKey) {
         const isNonTerm = nonTerm.has(iso);
         const termWeekday = !weekend && !isNonTerm;
 
-        // Breakfast / after-school run only on term weekdays. On non-term days
-        // and weekends they never apply (only a holiday club can be assigned),
+        // After-school runs only on term weekdays. On non-term days and
+        // weekends it never applies (only a holiday club can be assigned),
         // so per-date overrides are ignored there.
-        let breakfast = false;
         let afterSchool = null;
         let overridden = false;
         const termClubsHere = [];
         if (termWeekday) {
-            breakfast = iso in bOv ? !!bOv[iso] : bSchedule[wd] === true;
             const aRec = aSchedule[wd] !== 'none' ? aSchedule[wd] : 'none';
             const aEff = iso in aOv ? aOv[iso] : aRec;
             afterSchool = aEff && aEff !== 'none' ? aEff : null;
-            overridden = (iso in bOv) || (iso in aOv);
+            overridden = iso in aOv;
             for (const club of c.termClubs) {
                 const kOv = club.overrides || {};
                 const attending = iso in kOv ? !!kOv[iso] : club.schedule?.[wd] === true;
@@ -169,7 +161,7 @@ export function childcareDayMarkers(settings, monthKey) {
                 if (iso in kOv) overridden = true;
             }
         }
-        map[iso] = { nonTerm: isNonTerm, weekend, breakfast, afterSchool, overridden, termClubs: termClubsHere, clubs: [] };
+        map[iso] = { nonTerm: isNonTerm, weekend, afterSchool, overridden, termClubs: termClubsHere, clubs: [] };
     }
 
     // Holiday-club day assignments (only meaningful on non-term days).
@@ -207,27 +199,23 @@ function holidayClubCost(club, monthKey) {
 }
 
 // Monthly childcare cost breakdown. Per-concept/-club TFC knocks 20% off that
-// item, no quarterly cap. `net` is what you pay for breakfast/after-school/
-// holiday clubs (feeds the gaspard_care and gaspard_holiday budget links).
-// Term-time clubs are reported as this month's attendance for the breakdown,
-// but their budget line is termClubAccrual (paid up front each term).
+// item, no quarterly cap. `net` is what you pay for after-school/holiday clubs
+// (feeds the gaspard_care and gaspard_holiday budget links). Term-time clubs
+// are reported as this month's attendance for the breakdown, but their budget
+// line is the bill landing that month (paid up front each term).
 export function computeChildcare(settings, monthKey) {
     const c = getChildcare(settings);
     const markers = childcareDayMarkers(settings, monthKey);
 
-    let breakfastDays = 0;
     let afterSchoolCost = 0;
     const termClubDays = {};
     for (const iso in markers) {
-        if (markers[iso].breakfast) breakfastDays++;
         const opt = markers[iso].afterSchool;
         if (opt) afterSchoolCost += CHILDCARE_RATES.afterSchool[opt] || 0;
         for (const k of markers[iso].termClubs) termClubDays[k.id] = (termClubDays[k.id] || 0) + 1;
     }
-    const breakfastCost = breakfastDays * CHILDCARE_RATES.breakfast;
 
-    const withTfc = (cost, tfc) => ({ cost, saving: tfc ? cost * 0.20 : 0 });
-    const breakfast = withTfc(breakfastCost, c.breakfast.tfc);
+    const withTfc = (cost, tfc) => ({ tfc: !!tfc, cost, saving: tfc ? cost * 0.20 : 0 });
     const afterSchool = withTfc(afterSchoolCost, c.afterSchool.tfc);
     const holidayClubs = c.holidayClubs.map(club => ({
         id: club.id,
@@ -242,14 +230,14 @@ export function computeChildcare(settings, monthKey) {
     }));
 
     const netOf = (x) => x.cost - x.saving;
-    // Two budget lines: the recurring term clubs (breakfast + after-school) can
-    // be merged into one, while holiday clubs feed a separate line.
-    const termNet = netOf(breakfast) + netOf(afterSchool);
+    // Two budget lines: after-school is the recurring line, holiday clubs feed
+    // a separate one.
+    const termNet = netOf(afterSchool);
     const holidayNet = holidayClubs.reduce((s, h) => s + netOf(h), 0);
     const termClubMonthNet = termClubs.reduce((s, k) => s + netOf(k), 0);
-    const gross = breakfast.cost + afterSchool.cost + holidayClubs.reduce((s, h) => s + h.cost, 0);
-    const tfcSaving = breakfast.saving + afterSchool.saving + holidayClubs.reduce((s, h) => s + h.saving, 0);
-    return { breakfast, afterSchool, holidayClubs, termClubs, termNet, holidayNet, termClubMonthNet, gross, tfcSaving, net: termNet + holidayNet };
+    const gross = afterSchool.cost + holidayClubs.reduce((s, h) => s + h.cost, 0);
+    const tfcSaving = afterSchool.saving + holidayClubs.reduce((s, h) => s + h.saving, 0);
+    return { afterSchool, holidayClubs, termClubs, termNet, holidayNet, termClubMonthNet, gross, tfcSaving, net: termNet + holidayNet };
 }
 
 // --------------------- Per-term totals & accrual ---------------------

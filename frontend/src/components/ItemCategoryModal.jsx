@@ -343,10 +343,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                                     <span className={fieldLabel}>Sync from other tab</span>
                                                     <select name="childcare_link" value={formData.childcare_link} onChange={e => update('childcare_link', e.target.value)} className={inputCls}>
                                                         <option value="">Not linked</option>
-                                                        <option value="ellis_nursery">Ellis nursery</option>
-                                                        <option value="gaspard_care">Gaspard breakfast/after-school</option>
-                                                        <option value="gaspard_holiday">Gaspard holiday club</option>
-                                                        <option value="gaspard_term_club">Gaspard term-time clubs (accrued)</option>
+                                                        <option value="childcare">Childcare (nursery + all clubs)</option>
                                                     </select>
                                                 </div>
                                             )}

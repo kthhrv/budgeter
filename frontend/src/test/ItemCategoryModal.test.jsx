@@ -133,13 +133,13 @@ describe('ItemCategoryModal', () => {
         });
     });
 
-    describe('Nursery linking', () => {
-        it('shows the childcare-link select with Ellis + Gaspard targets, and reflects an existing link', () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'gaspard_care' }} />);
+    describe('Childcare linking', () => {
+        it('offers only the consolidated childcare target, and reflects an existing link', () => {
+            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'childcare' }} />);
             const select = getSelect('childcare_link'); // Advanced auto-opens because a link is set
             expect(select).not.toBeNull();
-            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'ellis_nursery', 'gaspard_care', 'gaspard_holiday', 'gaspard_term_club']);
-            expect(select.value).toBe('gaspard_care');
+            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'childcare']);
+            expect(select.value).toBe('childcare');
         });
     });
 

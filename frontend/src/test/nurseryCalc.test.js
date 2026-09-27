@@ -271,14 +271,13 @@ describe('effectiveForMonth', () => {
 });
 
 describe('nursery → childcare switchover at startMonth', () => {
-    // Full-time breakfast recurring so the childcare net is clearly non-zero.
+    // Full-time after-school recurring so the childcare net is clearly non-zero.
     const s = () => ({
         ...baseSettings(),
         childcare: {
             startMonth: '2026-09',
             nonTermDays: [],
-            breakfast:   { tfc: true, schedule: [true, true, true, true, true], adhoc: [] },
-            afterSchool: { tfc: true, schedule: ['none', 'none', 'none', 'none', 'none'], adhoc: [] },
+            afterSchool: { tfc: true, schedule: ['short', 'short', 'short', 'short', 'short'], adhoc: [] },
             holidayClubs: [{ id: 1, name: 'Camp', dayRate: 40, weekRate: 150, tfc: false, days: ['2026-09-05'] }],
         },
     });
@@ -298,7 +297,7 @@ describe('nursery → childcare switchover at startMonth', () => {
         // Pre-switch: care line tracks his nursery net; holiday line is 0.
         expect(aug.gaspardCareNet).toBeCloseTo(aug.gaspardTFC, 2);
         expect(aug.gaspardHolidayNet).toBe(0);
-        // Post-switch: care line = breakfast/after-school net; holiday line separate.
+        // Post-switch: care line = after-school net; holiday line separate.
         expect(sep.gaspardCareNet).toBeGreaterThan(0);
         expect(sep.gaspardHolidayNet).toBeGreaterThan(0); // one non-term Sat day @ £40
     });

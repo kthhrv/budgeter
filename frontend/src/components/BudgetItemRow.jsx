@@ -54,6 +54,7 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                         {item.is_tab_repayment && <span className={`${chip} bg-accent/10 text-accent-strong`}>Tab Repayment</span>}
                         {item.is_extra && <span className={`${chip} bg-warn-soft text-warn`}>Extra</span>}
                         {item.is_auto_extra && <span className={`${chip} bg-warn-soft text-warn`}>Monthly buffer</span>}
+                        {item.childcare_link === 'childcare' && <span className={`${chip} bg-good/10 text-good`}>Linked: Childcare</span>}
                         {item.childcare_link === 'ellis_nursery' && <span className={`${chip} bg-good/10 text-good`}>Linked: Ellis nursery</span>}
                         {item.childcare_link === 'gaspard_care' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard clubs</span>}
                         {item.childcare_link === 'gaspard_holiday' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard holiday</span>}
