@@ -9,45 +9,33 @@ const cc = (over = {}) => ({
     childcare: {
         startMonth: '2026-09',
         nonTermDays: [],
-        breakfast:   { tfc: true, schedule: ALL(false), overrides: {} },
         afterSchool: { tfc: true, schedule: ALL('none'), overrides: {} },
         holidayClubs: [],
         ...over,
     },
 });
 
-describe('computeChildcare — breakfast', () => {
-    it('costs each term weekday at £5 (22 weekdays in Sep 2026)', () => {
-        const c = computeChildcare(cc({ breakfast: { tfc: false, schedule: ALL(true), adhoc: [] } }), MONTH);
-        expect(c.breakfast.cost).toBeCloseTo(22 * CHILDCARE_RATES.breakfast, 2); // £110
-        expect(c.breakfast.saving).toBe(0);
-    });
-
+describe('computeChildcare — after-school overrides & TFC', () => {
     it('applies 20% TFC when enabled', () => {
-        const c = computeChildcare(cc({ breakfast: { tfc: true, schedule: ALL(true), overrides: {} } }), MONTH);
-        expect(c.breakfast.saving).toBeCloseTo(c.breakfast.cost * 0.20, 2);
-    });
-
-    it('an override to attend on a non-scheduled weekday adds one day', () => {
-        const c = computeChildcare(cc({ breakfast: { tfc: false, schedule: ALL(false), overrides: { '2026-09-03': true } } }), MONTH);
-        expect(c.breakfast.cost).toBeCloseTo(5, 2);
+        const c = computeChildcare(cc({ afterSchool: { tfc: true, schedule: ALL('short'), overrides: {} } }), MONTH);
+        expect(c.afterSchool.saving).toBeCloseTo(c.afterSchool.cost * 0.20, 2);
     });
 
     it('an override to skip a recurring day removes it', () => {
-        const c = computeChildcare(cc({ breakfast: { tfc: false, schedule: ALL(true), overrides: { '2026-09-03': false } } }), MONTH);
-        expect(c.breakfast.cost).toBeCloseTo(21 * 5, 2); // one Thursday removed
+        const c = computeChildcare(cc({ afterSchool: { tfc: false, schedule: ALL('short'), overrides: { '2026-09-03': 'none' } } }), MONTH);
+        expect(c.afterSchool.cost).toBeCloseTo(21 * 12, 2); // one Thursday removed
     });
 });
 
 describe('computeChildcare — month-scoped weekly pattern (forward-fill)', () => {
     it('a pattern set for a later month applies from that month, not before', () => {
         const s = cc({
-            breakfast: { tfc: false, schedule: ALL(true), overrides: {} }, // baseline: every weekday
-            patterns: { '2026-10': { breakfast: ALL(false) } },            // October onward: none
+            afterSchool: { tfc: false, schedule: ALL('short'), overrides: {} }, // baseline: every weekday
+            patterns: { '2026-10': { afterSchool: ALL('none') } },              // October onward: none
         });
-        expect(computeChildcare(s, '2026-09').breakfast.cost).toBeGreaterThan(0); // baseline still applies in Sep
-        expect(computeChildcare(s, '2026-10').breakfast.cost).toBe(0);            // October uses its own pattern
-        expect(computeChildcare(s, '2026-11').breakfast.cost).toBe(0);            // and forward-fills to Nov
+        expect(computeChildcare(s, '2026-09').afterSchool.cost).toBeGreaterThan(0); // baseline still applies in Sep
+        expect(computeChildcare(s, '2026-10').afterSchool.cost).toBe(0);            // October uses its own pattern
+        expect(computeChildcare(s, '2026-11').afterSchool.cost).toBe(0);            // and forward-fills to Nov
     });
 });
 
@@ -64,18 +52,18 @@ describe('computeChildcare — after-school', () => {
 });
 
 describe('computeChildcare — non-term exclusion', () => {
-    it('marking the whole month non-term drops recurring breakfast to £0', () => {
+    it('marking the whole month non-term drops recurring after-school to £0', () => {
         const nonTerm = Array.from({ length: 30 }, (_, i) => `2026-09-${String(i + 1).padStart(2, '0')}`);
-        const c = computeChildcare(cc({ nonTermDays: nonTerm, breakfast: { tfc: false, schedule: ALL(true), overrides: {} } }), MONTH);
-        expect(c.breakfast.cost).toBe(0);
+        const c = computeChildcare(cc({ nonTermDays: nonTerm, afterSchool: { tfc: false, schedule: ALL('short'), overrides: {} } }), MONTH);
+        expect(c.afterSchool.cost).toBe(0);
     });
 
-    it('ignores a breakfast override placed on a non-term day', () => {
+    it('ignores an after-school override placed on a non-term day', () => {
         const c = computeChildcare(cc({
             nonTermDays: ['2026-09-03'],
-            breakfast: { tfc: false, schedule: ALL(false), overrides: { '2026-09-03': true } },
+            afterSchool: { tfc: false, schedule: ALL('none'), overrides: { '2026-09-03': 'short' } },
         }), MONTH);
-        expect(c.breakfast.cost).toBe(0);
+        expect(c.afterSchool.cost).toBe(0);
     });
 });
 
@@ -108,29 +96,39 @@ describe('computeChildcare — holiday clubs (auto week rate)', () => {
 });
 
 describe('computeChildcare — nets split into two budget lines', () => {
-    it('termNet = breakfast + after-school; holidayNet separate; net = sum', () => {
+    it('termNet = after-school; holidayNet separate; net = sum', () => {
         const c = computeChildcare(cc({
-            breakfast:   { tfc: false, schedule: ALL(true), adhoc: [] },
             afterSchool: { tfc: false, schedule: ['long', 'none', 'none', 'none', 'none'], adhoc: [] },
             holidayClubs: [{ id: 1, name: 'Camp', dayRate: 40, weekRate: 150, tfc: false, days: ['2026-09-07', '2026-09-08'] }],
         }), MONTH);
-        expect(c.termNet).toBeCloseTo(c.breakfast.cost + c.afterSchool.cost, 2);
+        expect(c.termNet).toBeCloseTo(c.afterSchool.cost, 2);
         expect(c.holidayNet).toBeCloseTo(80, 2);
         expect(c.net).toBeCloseTo(c.termNet + c.holidayNet, 2);
+    });
+
+    it('club entries carry their tfc flag for the TFC / non-TFC split', () => {
+        const c = computeChildcare(cc({
+            termClubs: [
+                { id: 'a', name: 'A', sessionRate: 10, tfc: true, schedule: ALL(true), overrides: {} },
+                { id: 'b', name: 'B', sessionRate: 15, tfc: false, schedule: ALL(true), overrides: {} },
+            ],
+            holidayClubs: [{ id: 1, name: 'Camp', dayRate: 40, weekRate: 150, tfc: true, days: ['2026-09-07'] }],
+        }), MONTH);
+        expect(c.termClubs.find(k => k.id === 'a').tfc).toBe(true);
+        expect(c.termClubs.find(k => k.id === 'b').tfc).toBe(false);
+        expect(c.holidayClubs[0].tfc).toBe(true);
     });
 });
 
 describe('childcareDayMarkers', () => {
-    it('flags non-term days, breakfast, after-school option and club assignments', () => {
+    it('flags non-term days, after-school option and club assignments', () => {
         const m = childcareDayMarkers(cc({
             nonTermDays: ['2026-09-07'],
-            breakfast: { tfc: false, schedule: [false, true, false, false, false], adhoc: [] }, // Tue
             afterSchool: { tfc: false, schedule: ['none', 'none', 'long', 'none', 'none'], adhoc: [] }, // Wed
             holidayClubs: [{ id: 9, name: 'Camp', dayRate: 0, weekRate: 0, tfc: false, days: ['2026-09-07'] }],
         }), MONTH);
         expect(m['2026-09-07'].nonTerm).toBe(true);
         expect(m['2026-09-07'].clubs.map(c => c.id)).toContain(9);
-        expect(m['2026-09-08'].breakfast).toBe(true);   // a Tuesday
         expect(m['2026-09-02'].afterSchool).toBe('long'); // a Wednesday
     });
 });
