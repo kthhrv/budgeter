@@ -574,12 +574,14 @@ class MonzoConnection(models.Model):
 
 
 class NurserySettings(models.Model):
-    """Per-user nursery calculator state (stored as a single JSON blob)."""
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="nursery_settings",
-    )
+    """Household childcare calculator state (a single JSON blob).
+
+    One row for the whole household, not one per login: the children's
+    schedules and rates are the same whoever is looking, and the budget's
+    childcare line is derived from this blob client-side, so every user must
+    read (and write) the same data. Use ``get_solo()`` rather than
+    ``get_or_create``.
+    """
     data = models.JSONField(default=dict, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -588,4 +590,12 @@ class NurserySettings(models.Model):
         verbose_name_plural = "Nursery Settings"
 
     def __str__(self):
-        return f"Nursery settings for {self.user}"
+        return "Household childcare settings"
+
+    @classmethod
+    def get_solo(cls):
+        """Return the household row, creating it on first use."""
+        obj = cls.objects.order_by("pk").first()
+        if obj is None:
+            obj = cls.objects.create()
+        return obj

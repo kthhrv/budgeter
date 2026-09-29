@@ -84,7 +84,7 @@ class TabRepaymentAdmin(admin.ModelAdmin):
 
 @admin.register(NurserySettings)
 class NurserySettingsAdmin(admin.ModelAdmin):
-    list_display = ('user', 'updated_at')
+    list_display = ('__str__', 'updated_at')
     readonly_fields = ('updated_at',)
 
 
