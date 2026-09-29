@@ -242,6 +242,11 @@ const ChildcarePage = ({ onSettingsChange }) => {
     const [currentDate, setCurrentDate] = useState(() => getInitialDate());
     const [mode, setMode] = useState({ type: 'sessions' });
     const saveTimeout = useRef(null);
+    // The blob is shared by the whole household, so only an edit made on this
+    // page may write it: never echo the freshly loaded copy back, and never
+    // save at all if the load failed (that would overwrite everyone's settings
+    // with this page's defaults).
+    const dirty = useRef(false);
 
     useEffect(() => {
         const sync = () => setCurrentDate(prev => {
@@ -268,7 +273,6 @@ const ChildcarePage = ({ onSettingsChange }) => {
             setLoaded(true);
         }).catch(err => {
             console.error('Childcare settings load failed', err);
-            setLoaded(true);
         });
         return () => { cancelled = true; };
     }, []);
@@ -278,6 +282,11 @@ const ChildcarePage = ({ onSettingsChange }) => {
         if (!loaded) return;
         const blob = { ...otherBlob, ellis, gaspard, childcare };
         if (onSettingsChange) onSettingsChange(blob);
+        if (!dirty.current) {
+            // First run after load: the blob is the server's own copy.
+            dirty.current = true;
+            return;
+        }
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
         saveTimeout.current = setTimeout(() => {
             apiService.updateNurserySettings(blob)

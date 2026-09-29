@@ -153,9 +153,14 @@ and *synthetic* ones computed from every `BudgetItem` with
 `is_tab_repayment=True`. The synthetic ones are only surfaced for months that
 have already started — future months must not show a repayment yet.
 
-**`NurserySettings`** — a per-user `JSONField` blob (one-to-one with `User`)
-holding the nursery calculator's inputs. Schema-less by design; the shape is
-defined by the frontend calculators, not the model.
+**`NurserySettings`** — a single household `JSONField` blob holding the
+childcare calculators' inputs; get it with `NurserySettings.get_solo()`. It is
+deliberately *not* per login (it was until migration 0035, which is why one
+user used to see an empty calculator and a £0 Childcare line): the linked
+budget item is derived from this blob client-side, so everyone must read the
+same one. Schema-less by design; the shape is defined by the frontend
+calculators, not the model. The Childcare page only writes it after an edit on
+that page — never on load — so a stale or failed load can't clobber it.
 
 **FIRE models** (`FireAccount`, `BalanceSnapshot`, `EarningsVersion`,
 `Mortgage`, `FireSettings`) — inputs for the FIRE tab. The design principle

@@ -630,13 +630,13 @@ class NurserySettingsInputSchema(Schema):
 
 @api.get("/nursery/settings/", response=NurserySettingsSchema)
 def get_nursery_settings(request):
-    obj, _ = NurserySettings.objects.get_or_create(user=request.user)
+    obj = NurserySettings.get_solo()
     return {"data": obj.data or {}}
 
 
 @api.put("/nursery/settings/", response=NurserySettingsSchema)
 def update_nursery_settings(request, payload: NurserySettingsInputSchema):
-    obj, _ = NurserySettings.objects.get_or_create(user=request.user)
+    obj = NurserySettings.get_solo()
     obj.data = payload.data
     obj.save(update_fields=["data", "updated_at"])
     return {"data": obj.data}
