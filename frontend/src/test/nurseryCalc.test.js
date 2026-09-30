@@ -80,8 +80,30 @@ describe('computeMonthSummary', () => {
     });
 });
 
+describe('per-child childcare figures', () => {
+    it("Ellis's and Gaspard's lines add up to the legacy combined line", () => {
+        for (const month of [new Date(2026, 5, 1), new Date(2026, 9, 1)]) {
+            const s = computeMonthSummary(baseSettings(), month);
+            expect(s.ellisNurseryNet + s.gaspardChildcareNet).toBeCloseTo(s.childcareTotalNet, 6);
+        }
+    });
+
+    it("Gaspard's line is his nursery net while he is still in nursery", () => {
+        const s = computeMonthSummary(baseSettings(), new Date(2026, 5, 1));
+        expect(s.gaspardChildcareNet).toBeCloseTo(s.gaspardTFC, 6);
+        expect(s.gaspardChildcareNet).toBeGreaterThan(0);
+    });
+
+    it("Gaspard's line is after-school + holiday + term-club attendance once at school", () => {
+        const s = computeMonthSummary(baseSettings(), new Date(2026, 9, 1));
+        expect(s.gaspardChildcareNet).toBeCloseTo(s.childcareTotalNet - s.ellisNurseryNet, 6);
+        // The term-club *bill* line is not what feeds the pot: attendance is.
+        expect(s.gaspardChildcareNet).toBeGreaterThanOrEqual(s.gaspardCareNet + s.gaspardHolidayNet);
+    });
+});
+
 describe('applyChildcareLinks', () => {
-    const NETS = { ellis_nursery: 250.50, gaspard_care: 111.11 };
+    const NETS = { ellis_nursery: 250.50, gaspard_care: 111.11, gaspard_childcare: 236.60 };
     const baseItem = (overrides = {}) => ({
         budget_item_id: 'a',
         item_name: 'Nursery',
@@ -104,6 +126,12 @@ describe('applyChildcareLinks', () => {
         const items = [baseItem({ childcare_link: 'ellis_nursery', effective_value: 999 })];
         const out = applyChildcareLinks(items, NETS, 'June 2026');
         expect(out[0].effective_value).toBe(250.50);
+    });
+
+    it("routes gaspard_childcare items to Gaspard's own net", () => {
+        const items = [baseItem({ childcare_link: 'gaspard_childcare', effective_value: 999 })];
+        const out = applyChildcareLinks(items, NETS, 'June 2026');
+        expect(out[0].effective_value).toBe(236.60);
     });
 
     it('routes gaspard_care items to the Gaspard-care net', () => {

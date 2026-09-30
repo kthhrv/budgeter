@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useBudgetTotals } from '../hooks/useBudgetTotals';
+import { useBudgetTotals, computePotTransfers } from '../hooks/useBudgetTotals';
 
 const makeItem = (overrides) => ({
     budget_item_id: crypto.randomUUID(),
@@ -259,5 +259,37 @@ describe('useBudgetTotals', () => {
         expect(result.current.keithRemaining).toBe(1650);
         // Tild remaining: 2000 - 0 - 0 (shared) - 50 (out) + 100 (in)
         expect(result.current.tildRemaining).toBe(2050);
+    });
+});
+
+describe('computePotTransfers', () => {
+    it('sums each pot per owner and counts the items behind it', () => {
+        const items = [
+            makeItem({ owner: 'shared', expense_pot: 'bills', effective_value: '900' }),
+            makeItem({ owner: 'shared', expense_pot: 'bills', effective_value: '40' }),
+            makeItem({ owner: 'shared', expense_pot: 'groceries', effective_value: '320.50' }),
+            makeItem({ owner: 'shared', expense_pot: 'gaspard_childcare', effective_value: '236.60' }),
+            makeItem({ owner: 'keith', expense_pot: 'bills', effective_value: '30' }),
+        ];
+        const pots = computePotTransfers(items);
+        expect(pots.shared.bills).toEqual({ total: 940, count: 2 });
+        expect(pots.shared.groceries).toEqual({ total: 320.5, count: 1 });
+        expect(pots.shared.gaspard_childcare).toEqual({ total: 236.6, count: 1 });
+        expect(pots.keith.bills).toEqual({ total: 30, count: 1 });
+        expect(pots.tild).toEqual({});
+    });
+
+    it('ignores income, savings and un-potted expenses', () => {
+        const items = [
+            makeItem({ item_type: 'income', expense_pot: 'bills', effective_value: '1000' }),
+            makeItem({ item_type: 'savings', expense_pot: 'bills', effective_value: '200' }),
+            makeItem({ item_type: 'expense', expense_pot: '', effective_value: '50' }),
+        ];
+        expect(computePotTransfers(items).shared).toEqual({});
+    });
+
+    it('keeps a pot with items whose values sum to zero, so the card can still show it', () => {
+        const items = [makeItem({ expense_pot: 'gaspard_childcare', effective_value: '0' })];
+        expect(computePotTransfers(items).shared.gaspard_childcare).toEqual({ total: 0, count: 1 });
     });
 });

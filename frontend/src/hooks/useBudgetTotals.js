@@ -67,3 +67,19 @@ export const computeBudgetTotals = (items) => {
 };
 
 export const useBudgetTotals = (items) => useMemo(() => computeBudgetTotals(items), [items]);
+
+// How much each owner moves into each pot this month: a labelled subtotal of
+// expenses already counted under that owner, keyed owner → pot → { total,
+// count }. `count` lets the cards tell "no items in this pot" apart from a
+// pot whose items happen to sum to £0 (e.g. Gaspard's clubs in a month with
+// no sessions).
+export const computePotTransfers = (items) => {
+    const pots = { shared: {}, keith: {}, tild: {} };
+    for (const i of items) {
+        if (i.item_type !== 'expense' || !i.expense_pot || pots[i.owner] === undefined) continue;
+        const slot = pots[i.owner][i.expense_pot] || (pots[i.owner][i.expense_pot] = { total: 0, count: 0 });
+        slot.total += parseFloat(i.effective_value) || 0;
+        slot.count += 1;
+    }
+    return pots;
+};
