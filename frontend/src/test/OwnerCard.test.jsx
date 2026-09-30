@@ -20,7 +20,7 @@ const makeItem = (overrides = {}) => ({
 
 const config = {
     key: 'shared', name: 'Joint', accent: 'joint', sub: 'Shared account',
-    remainingLabel: 'Left over', remaining: 100, contributions: 0, billsPot: 0,
+    remainingLabel: 'Left over', remaining: 100, contributions: 0, pots: {},
 };
 
 const defaultProps = {
@@ -36,6 +36,34 @@ const items = [
     makeItem({ budget_item_id: 'netflix', item_name: 'Netflix', category: 'subscriptions', effective_value: '15.00' }),
     makeItem({ budget_item_id: 'misc', item_name: 'Miscellaneous', effective_value: '25.00' }),
 ];
+
+describe('OwnerCard pot transfer lines', () => {
+    it('always shows the Bills pot line, even with nothing in it', () => {
+        render(<OwnerCard {...defaultProps} items={items} />);
+        expect(screen.getByText('Transfer to Bills pot')).toBeInTheDocument();
+        expect(screen.queryByText('Transfer to Groceries pot')).not.toBeInTheDocument();
+        expect(screen.queryByText("Transfer to Gaspard's childcare")).not.toBeInTheDocument();
+    });
+
+    it("shows a Groceries and a Gaspard's childcare line when the owner has items in those pots", () => {
+        const pots = {
+            bills: { total: 940, count: 2 },
+            groceries: { total: 320.5, count: 1 },
+            gaspard_childcare: { total: 236.6, count: 1 },
+        };
+        render(<OwnerCard {...defaultProps} config={{ ...config, pots }} items={items} />);
+        expect(screen.getByText('Transfer to Groceries pot')).toBeInTheDocument();
+        expect(screen.getByText('£320.50')).toBeInTheDocument();
+        expect(screen.getByText("Transfer to Gaspard's childcare")).toBeInTheDocument();
+        expect(screen.getByText('£236.60')).toBeInTheDocument();
+    });
+
+    it("keeps Gaspard's line at £0.00 in a month with items but no sessions", () => {
+        const pots = { gaspard_childcare: { total: 0, count: 1 } };
+        render(<OwnerCard {...defaultProps} config={{ ...config, pots }} items={[]} />);
+        expect(screen.getByText("Transfer to Gaspard's childcare")).toBeInTheDocument();
+    });
+});
 
 describe('OwnerCard category grouping', () => {
     it('renders category groups collapsed by default, with items hidden', () => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Home, User, ChevronDown } from 'lucide-react';
-import { money, BILL_CATEGORIES } from '../utils/helpers';
+import { money, BILL_CATEGORIES, EXPENSE_POTS } from '../utils/helpers';
 import BudgetItemRow from './BudgetItemRow';
 
 const ACCENTS = {
@@ -79,10 +79,14 @@ const OwnerCard = ({ config, items, searchTerm = '', currentDate, isEditingDisab
                         <b className="num text-ink">{money(config.transfer)}</b>
                     </div>
                 )}
-                <div className={`rounded-xl px-3 py-2.5 flex items-center justify-between text-sm ${a.foot}`}>
-                    <span className="text-ink-soft">Transfer to Bills pot</span>
-                    <b className="num text-ink">{money(config.billsPot || 0)}</b>
-                </div>
+                {EXPENSE_POTS
+                    .filter(p => p.alwaysShown || (config.pots?.[p.value]?.count > 0))
+                    .map(p => (
+                        <div key={p.value} className={`rounded-xl px-3 py-2.5 flex items-center justify-between text-sm ${a.foot}`}>
+                            <span className="text-ink-soft">Transfer to {p.potName}</span>
+                            <b className="num text-ink">{money(config.pots?.[p.value]?.total || 0)}</b>
+                        </div>
+                    ))}
             </div>
 
             {sections.length === 0 ? (

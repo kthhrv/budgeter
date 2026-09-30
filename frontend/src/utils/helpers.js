@@ -12,6 +12,17 @@ export const BILL_CATEGORIES = [
     { value: 'children', label: 'Children' },
 ];
 
+// Expense pots — the Monzo pots an expense is funded from. Must match the
+// backend's BudgetItem.EXPENSE_POT_CHOICES. `label` is the short control text,
+// `potName` is what the budget cards print in "Transfer to …". Bills is shown
+// on every owner card whatever its total; the others only where the owner has
+// items in that pot.
+export const EXPENSE_POTS = [
+    { value: 'bills', label: 'Bills', potName: 'Bills pot', alwaysShown: true },
+    { value: 'groceries', label: 'Groceries', potName: 'Groceries pot' },
+    { value: 'gaspard_childcare', label: 'Gaspard', potName: "Gaspard's childcare" },
+];
+
 export const formatDate = (date, format = 'YYYY-MM') => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');

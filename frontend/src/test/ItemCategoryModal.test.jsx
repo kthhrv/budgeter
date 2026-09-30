@@ -134,12 +134,27 @@ describe('ItemCategoryModal', () => {
     });
 
     describe('Childcare linking', () => {
-        it('offers only the consolidated childcare target, and reflects an existing link', () => {
-            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'childcare' }} />);
+        it('offers one target per child, and reflects an existing link', () => {
+            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'gaspard_childcare' }} />);
             const select = getSelect('childcare_link'); // Advanced auto-opens because a link is set
             expect(select).not.toBeNull();
-            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'childcare']);
+            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'ellis_nursery', 'gaspard_childcare']);
+            expect(select.value).toBe('gaspard_childcare');
+        });
+
+        it('keeps the legacy combined target selectable only while an item still carries it', () => {
+            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'childcare' }} />);
+            const select = getSelect('childcare_link');
+            expect(Array.from(select.options).map(o => o.value)).toEqual(['', 'ellis_nursery', 'gaspard_childcare', 'childcare']);
             expect(select.value).toBe('childcare');
+        });
+
+        it("offers Gaspard's pot alongside Bills and Groceries", async () => {
+            const user = userEvent.setup();
+            render(<ItemCategoryModal {...defaultProps} item={{ ...baseItem, childcare_link: 'gaspard_childcare' }} />);
+            expect(btn('Gaspard')).toBeInTheDocument();
+            await user.click(btn('Gaspard'));
+            expect(btn('Gaspard').getAttribute('aria-pressed')).toBe('true');
         });
     });
 
