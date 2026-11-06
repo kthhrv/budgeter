@@ -197,6 +197,8 @@ const apiService = {
         return this._fireGet(`/payments/payees/search/?${params}`, 'Payee search failed');
     },
     getPotBalances() { return this._fireGet('/payments/pots/', 'Failed to load pot balances'); },
+    getPersonalBalance(owner) { return this._fireGet(`/payments/accounts/${owner}/balance/`, 'Failed to load the account balance'); },
+    setCalendarHidden(itemId, hidden) { return this._fireSend('PUT', `/budgetitems/${itemId}/calendar-hidden/`, { hidden }, hidden ? 'Failed to remove from the calendar' : 'Failed to show on the calendar'); },
     getAvailablePots() { return this._fireGet('/payments/pots/available/', 'Failed to load Monzo pots'); },
     linkBudgetPot(potKey, potId) { return this._fireSend('PUT', `/payments/pots/${potKey}/`, { pot_id: potId }, 'Failed to save the pot'); },
     getPayeeSuggestions() { return this._fireGet('/payments/suggestions/', 'Failed to load payee suggestions'); },

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Circle, Clock, AlertCircle, RefreshCw, Link2 } from 'lucide-react';
+import { Check, Circle, Clock, AlertCircle, RefreshCw, Link2, EyeOff } from 'lucide-react';
 import apiService from '../services/api';
 import MonthSelector from './MonthSelector';
 import Sheet from './Sheet';
 import PayeeLinkModal from './PayeeLinkModal';
 import PayeeSearch from './PayeeSearch';
 import BillsPotCard from './BillsPotCard';
+import AccountBalanceCard from './AccountBalanceCard';
 import { formatDate, money } from '../utils/helpers';
 import {
     monthWeeks, todayIso, entriesByDay, withChildcareAmounts, ordinal, METHOD_LABELS,
@@ -21,7 +22,30 @@ const STATUS = {
     overdue: { Icon: AlertCircle, text: 'text-warn', dot: 'bg-warn', label: 'Not seen yet' },
 };
 
-const OWNER_TEXT = { shared: 'Joint', keith: 'Keith', tild: 'Tild' };
+// Whose payments the calendar shows. Joint is weighed against the bills pot,
+// each person's view against their own current account.
+const VIEWS = [['shared', 'Joint'], ['tild', 'Tild'], ['keith', 'Keith']];
+const VIEW_KEY = 'calendar-view';
+
+function storedView() {
+    try {
+        const v = localStorage.getItem(VIEW_KEY);
+        return VIEWS.some(([k]) => k === v) ? v : 'shared';
+    } catch {
+        return 'shared';
+    }
+}
+
+// Take an item off the calendar (it's listed under Hidden to bring back).
+function HideButton({ itemId, busy, run }) {
+    return (
+        <button type="button" disabled={busy}
+            onClick={() => run(() => apiService.setCalendarHidden(itemId, true), 'Removed from the calendar')}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-line text-sm text-ink-soft hover:bg-line/50 disabled:opacity-50">
+            <EyeOff className="h-4 w-4" /> Remove from calendar
+        </button>
+    );
+}
 
 const fmtDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 
@@ -41,7 +65,7 @@ function EntryRow({ entry, onOpen }) {
             <span className="grow min-w-0">
                 <span className="block text-sm font-medium text-ink truncate">{entry.item_name}</span>
                 <span className="block text-xs text-ink-faint">
-                    {OWNER_TEXT[entry.owner]} · {p?.payee || (entry.payee_match ? `matches “${entry.payee_match}”` : 'not linked to a payee')}
+                    {p?.payee || (entry.payee_match ? `matches “${entry.payee_match}”` : 'not linked to a payee')}
                 </span>
             </span>
             <span className="text-right">
@@ -122,6 +146,7 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
                         Undo tick
                     </button>
                 )}
+                <HideButton itemId={entry.budget_item_id} busy={busy} run={run} />
             </div>
 
             <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-faint mb-2">Matching</h3>
@@ -173,6 +198,7 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     const [selectedDay, setSelectedDay] = useState(null);
     const [openEntry, setOpenEntry] = useState(null);
     const [linkOpen, setLinkOpen] = useState(false);
+    const [view, setViewState] = useState(storedView);
     const autoSynced = useRef(false);
     const monthId = formatDate(currentDate, 'YYYY-MM');
 
@@ -224,8 +250,16 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refreshKey]);
 
-    const entries = useMemo(() => withChildcareAmounts(data?.entries || [], childcareNets), [data, childcareNets]);
-    const unscheduled = useMemo(() => withChildcareAmounts(data?.unscheduled || [], childcareNets), [data, childcareNets]);
+    const setView = (v) => {
+        setViewState(v);
+        try { localStorage.setItem(VIEW_KEY, v); } catch { /* private window: just don't remember it */ }
+    };
+    const mine = useCallback((e) => e.owner === view, [view]);
+    const entries = useMemo(() => withChildcareAmounts((data?.entries || []).filter(mine), childcareNets), [data, childcareNets, mine]);
+    // A childcare line with nothing to pay this month (£0 once substituted) isn't worth listing.
+    const unscheduled = useMemo(() => withChildcareAmounts((data?.unscheduled || []).filter(mine), childcareNets)
+        .filter(u => u.expected_amount > 0), [data, childcareNets, mine]);
+    const hidden = useMemo(() => (data?.hidden || []).filter(mine), [data, mine]);
     const byDay = useMemo(() => entriesByDay(entries), [entries]);
     const weeks = useMemo(() => monthWeeks(currentDate.getFullYear(), currentDate.getMonth()), [currentDate]);
     const today = todayIso();
@@ -255,6 +289,16 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
         return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
     }, [data]);
 
+    const showAgain = async (item) => {
+        try {
+            await apiService.setCalendarHidden(item.budget_item_id, false);
+            showToast(`${item.item_name} is back on the calendar`);
+            load();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    };
+
     const dayEntries = selectedDay ? (byDay[selectedDay] || []) : [];
     const lastSynced = data?.last_synced_at
         ? new Date(data.last_synced_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -263,7 +307,16 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     return (
         <div className="animate-fadeIn">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] md:items-center gap-3 mb-5">
-                <div className="hidden md:block" />
+                <div className="flex justify-center md:justify-start">
+                    <div role="tablist" aria-label="Whose payments" className="inline-flex rounded-lg border border-line bg-card p-0.5">
+                        {VIEWS.map(([key, label]) => (
+                            <button key={key} type="button" role="tab" aria-selected={view === key} onClick={() => setView(key)}
+                                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${view === key ? 'bg-accent text-paper font-medium' : 'text-ink-soft hover:text-ink'}`}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <div className="flex justify-center"><MonthSelector currentDate={currentDate} isLoading={loading} /></div>
                 <div className="flex items-center gap-2 md:justify-end">
                     {data?.connected && (
@@ -291,8 +344,9 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
                 </p>
             )}
 
-            {data?.connected && today.startsWith(monthId) && (
-                <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} />
+            {data?.connected && today.startsWith(monthId) && (view === 'shared'
+                ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} />
+                : <AccountBalanceCard owner={view} entries={entries} unscheduled={unscheduled} showToast={showToast} />
             )}
 
             <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-sm text-ink-soft">
@@ -364,6 +418,20 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
                             ))}
                         </section>
                     )}
+
+                    {hidden.length > 0 && (
+                        <details className="bg-card border border-line rounded-2xl px-4 py-3" data-testid="hidden-items">
+                            <summary className="cursor-pointer text-sm text-ink-soft">Removed from the calendar ({hidden.length})</summary>
+                            <ul className="mt-2">
+                                {hidden.map(h => (
+                                    <li key={h.budget_item_id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+                                        <span className="truncate">{h.item_name}</span>
+                                        <button type="button" onClick={() => showAgain(h)} className="shrink-0 text-accent hover:underline">Show again</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
                 </div>
             </div>
 
@@ -383,12 +451,11 @@ function UnscheduledSheet({ item, onClose, onChanged, showToast }) {
     const [day, setDay] = useState('');
     const [busy, setBusy] = useState(false);
     const incoming = item.item_type === 'income';
-    const saveDay = async () => {
-        const dayNum = parseInt(day, 10);
+    const run = async (fn, message) => {
         setBusy(true);
         try {
-            await apiService.linkItemPayment(item.budget_item_id, { payment_day: dayNum, payment_day_manual: true });
-            showToast(`Scheduled for the ${ordinal(dayNum)}`);
+            await fn();
+            showToast(message);
             onChanged();
             onClose();
         } catch (e) {
@@ -396,6 +463,11 @@ function UnscheduledSheet({ item, onClose, onChanged, showToast }) {
         } finally {
             setBusy(false);
         }
+    };
+    const saveDay = () => {
+        const dayNum = parseInt(day, 10);
+        run(() => apiService.linkItemPayment(item.budget_item_id, { payment_day: dayNum, payment_day_manual: true }),
+            `Scheduled for the ${ordinal(dayNum)}`);
     };
     return (
         <Sheet isOpen onClose={onClose} title={item.item_name}>
@@ -417,6 +489,9 @@ function UnscheduledSheet({ item, onClose, onChanged, showToast }) {
                     className="px-4 py-2 rounded-xl border border-line text-sm hover:bg-line/50 disabled:opacity-50">
                     Save day
                 </button>
+            </div>
+            <div className="mt-6 pt-4 border-t border-line">
+                <HideButton itemId={item.budget_item_id} busy={busy} run={run} />
             </div>
         </Sheet>
     );

@@ -219,6 +219,11 @@ What the code won't tell you at a glance:
 - `new_payee` notifications only fire for payees first paid in the last 45
   days; older regulars go to the Link-payees screen so the first sync doesn't
   flood the bell.
+- The Calendar has Joint / Tild / Keith views, filtered on `owner`. Joint
+  weighs the bills pot; a person's view weighs their own Monzo current
+  account, found via `OWNER_BY_EMAIL` in `settings.py` (login email →
+  owner) — add a new login there too. `calendar_hidden` takes an item off
+  the calendar entirely (no matching, no notifications) without expiring it.
 - No Monzo locally or on demo: `uv run manage.py seed_demo_transactions
   [--link] [--clear]` writes fake transactions (refuses when `APP_ENV=prod`).
 

@@ -193,6 +193,9 @@ SOCIALACCOUNT_PROVIDERS = {
 
 SOCIALACCOUNT_ADAPTER = 'budgeter.adapters.WhitelistedSocialAccountAdapter'
 ALLOWED_GOOGLE_EMAILS = ["kthhrv@gmail.com", "mth.harvey@gmail.com"]
+# Which budget owner each login is: the Calendar's Keith/Tild views show that
+# person's own Monzo current account balance.
+OWNER_BY_EMAIL = {"kthhrv@gmail.com": "keith", "mth.harvey@gmail.com": "tild"}
 
 LOGIN_REDIRECT_URL = '/' # Redirect to frontend
 LOGOUT_REDIRECT_URL = '/'

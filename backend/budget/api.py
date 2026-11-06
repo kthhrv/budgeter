@@ -1123,6 +1123,10 @@ class PaymentLinkInputSchema(Schema):
     payment_day_manual: Optional[bool] = None
 
 
+class CalendarHiddenInputSchema(Schema):
+    hidden: bool
+
+
 class PaymentMarkInputSchema(Schema):
     budget_item_id: uuid.UUID
     due_date: datetime.date
@@ -1216,6 +1220,14 @@ def payments_unlink_item(request, budget_item_id: uuid.UUID):
     return 204, None
 
 
+@api.put("/budgetitems/{budget_item_id}/calendar-hidden/", response={204: None})
+def payments_hide_item(request, budget_item_id: uuid.UUID, payload: CalendarHiddenInputSchema):
+    """Take an item off the Calendar tab, or put it back."""
+    payment_service.set_hidden(get_object_or_404(BudgetItem, budget_item_id=budget_item_id),
+                               payload.hidden, request.user)
+    return 204, None
+
+
 @api.post("/payments/mark/", response={200: dict, 400: dict})
 def payments_mark_paid(request, payload: PaymentMarkInputSchema):
     """Tick an occurrence off by hand (money that didn't go through Monzo)."""
@@ -1279,6 +1291,15 @@ def payments_pot_balances(request):
     """Live balances of the Monzo pots linked to budget pots (bills, …)."""
     balances, errors = payment_service.linked_pot_balances()
     return {"pots": balances, "errors": errors}
+
+
+@api.get("/payments/accounts/{owner}/balance/", response={200: dict, 400: dict})
+def payments_personal_balance(request, owner: str):
+    """Live balance of Keith's or Tild's own Monzo current account."""
+    if owner not in django_settings.OWNER_BY_EMAIL.values():
+        return 400, {"detail": f"Unknown owner '{owner}'."}
+    account, error = payment_service.personal_account_balance(owner)
+    return 200, {"account": account, "error": error}
 
 
 @api.get("/payments/pots/available/", response={200: List[MonzoPotSchema], 400: dict})
