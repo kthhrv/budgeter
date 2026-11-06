@@ -66,6 +66,7 @@ function EntryRow({ entry, onOpen }) {
                 <span className="block text-xs text-ink-faint">
                     {entry.partial?.length > 0
                         ? <span className="text-warn">{entry.partial.length} of {entry.payment_parts} payments seen</span>
+                        : p?.source === 'assumed' ? 'assumed paid — not linked to a payee'
                         : (p?.payee || (entry.payee_match ? `matches “${entry.payee_match}”` : 'not linked to a payee'))}
                     {p?.parts?.length > 1 && ` · ${p.parts.length} payments`}
                 </span>
@@ -138,7 +139,8 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
                 <dd className="num">{money(entry.expected_amount)}</dd>
                 {p && counted.length <= 1 && <>
                     <dt className="text-ink-soft">{entry.item_type === 'income' ? 'Received' : 'Paid'}</dt>
-                    <dd className="num">{p.amount != null ? `${money(p.amount)} on ${fmtDay(p.date)}` : 'Marked paid by hand'}</dd>
+                    <dd className="num">{p.source === 'assumed' ? 'Assumed paid on the day — link a payee to check it'
+                        : p.amount != null ? `${money(p.amount)} on ${fmtDay(p.date)}` : 'Marked paid by hand'}</dd>
                     {p.payee && <><dt className="text-ink-soft">Payee</dt><dd>{p.payee}</dd></>}
                 </>}
                 {p && counted.length > 1 && <>
@@ -176,7 +178,7 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
                         {entry.item_type === 'income' ? 'Mark as received' : 'Mark as paid'}
                     </button>
                 )}
-                {p && counted.length <= 1 && p.source !== 'auto' && (
+                {p && counted.length <= 1 && p.source !== 'auto' && p.source !== 'assumed' && (
                     <button type="button" disabled={busy}
                         onClick={() => run(() => apiService.unmarkPaid(p.id), 'Tick removed')}
                         className="px-4 py-2 rounded-xl border border-line text-sm hover:bg-line/50 disabled:opacity-50">

@@ -220,6 +220,9 @@ What the code won't tell you at a glance:
   days, so the first sync doesn't flood the bell; older regulars are linked
   from each item's sheet (payee search). `/payments/suggestions/` is no
   longer called by the frontend.
+- An item with a day but no payee link is shown as paid once its due date
+  arrives (`source: 'assumed'`, computed in `calendar_for_month`, never
+  stored) — nothing could tick it off otherwise.
 - An item can be paid in several payments (`payment_parts`, e.g. a split
   mortgage): one `ItemPayment` per transaction for the same `due_date`, paid
   once all are seen, shown as their total. Only the hand tick (no

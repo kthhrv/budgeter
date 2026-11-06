@@ -323,6 +323,20 @@ class PaymentsFlowTests(TestCase):
         self.assertIn('Ellis nursery', names)
         self.assertNotIn('Nothing budgeted', names)
 
+    def test_unlinked_item_is_assumed_paid_once_due(self, *_):
+        # Netflix isn't linked: pin it to the 5th (due) and Broadband to the 25th (not yet).
+        for item, day in [(self.netflix, 5), (self.broadband, 25)]:
+            self.client.put(f'/api/budgetitems/{item.pk}/payment-link/', {'payment_day': day, 'payment_day_manual': True},
+                            content_type='application/json')
+        cal = self.client.get('/api/payments/calendar/2026-11/').json()
+        by_name = {e['item_name']: e for e in cal['entries']}
+        self.assertEqual(by_name['Netflix']['status'], 'paid')
+        self.assertEqual(by_name['Netflix']['payment']['source'], 'assumed')
+        self.assertEqual(by_name['Broadband']['status'], 'upcoming')
+        from .notifications import generate_notifications
+        generate_notifications(TODAY)
+        self.assertFalse(Notification.objects.filter(budget_item=self.netflix).exists())
+
     def test_hide_item_from_calendar(self, *_):
         self._link(self.broadband, 'SKY DIGITAL')
         from .notifications import generate_notifications
@@ -473,7 +487,7 @@ class PaymentsFlowTests(TestCase):
         cal = self.client.get('/api/payments/calendar/2026-11/').json()
         [entry] = [e for e in cal['entries'] if e['item_name'] == 'Netflix']
         self.assertEqual(entry['due_date'], '2026-11-03')
-        self.assertEqual(entry['status'], 'overdue')
+        self.assertEqual(entry['status'], 'paid')  # nothing to match it: assumed paid
 
 
 @mock.patch('budget.payment_service.timezone.now', return_value=NOW)
