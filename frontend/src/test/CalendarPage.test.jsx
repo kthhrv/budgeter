@@ -168,4 +168,17 @@ describe('CalendarPage', () => {
         expect(within(row.closest('button')).getByText('£812.50')).toBeInTheDocument();
         expect(screen.queryByText('Gaspard childcare')).not.toBeInTheDocument();
     });
+
+    it('shows an item paid in parts as partly seen', async () => {
+        const user = userEvent.setup();
+        apiService.getPaymentCalendar.mockResolvedValue(calendar({
+            entries: [entry({ item_name: 'Mortgage', payment_parts: 2, payment: null, status: 'overdue',
+                partial: [{ id: 5, source: 'auto', date: '2026-11-12', amount: 600, payee: 'Natwest Mortgage' }] })],
+        }));
+        render(<CalendarPage currentDate={NOV} showToast={vi.fn()} />);
+        await user.click(await screen.findByTestId('day-2026-11-12'));
+        expect(screen.getByText('1 of 2 payments seen')).toBeInTheDocument();
+        await user.click(screen.getByTestId('calendar-entry'));
+        expect(screen.getByTestId('payment-parts')).toHaveTextContent('£600.00');
+    });
 });

@@ -1121,6 +1121,13 @@ class PaymentLinkInputSchema(Schema):
     payee_match: str = ""
     payment_day: Optional[int] = None
     payment_day_manual: Optional[bool] = None
+    payment_parts: Optional[int] = None
+
+
+class TransactionLinkInputSchema(Schema):
+    budget_item_id: uuid.UUID
+    due_date: datetime.date
+    transaction_id: int
 
 
 class CalendarHiddenInputSchema(Schema):
@@ -1192,6 +1199,14 @@ def payments_link_item(request, budget_item_id: uuid.UUID, payload: PaymentLinkI
     item = get_object_or_404(BudgetItem, budget_item_id=budget_item_id)
     if payload.payment_day is not None and not 1 <= payload.payment_day <= 31:
         return 400, {"detail": "Payment day must be between 1 and 31."}
+    if payload.payment_parts is not None:
+        if not 1 <= payload.payment_parts <= 6:
+            return 400, {"detail": "An item can be paid in 1 to 6 payments."}
+        item.payment_parts = payload.payment_parts
+        item.save(update_fields=['payment_parts'])
+        if not payload.payee_match.strip() and payload.payment_day is None and payload.payment_day_manual is None:
+            payment_service.rematch(payment_service.recent_months(_today()))
+            return 200, _link_payload(item)
     if not payload.payee_match.strip() and payload.payment_day is None and payload.payment_day_manual is None:
         return 400, {"detail": "Give a payee to match or a payment day."}
     if payload.payee_match.strip():
@@ -1207,12 +1222,17 @@ def payments_link_item(request, budget_item_id: uuid.UUID, payload: PaymentLinkI
             payment_service.relearn_item(item)
         # A new day can line the item up with payments already fetched.
         payment_service.rematch(payment_service.recent_months(_today()))
-    return 200, {
+    return 200, _link_payload(item)
+
+
+def _link_payload(item):
+    return {
         "budget_item_id": str(item.pk),
         "payee_match": item.payee_match,
         "payment_day": item.payment_day,
         "payment_day_manual": item.payment_day_manual,
         "payment_method": item.payment_method,
+        "payment_parts": item.payment_parts,
     }
 
 
@@ -1230,6 +1250,30 @@ def payments_hide_item(request, budget_item_id: uuid.UUID, payload: CalendarHidd
     return 204, None
 
 
+@api.get("/payments/candidates/", response=List[dict])
+def payments_candidates(request, budget_item_id: uuid.UUID, due_date: datetime.date, q: str = ""):
+    """Transactions around an occurrence's date that could pay it, to link by hand."""
+    item = get_object_or_404(BudgetItem, budget_item_id=budget_item_id)
+    return payment_service.candidate_transactions(item, due_date, q)
+
+
+@api.post("/payments/link-transaction/", response={200: dict, 400: dict})
+def payments_link_transaction(request, payload: TransactionLinkInputSchema):
+    """Count a specific transaction towards an item's occurrence (one of
+    several, for an item paid in parts)."""
+    from .models import BankTransaction
+    item = get_object_or_404(BudgetItem, budget_item_id=payload.budget_item_id)
+    tx = get_object_or_404(BankTransaction, pk=payload.transaction_id)
+    month_obj = Month.objects.filter(month_id=payload.due_date.strftime('%Y-%m')).first()
+    if month_obj is None:
+        return 400, {"detail": f"No budget month {payload.due_date:%Y-%m}."}
+    if (tx.amount > 0) != payment_service.is_incoming(item):
+        return 400, {"detail": "That payment goes the wrong way for this item."}
+    count = payment_service.link_transaction(item, payload.due_date, tx, month_obj, _today())
+    item.refresh_from_db()
+    return 200, {"linked": count, "payment_parts": item.payment_parts}
+
+
 @api.post("/payments/mark/", response={200: dict, 400: dict})
 def payments_mark_paid(request, payload: PaymentMarkInputSchema):
     """Tick an occurrence off by hand (money that didn't go through Monzo)."""
@@ -1239,7 +1283,7 @@ def payments_mark_paid(request, payload: PaymentMarkInputSchema):
     if month_obj is None:
         return 400, {"detail": f"No budget month {month_id}."}
     payment, _ = ItemPayment.objects.get_or_create(
-        budget_item=item, due_date=payload.due_date,
+        budget_item=item, due_date=payload.due_date, transaction=None,
         defaults={"month": month_obj, "source": "manual"},
     )
     Notification.objects.filter(kind='missed', budget_item=item, month=month_obj, status='open').update(

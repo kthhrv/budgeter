@@ -4,6 +4,7 @@ import apiService from '../services/api';
 import MonthSelector from './MonthSelector';
 import Sheet from './Sheet';
 import PayeeSearch from './PayeeSearch';
+import TransactionPicker from './TransactionPicker';
 import BillsPotCard from './BillsPotCard';
 import AccountBalanceCard from './AccountBalanceCard';
 import { formatDate, money } from '../utils/helpers';
@@ -63,7 +64,10 @@ function EntryRow({ entry, onOpen }) {
             <span className="grow min-w-0">
                 <span className="block text-sm font-medium text-ink truncate">{entry.item_name}</span>
                 <span className="block text-xs text-ink-faint">
-                    {p?.payee || (entry.payee_match ? `matches “${entry.payee_match}”` : 'not linked to a payee')}
+                    {entry.partial?.length > 0
+                        ? <span className="text-warn">{entry.partial.length} of {entry.payment_parts} payments seen</span>
+                        : (p?.payee || (entry.payee_match ? `matches “${entry.payee_match}”` : 'not linked to a payee'))}
+                    {p?.parts?.length > 1 && ` · ${p.parts.length} payments`}
                 </span>
             </span>
             <span className="text-right">
@@ -78,9 +82,13 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
     const [day, setDay] = useState(entry?.payment_day_manual ? String(entry.payment_day || '') : '');
     const [busy, setBusy] = useState(false);
     const [searching, setSearching] = useState(false);
+    const [picking, setPicking] = useState(false);
+    const [parts, setParts] = useState(String(entry?.payment_parts || 1));
 
     useEffect(() => {
         setDay(entry?.payment_day_manual ? String(entry.payment_day || '') : '');
+        setParts(String(entry?.payment_parts || 1));
+        setPicking(false);
         // Nothing found to tick it off? Open the payee search straight away.
         setSearching(!entry?.payee_match);
     }, [entry]);
@@ -110,7 +118,14 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
             : { payment_day: dayNum, payment_day_manual: true };
         run(() => apiService.linkItemPayment(entry.budget_item_id, payload), isNaN(dayNum) ? 'Day will be learned from payments' : `Pinned to the ${ordinal(dayNum)}`);
     };
+    const saveParts = () => {
+        const n = parseInt(parts, 10);
+        run(() => apiService.linkItemPayment(entry.budget_item_id, { payment_parts: n }),
+            n === 1 ? 'Expects one payment' : `Expects ${n} payments each time`);
+    };
     const incoming = entry.item_type === 'income';
+    // Every payment counted towards this occurrence, whether or not it's complete.
+    const counted = p?.parts || entry.partial || [];
 
     return (
         <Sheet isOpen onClose={onClose} title={entry.item_name}>
@@ -121,13 +136,37 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
                 <dd>{fmtDay(entry.due_date)}{entry.due_date !== entry.scheduled_date && <span className="text-ink-faint"> (scheduled {fmtDay(entry.scheduled_date)})</span>}</dd>
                 <dt className="text-ink-soft">Budgeted</dt>
                 <dd className="num">{money(entry.expected_amount)}</dd>
-                {p && <>
+                {p && counted.length <= 1 && <>
                     <dt className="text-ink-soft">{entry.item_type === 'income' ? 'Received' : 'Paid'}</dt>
                     <dd className="num">{p.amount != null ? `${money(p.amount)} on ${fmtDay(p.date)}` : 'Marked paid by hand'}</dd>
                     {p.payee && <><dt className="text-ink-soft">Payee</dt><dd>{p.payee}</dd></>}
                 </>}
+                {p && counted.length > 1 && <>
+                    <dt className="text-ink-soft">{entry.item_type === 'income' ? 'Received' : 'Paid'}</dt>
+                    <dd className="num">{money(p.amount)} in {counted.length} payments</dd>
+                </>}
                 {entry.payment_method && <><dt className="text-ink-soft">Method</dt><dd>{METHOD_LABELS[entry.payment_method]}</dd></>}
             </dl>
+
+            {(counted.length > 1 || entry.partial?.length > 0) && (
+                <section className="mb-5" data-testid="payment-parts">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-faint mb-1">
+                        {p ? 'Payments' : `${counted.length} of ${entry.payment_parts} payments seen`}
+                    </h3>
+                    <ul className="divide-y divide-line">
+                        {counted.map(x => (
+                            <li key={x.id} className="flex items-center gap-3 py-1.5 text-sm">
+                                <span className="grow min-w-0 truncate">{x.payee || 'Marked paid by hand'}{x.date && <span className="text-xs text-ink-faint"> · {fmtDay(x.date)}</span>}</span>
+                                {x.amount != null && <span className="num">{money(x.amount)}</span>}
+                                {x.source !== 'auto' && (
+                                    <button type="button" disabled={busy} onClick={() => run(() => apiService.unmarkPaid(x.id), 'Payment removed')}
+                                        className="text-xs text-danger hover:underline disabled:opacity-50">Remove</button>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
 
             <div className="flex flex-wrap gap-2 mb-6">
                 {!p && (
@@ -137,15 +176,27 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
                         {entry.item_type === 'income' ? 'Mark as received' : 'Mark as paid'}
                     </button>
                 )}
-                {p && p.source !== 'auto' && (
+                {p && counted.length <= 1 && p.source !== 'auto' && (
                     <button type="button" disabled={busy}
                         onClick={() => run(() => apiService.unmarkPaid(p.id), 'Tick removed')}
                         className="px-4 py-2 rounded-xl border border-line text-sm hover:bg-line/50 disabled:opacity-50">
                         Undo tick
                     </button>
                 )}
+                {(entry.payee_match || counted.length > 0) && (
+                    <button type="button" onClick={() => setPicking(v => !v)}
+                        className="px-4 py-2 rounded-xl border border-line text-sm hover:bg-line/50">
+                        {picking ? 'Close' : 'Link a payment'}
+                    </button>
+                )}
                 <HideButton itemId={entry.budget_item_id} busy={busy} run={run} />
             </div>
+
+            {picking && (
+                <div className="mb-6">
+                    <TransactionPicker entry={entry} onLinked={() => { onChanged(); onClose(); }} showToast={showToast} />
+                </div>
+            )}
 
             <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-faint mb-2">Matching</h3>
             {entry.payee_match ? (
@@ -172,6 +223,18 @@ function EntrySheet({ entry, onClose, onChanged, showToast }) {
                         onLinked={() => { onChanged(); onClose(); }} showToast={showToast} />
                 </div>
             )}
+            <div className="flex flex-wrap items-end gap-2 mb-3">
+                <div>
+                    <label className="block text-sm text-ink-soft mb-1" htmlFor="payment-parts">Payments each time</label>
+                    <input id="payment-parts" type="number" min="1" max="6" inputMode="numeric" value={parts} onChange={e => setParts(e.target.value)}
+                        className="w-24 px-3 py-2 rounded-lg border border-line bg-paper text-sm num focus:outline-none focus:ring-2 focus:ring-accent/40" />
+                </div>
+                <button type="button" disabled={busy || !(parseInt(parts, 10) >= 1) || parseInt(parts, 10) === entry.payment_parts} onClick={saveParts}
+                    className="px-4 py-2 rounded-xl border border-line text-sm hover:bg-line/50 disabled:opacity-50">
+                    Save
+                </button>
+                <span className="text-xs text-ink-faint pb-2">e.g. 2 for a mortgage split in two</span>
+            </div>
             {isFixed && (
                 <div className="flex flex-wrap items-end gap-2">
                     <div>

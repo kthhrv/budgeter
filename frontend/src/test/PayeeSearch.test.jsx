@@ -39,8 +39,17 @@ describe('PayeeSearch', () => {
     it('searches money in for income items and flags payees already linked', async () => {
         apiService.searchPayees.mockResolvedValue([{ ...sky, payee: 'Acme Payroll', payee_key: 'ACME PAYROLL', linked_item: 'Salary' }]);
         render(<PayeeSearch itemId="s1" expectedAmount={3000} incoming onLinked={vi.fn()} showToast={vi.fn()} />);
-        expect(await screen.findByText('Already linked to Salary')).toBeInTheDocument();
+        expect(await screen.findByText(/Already linked to Salary/)).toBeInTheDocument();
         expect(apiService.searchPayees).toHaveBeenCalledWith('', 3000, true);
         expect(screen.getByText('Money in of £3,000.00')).toBeInTheDocument();
+    });
+
+    it('lists each recent payment, so two a month from one provider both show', async () => {
+        apiService.searchPayees.mockResolvedValue([{ ...sky, payee: 'British Gas', payee_key: 'BRITISH GAS',
+            recent: [{ date: '2026-11-09', amount: 42.1 }, { date: '2026-11-02', amount: 97.3 }] }]);
+        render(<PayeeSearch itemId="g1" expectedAmount={40} onLinked={vi.fn()} showToast={vi.fn()} />);
+        const recent = await screen.findByTestId('payee-recent');
+        expect(recent).toHaveTextContent('£42.10');
+        expect(recent).toHaveTextContent('£97.30');
     });
 });

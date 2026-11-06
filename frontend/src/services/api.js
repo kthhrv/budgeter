@@ -197,6 +197,14 @@ const apiService = {
         return this._fireGet(`/payments/payees/search/?${params}`, 'Payee search failed');
     },
     getPotBalances() { return this._fireGet('/payments/pots/', 'Failed to load pot balances'); },
+    getCandidatePayments(itemId, dueDate, q = '') {
+        const params = new URLSearchParams({ budget_item_id: itemId, due_date: dueDate });
+        if (q) params.set('q', q);
+        return this._fireGet(`/payments/candidates/?${params}`, 'Failed to load payments');
+    },
+    linkTransaction(itemId, dueDate, transactionId) {
+        return this._fireSend('POST', '/payments/link-transaction/', { budget_item_id: itemId, due_date: dueDate, transaction_id: transactionId }, 'Failed to link the payment');
+    },
     getPersonalBalance(owner) { return this._fireGet(`/payments/accounts/${owner}/balance/`, 'Failed to load the account balance'); },
     setCalendarHidden(itemId, hidden) { return this._fireSend('PUT', `/budgetitems/${itemId}/calendar-hidden/`, { hidden }, hidden ? 'Failed to remove from the calendar' : 'Failed to show on the calendar'); },
     getAvailablePots() { return this._fireGet('/payments/pots/available/', 'Failed to load Monzo pots'); },

@@ -70,7 +70,12 @@ const PayeeSearch = ({ itemId, expectedAmount, incoming = false, onLinked, showT
                                     {r.usual_day ? ` · usually the ${ordinal(r.usual_day)}` : ''}
                                     {r.payment_method ? ` · ${METHOD_LABELS[r.payment_method] || ''}` : ''}
                                 </span>
-                                {r.linked_item && <span className="block text-xs text-warn">Already linked to {r.linked_item}</span>}
+                                {r.recent?.length > 1 && (
+                                    <span className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 text-xs text-ink-soft" data-testid="payee-recent">
+                                        {r.recent.map((x, i) => <span key={i}>{fmtDay(x.date)} <span className="num">{money(x.amount)}</span></span>)}
+                                    </span>
+                                )}
+                                {r.linked_item && <span className="block text-xs text-warn">Already linked to {r.linked_item} — fine if it pays for more than one item</span>}
                             </span>
                             <button type="button" disabled={busy} onClick={() => use(r)}
                                 className="shrink-0 px-3 py-1.5 rounded-lg bg-accent text-paper text-sm font-medium hover:bg-accent-strong active:scale-[0.98] disabled:opacity-50">

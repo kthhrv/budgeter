@@ -202,6 +202,27 @@ class MatchingTests(SimpleTestCase):
         txs = [_tx(1, D(2026, 11, 12), -45, 'Sky'), _tx(2, D(2026, 11, 11), -45, 'Sky', declined=True)]
         self.assertEqual(p.match_occurrences(occs, txs, used_ids=[1]), [])
 
+    def test_item_paid_in_two_parts_takes_two(self):
+        occs = [{'key': 'm', 'payee_match': 'NATWEST', 'due_date': D(2026, 11, 2), 'parts': 2}]
+        txs = [_tx(1, D(2026, 11, 2), -600, 'Natwest Mortgage'), _tx(2, D(2026, 11, 2), -250, 'Natwest Mortgage'),
+               _tx(3, D(2026, 11, 3), -10, 'Natwest Mortgage')]
+        self.assertEqual(sorted(t for _, t in p.match_occurrences(occs, txs)), [1, 2])
+        # One already matched: only one more is taken.
+        occs[0]['have'] = 1
+        self.assertEqual(len(p.match_occurrences(occs, txs, used_ids=[1])), 1)
+
+    def test_shared_payee_picks_by_amount(self):
+        occs = [
+            {'key': 'gas', 'payee_match': 'BRITISH GAS', 'due_date': D(2026, 11, 3), 'shared': True, 'expected': Decimal('40')},
+            {'key': 'elec', 'payee_match': 'BRITISH GAS', 'due_date': D(2026, 11, 3), 'shared': True, 'expected': Decimal('95')},
+        ]
+        txs = [_tx(1, D(2026, 11, 3), -96.10, 'British Gas'), _tx(2, D(2026, 11, 4), -41.20, 'British Gas')]
+        self.assertEqual(dict(p.match_occurrences(occs, txs)), {'gas': 2, 'elec': 1})
+
+    def test_closest_amount_only(self):
+        txs = [(1, Decimal('-40')), (2, Decimal('-96')), (3, Decimal('-67.5'))]
+        self.assertEqual(p.closest_amount_only(txs, Decimal('40'), [Decimal('95')]), [1, 3])
+
 
 # --- Database / endpoint tests ---
 
@@ -587,3 +608,98 @@ class PersonalBalanceTests(TestCase):
         self.assertEqual(self.client.get('/api/payments/accounts/keith/balance/').json(),
                          {'account': None, 'error': None})
         self.assertEqual(self.client.get('/api/payments/accounts/shared/balance/').status_code, 400)
+
+
+@mock.patch('budget.api._today', return_value=TODAY)
+@mock.patch('budget.payment_service.timezone.now', return_value=NOW)
+class SplitAndSharedPaymentTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        User.objects.create_user(username='u', password='pw')
+        self.client.login(username='u', password='pw')
+        self.oct = _month(2026, 10)
+        self.nov = _month(2026, 11)
+
+    def _item(self, name, value):
+        item = BudgetItem.objects.create(item_name=name, item_type='expense', owner='shared', expense_pot='bills')
+        BudgetItemVersion.objects.create(budget_item=item, month=self.oct, effective_from_month=self.oct, value=value)
+        return item
+
+    def _link(self, item, **payload):
+        return self.client.put(f'/api/budgetitems/{item.pk}/payment-link/', payload, content_type='application/json')
+
+    def _entry(self, name):
+        cal = self.client.get('/api/payments/calendar/2026-11/').json()
+        return next(e for e in cal['entries'] if e['item_name'] == name)
+
+    def test_mortgage_in_two_parts(self, *_):
+        mortgage = self._item('Mortgage', 850)
+        for mid, d, amt in [('a1', D(2026, 10, 1), -600), ('a2', D(2026, 10, 1), -250),
+                            ('b1', D(2026, 11, 2), -600), ('b2', D(2026, 11, 2), -250)]:
+            _store(mid, d, amt, 'Natwest Mortgage')
+        self._link(mortgage, payee_match='NATWEST MORTGAGE')
+        # One payment expected by default: half paid isn't "paid".
+        e = self._entry('Mortgage')
+        self.assertEqual(e['payment']['amount'], 600.0)
+        r = self._link(mortgage, payment_parts=2)
+        self.assertEqual(r.json()['payment_parts'], 2)
+        e = self._entry('Mortgage')
+        self.assertEqual(e['status'], 'paid')
+        self.assertEqual(e['payment']['amount'], 850.0)
+        self.assertEqual(len(e['payment']['parts']), 2)
+        # No amount-changed notification: the total matches the budget.
+        from .notifications import generate_notifications
+        generate_notifications(TODAY)
+        self.assertFalse(Notification.objects.filter(kind='amount_changed', budget_item=mortgage).exists())
+
+    def test_partial_until_all_parts_seen(self, *_):
+        mortgage = self._item('Mortgage', 850)
+        _store('b1', D(2026, 11, 2), -600, 'Natwest Mortgage')
+        self._link(mortgage, payee_match='NATWEST MORTGAGE', payment_day=2, payment_day_manual=True)
+        self._link(mortgage, payment_parts=2)
+        e = self._entry('Mortgage')
+        self.assertIsNone(e['payment'])
+        self.assertEqual([x['amount'] for x in e['partial']], [600.0])
+        self.assertEqual(e['status'], 'overdue')
+
+    def test_link_a_second_transaction_by_hand(self, *_):
+        mortgage = self._item('Mortgage', 850)
+        t1 = _store('b1', D(2026, 11, 2), -600, 'Natwest Mortgage')
+        t2 = _store('b2', D(2026, 11, 2), -250, 'NatWest Loan Part 2')
+        self._link(mortgage, payee_match='NATWEST MORTGAGE', payment_day=2, payment_day_manual=True)
+        cands = self.client.get(f'/api/payments/candidates/?budget_item_id={mortgage.pk}&due_date=2026-11-02&q=natwest').json()
+        self.assertEqual({c['id'] for c in cands}, {t1.pk, t2.pk})
+        self.assertEqual(next(c for c in cands if c['id'] == t1.pk)['linked_item'], 'Mortgage')
+        r = self.client.post('/api/payments/link-transaction/',
+                             {'budget_item_id': str(mortgage.pk), 'due_date': '2026-11-02', 'transaction_id': t2.pk},
+                             content_type='application/json')
+        self.assertEqual(r.json(), {'linked': 2, 'payment_parts': 2})
+        e = self._entry('Mortgage')
+        self.assertEqual(e['payment']['amount'], 850.0)
+
+    def test_two_items_share_british_gas(self, *_):
+        self._british_gas(link_order=('Gas', 'Electricity'))
+
+    def test_two_items_share_british_gas_either_order(self, *_):
+        self._british_gas(link_order=('Electricity', 'Gas'))
+
+    def _british_gas(self, link_order):
+        gas = self._item('Gas', 40)
+        elec = self._item('Electricity', 95)
+        for mid, d, amt in [('g1', D(2026, 9, 8), -40), ('g2', D(2026, 10, 8), -40), ('g3', D(2026, 11, 9), -42.10),
+                            ('e1', D(2026, 9, 1), -95), ('e2', D(2026, 10, 1), -95), ('e3', D(2026, 11, 2), -97.30)]:
+            _store(mid, d, amt, 'British Gas')
+        items = {'Gas': gas, 'Electricity': elec}
+        for name in link_order:
+            self._link(items[name], payee_match='BRITISH GAS')
+        gas.refresh_from_db()
+        elec.refresh_from_db()
+        self.assertEqual((gas.payment_day, elec.payment_day), (8, 1))
+        self.assertEqual(self._entry('Gas')['payment']['amount'], 42.1)
+        self.assertEqual(self._entry('Electricity')['payment']['amount'], 97.3)
+
+    def test_search_lists_each_payment(self, *_):
+        _store('e3', D(2026, 11, 2), -97.30, 'British Gas')
+        _store('g3', D(2026, 11, 9), -42.10, 'British Gas')
+        [r] = self.client.get('/api/payments/payees/search/?q=british gas').json()
+        self.assertEqual([x['amount'] for x in r['recent']], [42.1, 97.3])
