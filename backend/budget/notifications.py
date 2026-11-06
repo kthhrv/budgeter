@@ -197,7 +197,7 @@ def apply_action(n, action, user, today, item_id=None):
         elif action == 'mark_paid':
             ItemPayment.objects.get_or_create(
                 budget_item=n.budget_item, due_date=datetime.date.fromisoformat(n.data['due_date']),
-                defaults={'month': n.month, 'source': 'manual'},
+                transaction=None, defaults={'month': n.month, 'source': 'manual'},
             )
         elif action == 'link':
             if not item_id:

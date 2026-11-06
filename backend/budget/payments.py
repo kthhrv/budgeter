@@ -324,12 +324,18 @@ def match_occurrences(occurrences, transactions, used_ids=()):
     """Pair due occurrences with transactions.
 
     `occurrences`: dicts with key, payee_match, due_date and optionally
-    incoming (True for income items: only money in matches them).
+    incoming (True for income items: only money in matches them), parts
+    (payments making up the occurrence, default 1), have (how many are
+    already matched), expected (the per-payment amount) and shared (another
+    item uses the same payee).
     `transactions`: dicts with id, date, amount, payee_key, scheme, declined.
-    Each occurrence takes the closest-dated (earlier on a tie) unused outgoing
-    transaction whose payee_key contains its payee_match, within the match
-    window. Occurrences are handled in due-date order and a transaction is
-    never used twice. Returns [(occurrence_key, transaction_id)].
+
+    Each occurrence takes up to parts − have unused transactions in its
+    direction whose payee_key contains its payee_match, within the match
+    window: the closest-dated first (earlier on a tie) — or, when the payee is
+    shared, the closest in amount first, so British Gas's gas and electricity
+    each find their own. Occurrences are handled in due-date order and a
+    transaction is never used twice. Returns [(occurrence_key, transaction_id)].
     """
     used = set(used_ids)
     pairs = []
@@ -337,17 +343,34 @@ def match_occurrences(occurrences, transactions, used_ids=()):
         needle = occ['payee_match']
         if not needle:
             continue
-        best = None
-        for tx in transactions:
-            if tx['id'] in used or not _is_payment(tx, occ.get('incoming', False)) or needle not in tx['payee_key']:
-                continue
-            delta = (tx['date'] - occ['due_date']).days
-            if not -MATCH_DAYS_BEFORE <= delta <= MATCH_DAYS_AFTER:
-                continue
-            rank = (abs(delta), delta)
-            if best is None or rank < best[0]:
-                best = (rank, tx['id'])
-        if best is not None:
+        expected = occ.get('expected')
+        by_amount = occ.get('shared') and expected is not None
+        for _ in range(max(occ.get('parts', 1) - occ.get('have', 0), 0)):
+            best = None
+            for tx in transactions:
+                if tx['id'] in used or not _is_payment(tx, occ.get('incoming', False)) or needle not in tx['payee_key']:
+                    continue
+                delta = (tx['date'] - occ['due_date']).days
+                if not -MATCH_DAYS_BEFORE <= delta <= MATCH_DAYS_AFTER:
+                    continue
+                rank = (abs(delta), delta)
+                if by_amount:
+                    rank = (abs(abs(tx['amount']) - expected),) + rank
+                if best is None or rank < best[0]:
+                    best = (rank, tx['id'])
+            if best is None:
+                break
             used.add(best[1])
             pairs.append((occ['key'], best[1]))
     return pairs
+
+
+def closest_amount_only(amounts_by_tx, mine, others):
+    """The transaction ids whose amount is nearer `mine` than any of `others`
+    (ties kept) — how an item sharing a payee picks out its own payments."""
+    keep = []
+    for tx_id, amount in amounts_by_tx:
+        distance = abs(abs(amount) - mine)
+        if all(distance <= abs(abs(amount) - other) for other in others):
+            keep.append(tx_id)
+    return keep

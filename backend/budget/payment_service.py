@@ -183,12 +183,50 @@ def payee_transactions(payee_match, since=None, incoming=False):
     return list(qs.order_by('created'))
 
 
-def relearn_item(item):
+def per_payment_amount(item, month_obj):
+    """What one payment of `item` should be in `month_obj` (its budget value
+    split across payment_parts), or None when there's no value."""
+    effective_version, _, _ = _api_helpers()
+    version = effective_version(item, month_obj) if month_obj else None
+    if version is None or not version.value:
+        return None
+    return version.value / max(item.payment_parts, 1)
+
+
+def _sharing(items):
+    """{payee_match: [items]} for payees linked to more than one item."""
+    groups = defaultdict(list)
+    for i in items:
+        if i.payee_match:
+            groups[i.payee_match].append(i)
+    return {k: v for k, v in groups.items() if len(v) > 1}
+
+
+def _own_transactions(item, txs, siblings, month_obj):
+    """When other items share this payee, keep only the transactions nearer
+    this item's amount than theirs (so gas and electricity learn their own
+    days). Falls back to all of them when amounts aren't known."""
+    mine = per_payment_amount(item, month_obj)
+    others = [a for a in (per_payment_amount(s, month_obj) for s in siblings if s.pk != item.pk) if a is not None]
+    if mine is None or not others:
+        return txs
+    keep = set(payments.closest_amount_only([(t.pk, t.amount) for t in txs], mine, others))
+    return [t for t in txs if t.pk in keep]
+
+
+def relearn_item(item, siblings=None, month_obj=None):
     """Update a linked item's payment_method (and payment_day unless manual)
     from the last year of its payee's transactions. Returns True if changed."""
     if not item.payee_match:
         return False
+    if siblings is None:
+        _, prefetched_items, _ = _api_helpers()
+        siblings = [i for i in prefetched_items().filter(payee_match=item.payee_match) if is_calendar_item(i)]
+    if month_obj is None:
+        month_obj = current_month(local_date(timezone.now()))
     txs = payee_transactions(item.payee_match, since=timezone.now() - FULL_HISTORY, incoming=is_incoming(item))
+    if len(siblings) > 1:
+        txs = _own_transactions(item, txs, siblings, month_obj)
     if not txs:
         return False
     method = txs[-1].payment_method
@@ -207,8 +245,12 @@ def relearn_item(item):
 
 
 def relearn_items():
-    for item in BudgetItem.objects.exclude(payee_match=''):
-        relearn_item(item)
+    _, prefetched_items, _ = _api_helpers()
+    items = [i for i in prefetched_items().exclude(payee_match='') if is_calendar_item(i)]
+    shared = _sharing(items)
+    month_obj = current_month(local_date(timezone.now()))
+    for item in items:
+        relearn_item(item, siblings=shared.get(item.payee_match, [item]), month_obj=month_obj)
 
 
 # --- Occurrences and matching ---
@@ -255,16 +297,30 @@ def rematch(month_objs):
     _, prefetched_items, school_terms = _api_helpers()
     terms = school_terms()
     items = [i for i in prefetched_items().exclude(payee_match='') if is_calendar_item(i)]
-    paid = set(ItemPayment.objects.values_list('budget_item_id', 'due_date'))
+    shared = _sharing(items)
+    have = defaultdict(int)  # matched transactions per (item, due_date)
+    ticked = set()           # occurrences ticked by hand: nothing more to find
+    for item_id, due, tx_id in ItemPayment.objects.values_list('budget_item_id', 'due_date', 'transaction_id'):
+        if tx_id is None:
+            ticked.add((item_id, due))
+        else:
+            have[(item_id, due)] += 1
     occurrences = []
     for month_obj in month_objs:
         for occ in occurrences_for_month(items, month_obj, terms):
-            if (occ['item'].pk, occ['due_date']) in paid:
+            item = occ['item']
+            slot = (item.pk, occ['due_date'])
+            if slot in ticked or have[slot] >= item.payment_parts:
                 continue
             occ['month'] = month_obj
             occ['key'] = len(occurrences)
-            occ['payee_match'] = occ['item'].payee_match
-            occ['incoming'] = is_incoming(occ['item'])
+            occ['payee_match'] = item.payee_match
+            occ['incoming'] = is_incoming(item)
+            occ['parts'] = item.payment_parts
+            occ['have'] = have[slot]
+            occ['shared'] = item.payee_match in shared
+            if occ['version'].value:
+                occ['expected'] = occ['version'].value / max(item.payment_parts, 1)
             occurrences.append(occ)
     if not occurrences:
         return 0
@@ -288,23 +344,56 @@ def rematch(month_objs):
 
 
 def _assign_payments(occs, payments_for_item):
-    """Pair an item's occurrences in a month with its ItemPayment rows: an
-    exact due_date first, then the nearest remaining one (the learned day may
-    have moved since the payment was recorded)."""
-    remaining = list(payments_for_item)
+    """Pair an item's occurrences in a month with its ItemPayment rows, grouped
+    by due date (an item paid in parts has several rows per date): an exact
+    due_date first, then the nearest remaining group (the learned day may have
+    moved since the payment was recorded). Returns {id(occ): [rows]}."""
+    groups = defaultdict(list)
+    for p in payments_for_item:
+        groups[p.due_date].append(p)
+    remaining = dict(groups)
     assigned = {}
     for occ in occs:
-        exact = next((p for p in remaining if p.due_date == occ['due_date']), None)
-        if exact:
-            assigned[id(occ)] = exact
-            remaining.remove(exact)
+        if occ['due_date'] in remaining:
+            assigned[id(occ)] = remaining.pop(occ['due_date'])
     for occ in occs:
         if id(occ) in assigned or not remaining:
             continue
-        nearest = min(remaining, key=lambda p: abs((p.due_date - occ['due_date']).days))
-        assigned[id(occ)] = nearest
-        remaining.remove(nearest)
+        nearest = min(remaining, key=lambda d: abs((d - occ['due_date']).days))
+        assigned[id(occ)] = remaining.pop(nearest)
     return assigned
+
+
+def _payment_payload(rows, parts):
+    """The calendar's view of the payments made towards one occurrence:
+    (payment or None, partial list). `payment` is set once it counts as paid —
+    a hand tick, or all `parts` transactions seen — with their total."""
+    listed = []
+    for p in sorted(rows, key=lambda r: (r.transaction.created if r.transaction else timezone.now())):
+        tx = p.transaction
+        listed.append({
+            'id': p.pk,
+            'source': p.source,
+            'date': local_date(tx.created).isoformat() if tx else None,
+            'amount': float(abs(tx.amount)) if tx else None,
+            'payee': tx.payee if tx else '',
+        })
+    if not listed:
+        return None, []
+    matched = [x for x in listed if x['amount'] is not None]
+    hand_ticked = len(matched) < len(listed)
+    if not hand_ticked and len(matched) < parts:
+        return None, listed
+    first = matched[0] if matched else listed[0]
+    return {
+        'id': first['id'],
+        'source': first['source'],
+        'date': matched[-1]['date'] if matched else None,
+        # A hand tick alone has no amount; with transactions, it's their total.
+        'amount': round(sum(x['amount'] for x in matched), 2) if matched else None,
+        'payee': first['payee'],
+        'parts': listed,
+    }, []
 
 
 def _item_summary(item, version):
@@ -320,6 +409,7 @@ def _item_summary(item, version):
         'payment_day': item.payment_day,
         'payment_day_manual': item.payment_day_manual,
         'payment_method': item.payment_method,
+        'payment_parts': item.payment_parts,
         'expected_amount': float(version.value),
     }
 
@@ -342,23 +432,14 @@ def calendar_for_month(month_obj, today):
     for item_id, item_occs in occs_by_item.items():
         assigned = _assign_payments(item_occs, by_item.get(item_id, []))
         for occ in item_occs:
-            p = assigned.get(id(occ))
-            payment = None
-            if p is not None:
-                tx = p.transaction
-                payment = {
-                    'id': p.pk,
-                    'source': p.source,
-                    'date': local_date(tx.created).isoformat() if tx else None,
-                    'amount': float(abs(tx.amount)) if tx else None,
-                    'payee': tx.payee if tx else '',
-                }
+            payment, partial = _payment_payload(assigned.get(id(occ), []), occ['item'].payment_parts)
             entries.append({
                 **_item_summary(occ['item'], occ['version']),
                 'scheduled_date': occ['scheduled_date'].isoformat(),
                 'due_date': occ['due_date'].isoformat(),
-                'status': payments.occurrence_status(occ['due_date'], p is not None, today),
+                'status': payments.occurrence_status(occ['due_date'], payment is not None, today),
                 'payment': payment,
+                'partial': partial,
             })
     entries.sort(key=lambda e: (e['due_date'], e['item_name']))
 
@@ -449,6 +530,8 @@ def search_payees(query='', amount=None, incoming=False):
             'last_date': local_date(latest.created).isoformat(),
             'last_amount': float(abs(latest.amount)),
             'amounts': [float(a) for a in amounts[:5]],
+            # Each recent payment, so two a month (gas + electricity) show as two.
+            'recent': [{'date': local_date(t.created).isoformat(), 'amount': float(abs(t.amount))} for t in txs[:6]],
             'payment_method': latest.payment_method,
             'usual_day': payments.learn_payment_day([local_date(t.created) for t in txs], latest.payment_method),
             'linked_item': next((name for match, name in linked.items() if match in key), None),
@@ -499,9 +582,19 @@ def link_item(item, payee_match, payment_day=None, payment_day_manual=None, toda
     if payment_day is not None:
         item.payment_day = payment_day
     item.save()
-    relearn_item(item)
+    # Every item on this payee: a newcomer changes which payments are whose.
+    _, prefetched_items, _ = _api_helpers()
+    siblings = [i for i in prefetched_items().filter(payee_match=item.payee_match) if is_calendar_item(i)] or [item]
+    for sibling in siblings:
+        relearn_item(sibling, siblings=siblings)
     today = today or local_date(timezone.now())
-    rematch(recent_months(today))
+    months = recent_months(today)
+    if len(siblings) > 1:
+        # Payments matched before this item joined may be its own: redo the
+        # automatic matches on this payee (hand-picked ones stay).
+        ItemPayment.objects.filter(budget_item__in=siblings, month__in=months, source='auto').delete()
+    rematch(months)
+    item.refresh_from_db()
     return item
 
 
@@ -513,6 +606,60 @@ def unlink_item(item):
         item.payment_day = None
     item.save()
     ItemPayment.objects.filter(budget_item=item).exclude(source='manual').delete()
+
+
+CANDIDATE_DAYS = 10
+
+
+def candidate_transactions(item, due_date, query=''):
+    """Transactions that could pay `item`'s occurrence due on `due_date`, for
+    linking one by hand: those of its payee (or matching `query`) within
+    CANDIDATE_DAYS of the date, closest first. Each says which item, if any,
+    it already pays."""
+    start = datetime.datetime.combine(due_date - datetime.timedelta(days=CANDIDATE_DAYS), datetime.time(), LONDON)
+    end = datetime.datetime.combine(due_date + datetime.timedelta(days=CANDIDATE_DAYS + 1), datetime.time(), LONDON)
+    qs = (BankTransaction.objects.filter(created__gte=start, created__lt=end, declined=False,
+                                         **({'amount__gt': 0} if is_incoming(item) else {'amount__lt': 0}))
+          .exclude(scheme='uk_retail_pot').select_related('item_payment__budget_item'))
+    query = (query or '').strip()
+    if query:
+        words = payments.normalise_payee(query).split()
+        txs = [t for t in qs if (words and all(w in t.payee_key for w in words)) or query.lower() in t.payee.lower()]
+    elif item.payee_match:
+        txs = list(qs.filter(payee_key__contains=item.payee_match))
+    else:
+        txs = []
+    txs.sort(key=lambda t: (abs((local_date(t.created) - due_date).days), t.created))
+    out = []
+    for t in txs[:SEARCH_LIMIT]:
+        linked = getattr(t, 'item_payment', None)
+        out.append({
+            'id': t.pk,
+            'date': local_date(t.created).isoformat(),
+            'amount': float(abs(t.amount)),
+            'payee': t.payee,
+            'payee_key': t.payee_key,
+            'linked_item_id': str(linked.budget_item_id) if linked else None,
+            'linked_item': linked.budget_item.item_name if linked else None,
+        })
+    return out
+
+
+def link_transaction(item, due_date, tx, month_obj, today):
+    """Count `tx` towards `item`'s occurrence on `due_date` (taking it off any
+    other item). If that makes more payments than the item expects, it now
+    expects that many each time; an item with no payee picks up this one's."""
+    with db_transaction.atomic():
+        ItemPayment.objects.filter(transaction=tx).delete()
+        ItemPayment.objects.create(budget_item=item, month=month_obj, due_date=due_date,
+                                   transaction=tx, source='confirmed')
+        count = ItemPayment.objects.filter(budget_item=item, due_date=due_date).exclude(transaction=None).count()
+        if count > item.payment_parts:
+            item.payment_parts = count
+            item.save(update_fields=['payment_parts'])
+    if not item.payee_match:
+        link_item(item, tx.payee_key, today=today)
+    return count
 
 
 def set_hidden(item, hidden, user=None):

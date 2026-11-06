@@ -249,6 +249,12 @@ class BudgetItem(models.Model):
         help_text="How the payment leaves the account, learned from the transaction scheme. "
                   "Only direct debits roll forward over weekends and bank holidays."
     )
+    payment_parts = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="How many payments make up one occurrence, e.g. 2 for a mortgage split "
+                  "into two products. It counts as paid once that many have been seen; the "
+                  "calendar shows their total."
+    )
     calendar_hidden = models.BooleanField(
         default=False,
         help_text="Taken off the Calendar tab: not shown, matched or notified about. "
@@ -691,7 +697,10 @@ class BankTransaction(models.Model):
 
 
 class ItemPayment(models.Model):
-    """One occurrence of a budget item marked as paid on the calendar.
+    """A payment towards one occurrence of a budget item on the calendar.
+
+    An item paid in several parts (`BudgetItem.payment_parts`) has one row per
+    matched transaction for the same `due_date`.
 
     `due_date` is the date the calendar expected it (after the working-day
     roll for direct debits). Rows with a transaction come from matching
@@ -713,8 +722,15 @@ class ItemPayment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('budget_item', 'due_date')
         ordering = ['due_date']
+        constraints = [
+            # Several matched transactions may pay one occurrence (payment_parts),
+            # but there is only ever one hand tick.
+            models.UniqueConstraint(
+                fields=['budget_item', 'due_date'], condition=models.Q(transaction__isnull=True),
+                name='one_hand_tick_per_occurrence',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.budget_item.item_name} paid for {self.due_date}"

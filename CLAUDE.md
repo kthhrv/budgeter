@@ -220,6 +220,13 @@ What the code won't tell you at a glance:
   days, so the first sync doesn't flood the bell; older regulars are linked
   from each item's sheet (payee search). `/payments/suggestions/` is no
   longer called by the frontend.
+- An item can be paid in several payments (`payment_parts`, e.g. a split
+  mortgage): one `ItemPayment` per transaction for the same `due_date`, paid
+  once all are seen, shown as their total. Only the hand tick (no
+  transaction) is unique per occurrence. Items sharing one payee (British
+  Gas gas + electricity) are told apart by amount, both when matching and
+  when learning the day; linking a second item to a payee redoes that
+  payee's automatic matches.
 - The Calendar has Joint / Tild / Keith views, filtered on `owner`. Joint
   weighs the bills pot; a person's view weighs their own Monzo current
   account, found via `OWNER_BY_EMAIL` in `settings.py` (login email →
