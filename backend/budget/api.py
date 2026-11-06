@@ -1205,6 +1205,8 @@ def payments_link_item(request, budget_item_id: uuid.UUID, payload: PaymentLinkI
         item.save()
         if item.payee_match and not item.payment_day_manual:
             payment_service.relearn_item(item)
+        # A new day can line the item up with payments already fetched.
+        payment_service.rematch(payment_service.recent_months(_today()))
     return 200, {
         "budget_item_id": str(item.pk),
         "payee_match": item.payee_match,

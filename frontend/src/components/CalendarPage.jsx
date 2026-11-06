@@ -11,7 +11,6 @@ import {
     monthWeeks, todayIso, entriesByDay, withChildcareAmounts, ordinal, METHOD_LABELS,
 } from '../utils/calendarGrid';
 
-const AUTO_SYNC_AFTER_MS = 60 * 60 * 1000;
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const STATUS = {
@@ -199,6 +198,8 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     const [syncKey, setSyncKey] = useState(0);
     const [view, setViewState] = useState(storedView);
     const autoSynced = useRef(false);
+    const syncRun = useRef(null); // the sync in flight, if any
+    const syncAgain = useRef(false);
     const monthId = formatDate(currentDate, 'YYYY-MM');
 
     const load = useCallback(async () => {
@@ -217,27 +218,43 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     }, [currentDate, monthId, showToast]);
 
     const sync = useCallback(async (silent = false) => {
+        // One at a time: a change made mid-sync gets one more sync afterwards.
+        if (syncRun.current) {
+            syncAgain.current = true;
+            return syncRun.current;
+        }
         setSyncing(true);
-        try {
-            const r = await apiService.syncPayments();
-            if (r.errors.length) showToast(r.errors.join(' · '), 'error');
-            else if (!silent) showToast(r.matched ? `Synced — ${r.matched} new payment${r.matched === 1 ? '' : 's'} ticked off` : 'Synced — nothing new');
-            await load();
-            setSyncKey(k => k + 1);
-            onNotificationsChanged?.();
-        } catch (e) {
-            if (!silent) showToast(e.message, 'error');
-        } finally {
+        syncRun.current = (async () => {
+            try {
+                const r = await apiService.syncPayments();
+                if (r.errors.length) showToast(r.errors.join(' · '), 'error');
+                else if (!silent) showToast(r.matched ? `Synced — ${r.matched} new payment${r.matched === 1 ? '' : 's'} ticked off` : 'Synced — nothing new');
+                await load();
+                setSyncKey(k => k + 1);
+                onNotificationsChanged?.();
+            } catch (e) {
+                if (!silent) showToast(e.message, 'error');
+            }
+        })();
+        await syncRun.current;
+        syncRun.current = null;
+        if (syncAgain.current) {
+            syncAgain.current = false;
+            await sync(true);
+        } else {
             setSyncing(false);
         }
     }, [load, onNotificationsChanged, showToast]);
+
+    // After an item is changed here: sync with Monzo (which also reloads), or
+    // just reload when nobody has connected it.
+    const afterChange = useCallback(() => (data?.connected ? sync(true) : load()), [data, sync, load]);
 
     useEffect(() => {
         load().then(cal => {
             if (!cal || autoSynced.current || !cal.connected) return;
             autoSynced.current = true;
-            const last = cal.last_synced_at ? new Date(cal.last_synced_at).getTime() : 0;
-            if (Date.now() - last > AUTO_SYNC_AFTER_MS) sync(true);
+            sync(true); // every visit picks up the latest payments
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [monthId]);
@@ -285,7 +302,7 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
         try {
             await apiService.setCalendarHidden(item.budget_item_id, false);
             showToast(`${item.item_name} is back on the calendar`);
-            load();
+            afterChange();
         } catch (e) {
             showToast(e.message, 'error');
         }
@@ -419,10 +436,10 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
             </div>
 
             {openEntry && !openEntry.unscheduled && (
-                <EntrySheet entry={openEntry} onClose={() => setOpenEntry(null)} onChanged={load} showToast={showToast} />
+                <EntrySheet entry={openEntry} onClose={() => setOpenEntry(null)} onChanged={afterChange} showToast={showToast} />
             )}
             {openEntry?.unscheduled && (
-                <UnscheduledSheet item={openEntry} onClose={() => setOpenEntry(null)} onChanged={load} showToast={showToast} />
+                <UnscheduledSheet item={openEntry} onClose={() => setOpenEntry(null)} onChanged={afterChange} showToast={showToast} />
             )}
         </div>
     );
