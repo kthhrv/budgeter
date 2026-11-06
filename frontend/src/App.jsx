@@ -7,7 +7,7 @@ import Toast from './components/Toast';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import SearchComponent from './components/SearchComponent';
 import MonthSelector from './components/MonthSelector';
-import { useBudgetTotals } from './hooks/useBudgetTotals';
+import { useBudgetTotals, computePotTransfers } from './hooks/useBudgetTotals';
 import OwnerCard from './components/OwnerCard';
 import ItemCategoryModal from './components/ItemCategoryModal';
 import TabsPage from './components/TabsPage';
@@ -24,19 +24,14 @@ const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm
     const contributions = t.keithShare + t.tildShare;
     const sharedRemaining = t.sharedIncome + contributions - t.sharedExpenseTotal - t.sharedSavings;
 
-    // How much each person moves into their Bills Pot this month (a labelled subtotal
+    // How much each person moves into each pot this month (labelled subtotals
     // of expenses already counted under that owner).
-    const billsPot = { shared: 0, keith: 0, tild: 0 };
-    for (const i of items) {
-        if (i.item_type === 'expense' && i.expense_pot === 'bills' && billsPot[i.owner] !== undefined) {
-            billsPot[i.owner] += parseFloat(i.effective_value) || 0;
-        }
-    }
+    const pots = computePotTransfers(items);
 
     const owners = [
-        { key: 'shared', name: 'Joint', accent: 'joint', sub: 'Shared account', remainingLabel: 'Left over', remaining: sharedRemaining, contributions, billsPot: billsPot.shared },
-        { key: 'keith', name: 'Keith', accent: 'keith', sub: `${(t.keithProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.keithRemaining, transfer: t.keithShare, billsPot: billsPot.keith },
-        { key: 'tild', name: 'Tild', accent: 'tild', sub: `${(t.tildProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.tildRemaining, transfer: t.tildShare, billsPot: billsPot.tild },
+        { key: 'shared', name: 'Joint', accent: 'joint', sub: 'Shared account', remainingLabel: 'Left over', remaining: sharedRemaining, contributions, pots: pots.shared },
+        { key: 'keith', name: 'Keith', accent: 'keith', sub: `${(t.keithProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.keithRemaining, transfer: t.keithShare, pots: pots.keith },
+        { key: 'tild', name: 'Tild', accent: 'tild', sub: `${(t.tildProportion * 100).toFixed(0)}% of shared costs`, remainingLabel: 'Left over', remaining: t.tildRemaining, transfer: t.tildShare, pots: pots.tild },
     ];
 
     const cardProps = { items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled };
@@ -105,10 +100,13 @@ const App = () => {
         if (!nurserySettings?.ellis || !nurserySettings?.gaspard) return null;
         const summary = computeMonthSummary(nurserySettings, currentDate);
         return {
-            childcare: summary.childcareTotalNet,
-            // Legacy per-component links, kept so expired items still resolve
-            // when viewing past months.
+            // One line per child: Ellis is funded from the bills pot, Gaspard
+            // from his own pot (his bills land in lumps each half-term).
             ellis_nursery: summary.ellisNurseryNet,
+            gaspard_childcare: summary.gaspardChildcareNet,
+            // Legacy links, kept so historical items still resolve when
+            // viewing past months.
+            childcare: summary.childcareTotalNet,
             gaspard_care: summary.gaspardCareNet,
             gaspard_holiday: summary.gaspardHolidayNet,
             gaspard_term_club: summary.gaspardTermClubNet,

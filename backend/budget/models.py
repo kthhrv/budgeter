@@ -95,6 +95,10 @@ class BudgetItem(models.Model):
     EXPENSE_POT_CHOICES = [
         ('bills', 'Bills Pot'),
         ('groceries', 'Groceries Pot'),
+        # Gaspard's school-club money: the bills land in lumps at half-term
+        # start/end, so the monthly attendance cost is set aside in its own pot
+        # rather than the bills pot.
+        ('gaspard_childcare', "Gaspard's Childcare Pot"),
     ]
 
     CATEGORY_CHOICES = [
@@ -132,7 +136,7 @@ class BudgetItem(models.Model):
         choices=EXPENSE_POT_CHOICES,
         blank=True,
         default='',
-        help_text="Optional sub-classification for an expense: bills pot or groceries pot."
+        help_text="Optional sub-classification for an expense: which pot it is funded from (bills, groceries or Gaspard's childcare). The budget tab shows a 'Transfer to …' line per pot."
     )
     category = models.CharField(
         max_length=20,
@@ -151,10 +155,13 @@ class BudgetItem(models.Model):
     )
     CHILDCARE_LINK_CHOICES = [
         ('', '—'),
-        ('childcare', 'Childcare (nursery + all clubs)'),
-        # Legacy per-component links: no longer offered in the UI, kept so
-        # expired historical items keep resolving in past months.
-        ('ellis_nursery', 'Ellis nursery (legacy)'),
+        ('ellis_nursery', 'Ellis nursery'),
+        ('gaspard_childcare', 'Gaspard childcare (after-school + clubs)'),
+        # Legacy links: no longer offered in the UI, kept so historical items
+        # keep resolving in past months. 'childcare' was the single combined
+        # line split by migration 0036; the per-component Gaspard links were
+        # consolidated by 0034.
+        ('childcare', 'Childcare, both children (legacy)'),
         ('gaspard_care', 'Gaspard after-school (legacy)'),
         ('gaspard_holiday', 'Gaspard holiday club (legacy)'),
         ('gaspard_term_club', 'Gaspard term-time clubs (legacy)'),
@@ -165,11 +172,13 @@ class BudgetItem(models.Model):
         blank=True,
         default='',
         help_text="If set, this item's monthly value is auto-synced from the childcare "
-                  "calculators. 'childcare' → the whole monthly cost: Ellis's nursery net "
-                  "plus Gaspard's after-school, term-time-club and holiday-club attendance "
-                  "for the month (TFC clubs at their net 80%, non-TFC at full price). The "
-                  "other values are legacy per-component links consolidated by migration "
-                  "0034; they remain only on expired items."
+                  "calculators. 'ellis_nursery' → Ellis's nursery net for the month. "
+                  "'gaspard_childcare' → Gaspard's after-school, term-time-club and "
+                  "holiday-club attendance for the month (TFC clubs at their net 80%, "
+                  "non-TFC at full price); pair it with the gaspard_childcare pot. The "
+                  "two are kept apart because Ellis is funded from the bills pot and "
+                  "Gaspard from his own. The other values are legacy links (see "
+                  "migrations 0034 and 0036) and remain only on historical items."
     )
     is_auto_extra = models.BooleanField(
         default=False,

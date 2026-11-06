@@ -94,7 +94,12 @@ foreign keys point at them — so month logic means joins, not date arithmetic.
 **`BudgetItem`** — a budget category. The interesting axes:
 - `item_type`: `expense`, `income`, or `savings`.
 - `owner`: `shared`, `keith`, or `tild`.
-- `expense_pot`: `bills` or `groceries` — which pot the expense is funded from.
+- `expense_pot`: `bills`, `groceries` or `gaspard_childcare` — which pot the
+  expense is funded from. The Budget tab prints a "Transfer to …" line per pot
+  on each owner card (Bills always; the others only where that owner has items
+  in the pot — `computePotTransfers` in `useBudgetTotals.js`). Gaspard's pot
+  exists because his school-club bills land in lumps at half-term start/end,
+  so the monthly attendance cost accumulates there instead of in bills.
 - `calculation_type`: `fixed` (a monthly amount), `weekly_count` (value ×
   the number of times `weekly_payment_day` falls in that month), or `per_term`
   (value is the cost per school half-term bill; it lands whole in the month a
@@ -111,14 +116,18 @@ foreign keys point at them — so month logic means joins, not date arithmetic.
   joint Remaining at the stored target.
 - `is_tab_repayment` — this item's monthly value is also emitted as an
   automatic repayment on the tabs ledger.
-- `childcare_link` — binds the item to a frontend calculator
-  (`ellis_nursery`, `gaspard_care`, `gaspard_holiday`, `gaspard_term_club`)
-  — linked items have their `effective_value` substituted client-side at
-  render time (`applyChildcareLinks`), never written to the DB.
-  `gaspard_term_club` is the term-time-club bill landing that month, zero in
-  between (paid up front each half-term, `termClubBills`); `gaspard_care`
-  stays the month's breakfast + after-school attendance cost — that invoice
-  arrives at half-term end, and the money accumulates as sessions happen.
+- `childcare_link` — binds the item to a frontend calculator figure; linked
+  items have their `effective_value` substituted client-side at render time
+  (`applyChildcareLinks`), never written to the DB. Live values are one per
+  child, so each can sit in its own pot: `ellis_nursery` (Ellis's nursery net,
+  bills pot) and `gaspard_childcare` (Gaspard's after-school + term-time-club +
+  holiday-club *attendance* for the month, his own pot). Legacy values still
+  resolve for historical items: `childcare` (both children in one line, split
+  by migration 0036), and the per-component Gaspard links consolidated by
+  0034 — `gaspard_care`, `gaspard_holiday`, and `gaspard_term_club` (the
+  term-time-club *bill* landing that month, zero in between —
+  `termClubBills`). Nothing live uses the bill figure: the pot builds up from
+  attendance and the lumpy bill is paid out of it.
 
 **`BudgetItemVersion`** — temporal versioning, and the concept most likely to
 trip you up. A value change is a *new version*, not an update in place.

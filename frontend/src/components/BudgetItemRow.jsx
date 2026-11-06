@@ -51,11 +51,13 @@ const BudgetItemRow = ({ item, onEditCategory, onDelete, isEditingDisabled = fal
                         <span className="font-medium text-sm text-ink truncate">{item.item_name}</span>
                         {!hideOwnerBadge && <span className={`${chip} ${ownerColors[item.owner?.toLowerCase()] || 'bg-line/70 text-ink'}`}>{item.owner}</span>}
                         {item.expense_pot === 'groceries' && <span className={`${chip} bg-good/10 text-good`}>Groceries Pot</span>}
+                        {item.expense_pot === 'gaspard_childcare' && <span className={`${chip} bg-good/10 text-good`}>Gaspard's Pot</span>}
                         {item.is_tab_repayment && <span className={`${chip} bg-accent/10 text-accent-strong`}>Tab Repayment</span>}
                         {item.is_extra && <span className={`${chip} bg-warn-soft text-warn`}>Extra</span>}
                         {item.is_auto_extra && <span className={`${chip} bg-warn-soft text-warn`}>Monthly buffer</span>}
                         {item.childcare_link === 'childcare' && <span className={`${chip} bg-good/10 text-good`}>Linked: Childcare</span>}
                         {item.childcare_link === 'ellis_nursery' && <span className={`${chip} bg-good/10 text-good`}>Linked: Ellis nursery</span>}
+                        {item.childcare_link === 'gaspard_childcare' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard childcare</span>}
                         {item.childcare_link === 'gaspard_care' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard clubs</span>}
                         {item.childcare_link === 'gaspard_holiday' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard holiday</span>}
                         {item.childcare_link === 'gaspard_term_club' && <span className={`${chip} bg-good/10 text-good`}>Linked: Gaspard term clubs</span>}

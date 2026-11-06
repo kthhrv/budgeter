@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { formatDate, DAY_CHOICES, BILL_CATEGORIES, money, weekdayOccurrencesInMonth } from '../utils/helpers';
+import { formatDate, DAY_CHOICES, BILL_CATEGORIES, money, weekdayOccurrencesInMonth, EXPENSE_POTS } from '../utils/helpers';
 import ConfirmationModal from './ConfirmationModal';
 
 const EMPTY = {
@@ -317,7 +317,7 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                                     <span className={fieldLabel}>Pot</span>
                                                     <Segmented ariaLabel="Pot" value={formData.expense_pot || 'none'}
                                                         onChange={v => update('expense_pot', v === 'none' ? '' : v)}
-                                                        options={[{ value: 'none', label: 'None' }, { value: 'bills', label: 'Bills' }, { value: 'groceries', label: 'Groceries' }]} />
+                                                        options={[{ value: 'none', label: 'None' }, ...EXPENSE_POTS.map(p => ({ value: p.value, label: p.label }))]} />
                                                 </div>
                                             )}
 
@@ -343,7 +343,10 @@ const ItemCategoryModal = ({ item, isOpen, onClose, onSave, onDelete, currentDat
                                                     <span className={fieldLabel}>Sync from other tab</span>
                                                     <select name="childcare_link" value={formData.childcare_link} onChange={e => update('childcare_link', e.target.value)} className={inputCls}>
                                                         <option value="">Not linked</option>
-                                                        <option value="childcare">Childcare (nursery + all clubs)</option>
+                                                        <option value="ellis_nursery">Ellis nursery</option>
+                                                        <option value="gaspard_childcare">Gaspard childcare (after-school + clubs)</option>
+                                                        {/* Legacy combined line, split by migration 0036: only offered while an item still carries it. */}
+                                                        {formData.childcare_link === 'childcare' && <option value="childcare">Childcare, both children (legacy)</option>}
                                                     </select>
                                                 </div>
                                             )}

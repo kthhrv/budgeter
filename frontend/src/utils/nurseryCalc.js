@@ -493,10 +493,14 @@ export function computeMonthSummary(settings, date) {
     // Term-time clubs are paid up front each half-term, so their line is the
     // bill landing this month (zero in between), not the attendance cost.
     const gaspardTermClubNet = eff.gaspardInNursery ? 0 : termClubBills(settings, monthKey).total;
-    // The consolidated 'childcare' budget link: the whole month's cost, with
-    // term-time clubs counted as attendance (sessions that month), not bills.
-    const childcareTotalNet = ellisNurseryNet + gaspardCareNet + gaspardHolidayNet
+    // Gaspard's budget line ('gaspard_childcare'): everything of his for the
+    // month, with term-time clubs counted as attendance (sessions that month),
+    // not bills — the money sits in his own pot until each lumpy bill lands.
+    // Matches the Gaspard row of the Childcare tab's breakdown.
+    const gaspardChildcareNet = gaspardCareNet + gaspardHolidayNet
         + (eff.gaspardInNursery ? 0 : childcare.termClubMonthNet);
+    // The legacy combined 'childcare' link: both children in one line.
+    const childcareTotalNet = ellisNurseryNet + gaspardChildcareNet;
 
     return {
         year, monthIdx, monthLabel, daysInMonth, weekdayCounts,
@@ -511,6 +515,7 @@ export function computeMonthSummary(settings, date) {
         gaspardCareNet,
         gaspardHolidayNet,
         gaspardTermClubNet,
+        gaspardChildcareNet,
         childcareTotalNet,
         tfc: {
             ellisFactor:       eEffMult,
@@ -532,8 +537,10 @@ export function computeMonthSummary(settings, date) {
 // item whose `childcare_link` targets a computed value, unless that item has an
 // explicit one-off override pinned to the displayed month. Used by the budget
 // tab to keep linked items in sync with the Nursery calculator without a button
-// press. `nets` maps link values to figures: `childcare` (the consolidated
-// line) plus the legacy per-component keys for expired historical items.
+// press. `nets` maps link values to figures: `ellis_nursery` and
+// `gaspard_childcare` (one line per child, each funded from its own pot) plus
+// the legacy keys (`childcare`, the old per-component Gaspard links) for
+// historical items.
 export function applyChildcareLinks(items, nets, currentMonthName) {
     if (!nets) return items;
     return items.map(item => {

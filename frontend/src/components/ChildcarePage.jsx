@@ -676,7 +676,7 @@ const ChildcarePage = ({ onSettingsChange }) => {
                         <h3 className="text-sm font-semibold text-ink">Term-time clubs {ICON.termClub}</h3>
                         <button type="button" onClick={addTermClub} className="text-xs font-medium bg-tild hover:bg-accent-strong text-paper rounded-lg px-2 py-0.5">+ Club</button>
                     </div>
-                    <p className="text-[11px] text-ink-faint mb-2">Paid up front at the start of each half-term — the linked budget line shows each bill in the month it lands.</p>
+                    <p className="text-[11px] text-ink-faint mb-2">Paid up front at the start of each half-term — Gaspard's linked budget line counts the sessions each month, so his pot builds up ahead of each bill.</p>
                     {(childcare.termClubs || []).length === 0 && <p className="text-xs text-ink-faint">No term-time clubs yet.</p>}
                     <div className="space-y-2">
                         {(childcare.termClubs || []).map(club => (
