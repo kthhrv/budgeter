@@ -338,11 +338,6 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
                     Connect Monzo from the FIRE tab and payments will tick themselves off here. Until then you can still set a day on an item and tick it by hand.
                 </p>
             )}
-            {data?.connected && !data.history_backfilled && (
-                <p className="mb-4 rounded-xl border border-line bg-warn-soft px-4 py-3 text-sm text-ink-soft">
-                    Only the last 90 days of payments are loaded. For a year of history (better suggestions), disconnect and reconnect Monzo on the FIRE tab, approve in the Monzo app, then open this tab within a few minutes.
-                </p>
-            )}
 
             {data?.connected && today.startsWith(monthId) && (view === 'shared'
                 ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} onReload={load} />
