@@ -10,13 +10,14 @@ from collections import defaultdict
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db import transaction as db_transaction
 from django.utils import timezone
 
 from . import monzo, payments
 from .models import (
     BankTransaction, BudgetItem, IgnoredPayee, ItemPayment, Month, MonzoConnection,
-    PaymentsSettings,
+    Notification, PaymentsSettings,
 )
 
 LONDON = ZoneInfo('Europe/London')
@@ -63,9 +64,14 @@ def _is_expired(item, month_obj):
     return bool(item.last_payment_month and month_obj.start_date > item.last_payment_month.end_date)
 
 
-def is_calendar_item(item):
+def is_payment_item(item):
     """Items that are real payments in or out — everything but the Extra buffers."""
     return not item.is_extra and not item.is_auto_extra
+
+
+def is_calendar_item(item):
+    """Payment items still on the calendar (not hidden from it by hand)."""
+    return is_payment_item(item) and not item.calendar_hidden
 
 
 def is_incoming(item):
@@ -365,6 +371,11 @@ def calendar_for_month(month_obj, today):
             unscheduled.append(_item_summary(item, version))
     unscheduled.sort(key=lambda e: e['item_name'])
 
+    hidden = [{'budget_item_id': str(i.pk), 'item_name': i.item_name, 'item_type': i.item_type, 'owner': i.owner}
+              for i in prefetched_items()
+              if is_payment_item(i) and i.calendar_hidden and not _is_expired(i, month_obj)]
+    hidden.sort(key=lambda e: e['item_name'])
+
     connections = list(MonzoConnection.objects.all())
     synced = [c.transactions_synced_at for c in connections if c.transactions_synced_at]
     return {
@@ -376,6 +387,7 @@ def calendar_for_month(month_obj, today):
         'last_synced_at': max(synced).isoformat() if synced else None,
         'entries': entries,
         'unscheduled': unscheduled,
+        'hidden': hidden,
     }
 
 
@@ -450,8 +462,10 @@ def payee_suggestions(today):
         created__gte=timezone.now() - FULL_HISTORY, declined=False,
     )]
     recurring = payments.find_recurring(txs)
-    items = [i for i in prefetched_items() if is_calendar_item(i)]
-    links = [i.payee_match for i in items if i.payee_match]
+    all_items = [i for i in prefetched_items() if is_payment_item(i)]
+    # A hidden item's payee is still spoken for: don't re-suggest it.
+    links = [i.payee_match for i in all_items if i.payee_match]
+    items = [i for i in all_items if not i.calendar_hidden]
     ignored = set(IgnoredPayee.objects.values_list('payee_key', flat=True))
     recurring = [r for r in recurring
                  if r['payee_key'] not in ignored and not any(m in r['payee_key'] for m in links)]
@@ -500,6 +514,43 @@ def unlink_item(item):
     ItemPayment.objects.filter(budget_item=item).exclude(source='manual').delete()
 
 
+def set_hidden(item, hidden, user=None):
+    """Take an item off the calendar (or put it back). Hiding closes its open
+    notifications; its past ticks stay, so showing it again loses nothing."""
+    item.calendar_hidden = hidden
+    item.save(update_fields=['calendar_hidden'])
+    if hidden:
+        Notification.objects.filter(budget_item=item, status='open').update(
+            status='dismissed', resolved_at=timezone.now(), resolved_by=user,
+        )
+
+
+# --- Balances ---
+
+def owner_for_user(user):
+    """'keith' / 'tild' for a household login, from settings.OWNER_BY_EMAIL."""
+    return settings.OWNER_BY_EMAIL.get((user.email or '').lower())
+
+
+def personal_account_balance(owner):
+    """Live balance of `owner`'s own Monzo current account (pots excluded).
+
+    Returns ({name, balance} or None, error or None). None with no error
+    means that person hasn't connected Monzo.
+    """
+    for connection in MonzoConnection.objects.select_related('user'):
+        if owner_for_user(connection.user) != owner:
+            continue
+        try:
+            account = next((a for a in monzo.list_accounts(connection) if a.get('type') == 'uk_retail'), None)
+            if account is None:
+                return None, "No personal Monzo account on that connection."
+            return {'name': 'Current account', 'balance': monzo.get_balance(connection, account['id'])}, None
+        except monzo.MonzoError as exc:
+            return None, str(exc)
+    return None, None
+
+
 # --- Pot balances ---
 
 def household_pots():
@@ -520,13 +571,13 @@ def household_pots():
 def linked_pot_balances():
     """{pot_key: {pot_id, name, balance} or None} for each linked budget pot,
     with live balances; plus any connection errors."""
-    settings = PaymentsSettings.get_solo()
-    if not settings.pot_ids:
+    pot_settings = PaymentsSettings.get_solo()
+    if not pot_settings.pot_ids:
         return {}, []
     pots, errors = household_pots()
     by_id = {p['id']: p for p in pots}
     out = {}
-    for key, pot_id in settings.pot_ids.items():
+    for key, pot_id in pot_settings.pot_ids.items():
         pot = by_id.get(pot_id)
         out[key] = {'pot_id': pot_id, 'name': pot['name'], 'balance': pot['balance']} if pot else None
     return out, errors

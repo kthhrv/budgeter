@@ -6,7 +6,7 @@ from decimal import Decimal
 from unittest import mock
 
 from django.contrib.auth.models import User
-from django.test import Client, SimpleTestCase, TestCase
+from django.test import override_settings, Client, SimpleTestCase, TestCase
 
 from . import payments as p
 from .models import (
@@ -291,6 +291,31 @@ class PaymentsFlowTests(TestCase):
         generate_notifications(TODAY)
         self.assertEqual(Notification.objects.filter(kind='amount_changed', status='open').count(), 0)
 
+    def test_hide_item_from_calendar(self, *_):
+        self._link(self.broadband, 'SKY DIGITAL')
+        from .notifications import generate_notifications
+        generate_notifications(TODAY)
+        self.assertTrue(Notification.objects.filter(budget_item=self.broadband, status='open').exists())
+
+        r = self.client.put(f'/api/budgetitems/{self.broadband.pk}/calendar-hidden/', {'hidden': True},
+                            content_type='application/json')
+        self.assertEqual(r.status_code, 204)
+        self.assertFalse(Notification.objects.filter(budget_item=self.broadband, status='open').exists())
+        cal = self.client.get('/api/payments/calendar/2026-11/').json()
+        self.assertNotIn('Broadband', [e['item_name'] for e in cal['entries']])
+        self.assertEqual([h['item_name'] for h in cal['hidden']], ['Broadband'])
+        # Its payee isn't suggested again as a new one.
+        suggested = [s['payee_key'] for s in self.client.get('/api/payments/suggestions/').json()]
+        self.assertNotIn('SKY DIGITAL', suggested)
+        generate_notifications(TODAY)
+        self.assertFalse(Notification.objects.filter(budget_item=self.broadband, status='open').exists())
+
+        self.client.put(f'/api/budgetitems/{self.broadband.pk}/calendar-hidden/', {'hidden': False},
+                        content_type='application/json')
+        cal = self.client.get('/api/payments/calendar/2026-11/').json()
+        self.assertIn('Broadband', [e['item_name'] for e in cal['entries']])
+        self.assertEqual(cal['hidden'], [])
+
     def test_one_off_only_for_current_month(self, *_):
         self._link(self.broadband, 'SKY DIGITAL')
         n = Notification.objects.create(kind='amount_changed', budget_item=self.broadband, month=self.oct,
@@ -521,3 +546,33 @@ class PotBalanceTests(TestCase):
         self.client.put('/api/payments/pots/bills/', {'pot_id': 'pot_bills'}, content_type='application/json')
         r = self.client.put('/api/payments/pots/bills/', {'pot_id': ''}, content_type='application/json')
         self.assertEqual(r.json()['pot_ids'], {})
+
+
+@override_settings(OWNER_BY_EMAIL={'keith@example.com': 'keith', 'tild@example.com': 'tild'})
+class PersonalBalanceTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.tild = User.objects.create_user(username='t', password='pw', email='Tild@example.com')
+        self.client.login(username='t', password='pw')
+        MonzoConnection.objects.create(user=self.tild, access_token='tok')
+
+    def _fake_get(self, url, params=None, headers=None, timeout=None):
+        if url.endswith('/accounts'):
+            return _fake_response(200, {'accounts': [
+                {'id': 'acc_joint', 'type': 'uk_retail_joint', 'closed': False},
+                {'id': 'acc_tild', 'type': 'uk_retail', 'closed': False},
+            ]})
+        if url.endswith('/balance'):
+            self.assertEqual(params['account_id'], 'acc_tild')
+            return _fake_response(200, {'balance': 98765})
+        raise AssertionError(url)
+
+    def test_own_account_balance(self):
+        with mock.patch.dict(os.environ, MONZO_ENV), mock.patch('budget.monzo.requests.get', side_effect=self._fake_get):
+            r = self.client.get('/api/payments/accounts/tild/balance/').json()
+        self.assertEqual(r, {'account': {'name': 'Current account', 'balance': 987.65}, 'error': None})
+
+    def test_not_connected_and_unknown_owner(self):
+        self.assertEqual(self.client.get('/api/payments/accounts/keith/balance/').json(),
+                         {'account': None, 'error': None})
+        self.assertEqual(self.client.get('/api/payments/accounts/shared/balance/').status_code, 400)

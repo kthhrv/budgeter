@@ -16,6 +16,9 @@ vi.mock('../services/api', () => ({
         linkItemPayment: vi.fn(),
         unlinkItemPayment: vi.fn(),
         ignorePayee: vi.fn(),
+        setCalendarHidden: vi.fn(),
+        getPersonalBalance: vi.fn(),
+        getPotBalances: vi.fn(),
     },
 }));
 
@@ -35,15 +38,31 @@ const calendar = (over = {}) => ({
         entry({ budget_item_id: 'b2', item_name: 'Netflix', payee_match: 'NETFLIX', expected_amount: 10.99,
             scheduled_date: '2026-11-05', due_date: '2026-11-05', status: 'overdue', payment: null, payment_method: 'card' }),
     ],
-    unscheduled: [{ budget_item_id: 'b3', item_name: 'Council tax', expected_amount: 180, payee_match: '' }],
+    unscheduled: [{ budget_item_id: 'b3', item_name: 'Council tax', owner: 'shared', expected_amount: 180, payee_match: '' }],
+    hidden: [],
     ...over,
 });
 
 const NOV = new Date(2026, 10, 1);
 
+// Node's own (flag-gated) localStorage shadows jsdom's here, so stub one.
+function memoryStorage() {
+    const store = new Map();
+    return {
+        getItem: (k) => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, String(v)),
+        removeItem: (k) => store.delete(k),
+        clear: () => store.clear(),
+    };
+}
+
 describe('CalendarPage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.stubGlobal('localStorage', memoryStorage());
+        apiService.getPotBalances.mockResolvedValue({ pots: {}, errors: [] });
+        apiService.getPersonalBalance.mockResolvedValue({ account: { name: 'Current account', balance: 500 }, error: null });
+        apiService.setCalendarHidden.mockResolvedValue(null);
         apiService.createOrGetMonth.mockResolvedValue({});
         apiService.getPaymentCalendar.mockResolvedValue(calendar());
         apiService.syncPayments.mockResolvedValue({ fetched: 0, matched: 0, errors: [] });
@@ -97,5 +116,38 @@ describe('CalendarPage', () => {
         }));
         render(<CalendarPage currentDate={NOV} childcareNets={{ ellis_nursery: 812.5 }} showToast={vi.fn()} />);
         expect(await screen.findByText('£812.50', { exact: false })).toBeInTheDocument();
+    });
+
+    it('switches between Joint, Tild and Keith and remembers the choice', async () => {
+        const user = userEvent.setup();
+        apiService.getPaymentCalendar.mockResolvedValue(calendar({
+            entries: [entry(), entry({ budget_item_id: 'b9', item_name: 'Gym', owner: 'tild', scheduled_date: '2026-11-03', due_date: '2026-11-03', payment: null, status: 'upcoming' })],
+        }));
+        render(<CalendarPage currentDate={NOV} showToast={vi.fn()} />);
+        await screen.findByTestId('day-2026-11-12');
+        expect(within(screen.getByTestId('day-2026-11-12')).getAllByText('Broadband').length).toBeGreaterThan(0);
+        expect(within(screen.getByTestId('day-2026-11-03')).queryAllByText('Gym')).toHaveLength(0);
+
+        await user.click(screen.getByRole('tab', { name: 'Tild' }));
+        expect(within(screen.getByTestId('day-2026-11-03')).getAllByText('Gym').length).toBeGreaterThan(0);
+        expect(within(screen.getByTestId('day-2026-11-12')).queryAllByText('Broadband')).toHaveLength(0);
+        expect(screen.queryByText('Council tax')).not.toBeInTheDocument();
+        expect(localStorage.getItem('calendar-view')).toBe('tild');
+    });
+
+    it('removes an item from the calendar and brings it back', async () => {
+        const user = userEvent.setup();
+        render(<CalendarPage currentDate={NOV} showToast={vi.fn()} />);
+        await user.click(await screen.findByTestId('day-2026-11-05'));
+        await user.click(screen.getByTestId('calendar-entry'));
+        apiService.getPaymentCalendar.mockResolvedValue(calendar({
+            hidden: [{ budget_item_id: 'b2', item_name: 'Netflix', item_type: 'expense', owner: 'shared' }],
+        }));
+        await user.click(screen.getByRole('button', { name: /Remove from calendar/ }));
+        expect(apiService.setCalendarHidden).toHaveBeenCalledWith('b2', true);
+        await waitFor(() => expect(screen.getByTestId('hidden-items')).toBeInTheDocument());
+        await user.click(screen.getByText(/Removed from the calendar \(1\)/));
+        await user.click(screen.getByRole('button', { name: 'Show again' }));
+        expect(apiService.setCalendarHidden).toHaveBeenCalledWith('b2', false);
     });
 });

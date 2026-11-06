@@ -46,11 +46,16 @@ export const cadenceText = (s) => (s.cadence === 'weekly'
     ? `weekly on ${WEEKDAY_NAMES[s.usual_weekday] || '?'}`
     : `usually the ${ordinal(s.usual_day)}`);
 
-// What's still to leave the bills pot this month: unticked bills-pot
-// expenses on the calendar, plus bills-pot items with no known day.
-export function billsLeftToPay(entries, unscheduled) {
-    const isBill = (e) => e.expense_pot === 'bills' && e.item_type !== 'income';
-    const dated = entries.filter(e => isBill(e) && !e.payment).reduce((t, e) => t + e.expected_amount, 0);
-    const undated = unscheduled.filter(isBill).reduce((t, e) => t + e.expected_amount, 0);
+// What's still to go out this month: unticked outgoing entries on the
+// calendar that `include` picks, plus those with no known day yet.
+export function leftToPay(entries, unscheduled, include = () => true) {
+    const isDue = (e) => e.item_type !== 'income' && include(e);
+    const dated = entries.filter(e => isDue(e) && !e.payment).reduce((t, e) => t + e.expected_amount, 0);
+    const undated = unscheduled.filter(isDue).reduce((t, e) => t + e.expected_amount, 0);
     return { total: dated + undated, undated };
+}
+
+// What's still to leave the bills pot this month.
+export function billsLeftToPay(entries, unscheduled) {
+    return leftToPay(entries, unscheduled, e => e.expense_pot === 'bills');
 }

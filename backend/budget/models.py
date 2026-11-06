@@ -249,6 +249,11 @@ class BudgetItem(models.Model):
         help_text="How the payment leaves the account, learned from the transaction scheme. "
                   "Only direct debits roll forward over weekends and bank holidays."
     )
+    calendar_hidden = models.BooleanField(
+        default=False,
+        help_text="Taken off the Calendar tab: not shown, matched or notified about. "
+                  "Listed under 'Hidden' there so it can be shown again."
+    )
 
 
     class Meta:
