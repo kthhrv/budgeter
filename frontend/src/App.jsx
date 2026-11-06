@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Flame, Coins, Home, Menu } from 'lucide-react';
+import { PlusCircle, XCircle, Wallet, LayoutDashboard, ArrowRightLeft, Baby, Flame, Coins, Home, Menu, CalendarDays, Bell } from 'lucide-react';
 import { formatDate, isMonthInPast, getInitialDate } from './utils/helpers';
 import { computeMonthSummary, applyChildcareLinks } from './utils/nurseryCalc';
 import apiService from './services/api';
@@ -15,6 +15,8 @@ import ChildcarePage from './components/ChildcarePage';
 import FirePage from './components/FirePage';
 import ReportsPage from './components/ReportsPage';
 import MortgagePage from './components/MortgagePage';
+import CalendarPage from './components/CalendarPage';
+import NotificationsPanel from './components/NotificationsPanel';
 
 const BudgetDashboard = ({ items, onUpdate, onDelete, onEditCategory, searchTerm, currentDate, isEditingDisabled }) => {
     const t = useBudgetTotals(items);
@@ -58,6 +60,10 @@ const App = () => {
     const [activePage, setActivePage] = useState('budget');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [nurserySettings, setNurserySettings] = useState(null);
+    const [notifications, setNotifications] = useState([]);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    // Bumped after a notification action so an open Calendar reloads.
+    const [paymentsVersion, setPaymentsVersion] = useState(0);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -75,9 +81,16 @@ const App = () => {
 
     const isEditingDisabled = useMemo(() => isMonthInPast(currentDate), [currentDate]);
 
-    const showToast = (message, type = 'success') => {
+    // Stable identity: pages put it in effect/callback dependency lists.
+    const showToast = useCallback((message, type = 'success') => {
         setToast({ message, type, key: new Date().getTime() });
-    };
+    }, []);
+
+    const refreshNotifications = useCallback(() => {
+        apiService.getNotifications()
+            .then(setNotifications)
+            .catch(err => console.error('Failed to load notifications', err));
+    }, []);
 
     const fetchData = useCallback(async (date) => {
         setIsLoading(true);
@@ -92,7 +105,7 @@ const App = () => {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [showToast]);
 
     const childcareNets = useMemo(() => {
         // Settings can be `{}` for users who've never opened the Nursery tab —
@@ -163,6 +176,24 @@ const App = () => {
             fetchData(currentDate);
         }
     }, [currentDate, fetchData, isAuthLoading, user]);
+
+    useEffect(() => {
+        if (!isAuthLoading && user) refreshNotifications();
+    }, [isAuthLoading, user, refreshNotifications]);
+
+    // Budget items a payee can be linked to (Notifications' new-payee cards):
+    // income items for money in, the rest for money out.
+    const linkableItems = useMemo(() => budgetItems
+        .filter(i => !i.is_extra && !i.is_auto_extra)
+        .map(i => ({ id: i.budget_item_id, name: i.item_name, incoming: i.item_type === 'income' }))
+        .sort((a, b) => a.name.localeCompare(b.name)), [budgetItems]);
+
+    const handleNotificationsChanged = (action) => {
+        refreshNotifications();
+        setPaymentsVersion(v => v + 1);
+        // Reconcile / one-off write a new budget value.
+        if (action === 'reconcile' || action === 'one_off') fetchData(currentDate);
+    };
 
     useEffect(() => {
         if (!isAuthLoading && user) {
@@ -295,10 +326,19 @@ const App = () => {
                         <Menu className="h-6 w-6" />
                     </button>
                     <h1 className="font-serif italic text-2xl md:text-3xl leading-none text-accent-strong grow">
-                        {{ budget: 'Budget', tabs: 'Tabs', childcare: 'Childcare', fire: 'FIRE', reports: 'Reports', mortgage: 'Mortgage' }[activePage] || 'Budget'}
+                        {{ budget: 'Budget', calendar: 'Calendar', tabs: 'Tabs', childcare: 'Childcare', fire: 'FIRE', reports: 'Reports', mortgage: 'Mortgage' }[activePage] || 'Budget'}
                     </h1>
                     <div className="flex items-center space-x-4">
                         <span className="hidden md:block text-ink-soft text-sm">Signed in as {user.username}</span>
+                        <button onClick={() => setNotificationsOpen(true)} className="relative p-2 hover:bg-line/60 rounded-full transition-colors"
+                            title="Notifications" aria-label={`Notifications${notifications.length ? ` (${notifications.length})` : ''}`}>
+                            <Bell className="h-6 w-6" />
+                            {notifications.length > 0 && (
+                                <span data-testid="notification-badge" className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-danger text-paper text-[11px] font-semibold leading-5 text-center num">
+                                    {notifications.length > 9 ? '9+' : notifications.length}
+                                </span>
+                            )}
+                        </button>
                         <button onClick={handleLogout} className="p-2 hover:bg-line/60 rounded-full transition-colors" title="Logout">
                             <XCircle className="h-6 w-6" />
                         </button>
@@ -308,6 +348,7 @@ const App = () => {
                     <div className="mt-3 -mx-4 px-4 pt-3 border-t border-line flex flex-col gap-1">
                         {[
                             { id: 'budget',  label: 'Budget',  Icon: LayoutDashboard },
+                            { id: 'calendar', label: 'Calendar', Icon: CalendarDays },
                             { id: 'tabs',    label: 'Tabs',    Icon: ArrowRightLeft },
                             { id: 'childcare', label: 'Childcare', Icon: Baby },
                             { id: 'fire',    label: 'FIRE',    Icon: Flame },
@@ -327,7 +368,9 @@ const App = () => {
             </header>
             <main className="container mx-auto p-4 max-w-7xl">
                 <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={() => setToast({ ...toast, message: '' })} />
-                {activePage === 'reports' ? (
+                {activePage === 'calendar' ? (
+                    <CalendarPage currentDate={currentDate} childcareNets={childcareNets} refreshKey={paymentsVersion} showToast={showToast} onNotificationsChanged={refreshNotifications} />
+                ) : activePage === 'reports' ? (
                     <ReportsPage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 ) : activePage === 'mortgage' ? (
                     <MortgagePage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
@@ -381,6 +424,8 @@ const App = () => {
                     <TabsPage showToast={(msg, type = 'success') => setToast({ message: msg, type, key: Date.now() })} />
                 )}
             </main>
+            <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)}
+                notifications={notifications} items={linkableItems} onChanged={handleNotificationsChanged} showToast={showToast} />
             <ItemCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory} onDelete={handleDeleteItem} item={editingCategory} currentDate={currentDate} />
         </div>
     );

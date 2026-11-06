@@ -19,8 +19,9 @@ from . import monzo
 from .models import (
     Month, BudgetItem, BudgetItemVersion, TabItem, TabRepayment, NurserySettings,
     FireAccount, BalanceSnapshot, EarningsVersion, Mortgage, Property, FireSettings,
-    MonzoConnection, SchoolTerm,
+    MonzoConnection, SchoolTerm, ItemPayment, Notification, PaymentsSettings,
 )
+from . import payment_service, notifications
 from django.db.models import Prefetch
 from django.middleware.csrf import get_token
 
@@ -357,13 +358,22 @@ def set_budget_item_value_for_month(request, month_id: str, budget_item_id: uuid
     if month.start_date < current_month_start:
         return 403, {"detail": "Cannot edit budget items for previous months"}
     
-    with transaction.atomic():
-        budget_item_version, _ = BudgetItemVersion.objects.update_or_create(
-            budget_item=budget_item, month=month,
-            defaults={'value': payload.value, 'effective_from_month': month, 'is_one_off': payload.is_one_off}
-        )
+    budget_item_version = _set_item_value(budget_item, month, payload.value, payload.is_one_off)
     budget_item.refresh_from_db()
     return _serialize_version(budget_item, budget_item_version, month, terms=_school_terms())
+
+
+def _set_item_value(budget_item, month, value, is_one_off=False):
+    """Record `value` for `budget_item` from `month` (a new version, or an
+    update to that month's version). Shared by the Budget tab's edit and the
+    notifications' reconcile/one-off actions; callers enforce the
+    no-past-months rule."""
+    with transaction.atomic():
+        version, _ = BudgetItemVersion.objects.update_or_create(
+            budget_item=budget_item, month=month,
+            defaults={'value': value, 'effective_from_month': month, 'is_one_off': is_one_off}
+        )
+    return version
 
 @api.delete("/months/{month_id}/items/{budget_item_id}/", response={204: None, 403: dict})
 def delete_budget_item_from_month(request, month_id: str, budget_item_id: uuid.UUID):
@@ -991,6 +1001,10 @@ def monzo_callback(request, code: str = "", state: str = ""):
         return 400, {"detail": str(exc)}
     connection, _ = MonzoConnection.objects.get_or_create(user=request.user, defaults={"access_token": ""})
     monzo.apply_token_payload(connection, payload)
+    # Starts the window in which the payments sync can backfill a year of
+    # history (Monzo allows it only just after the user approves in the app).
+    connection.authorised_at = datetime.datetime.now(datetime.timezone.utc)
+    connection.save(update_fields=["authorised_at", "updated_at"])
     # Back to the SPA — the FIRE tab's status call now reports connected.
     return redirect("/")
 
@@ -1089,3 +1103,206 @@ def fire_monthly_items(request, count: int = 12):
         )
         for m in reversed(months)
     ]
+
+
+# --- Payments calendar & notifications ---
+#
+# Logic lives in payments.py (pure rules), payment_service.py (sync, matching,
+# calendar payload) and notifications.py. Transactions are synced from EVERY
+# household Monzo connection, whoever triggers the sync.
+
+class PaymentSyncResultSchema(Schema):
+    fetched: int
+    matched: int
+    errors: List[str]
+
+
+class PaymentLinkInputSchema(Schema):
+    payee_match: str = ""
+    payment_day: Optional[int] = None
+    payment_day_manual: Optional[bool] = None
+
+
+class PaymentMarkInputSchema(Schema):
+    budget_item_id: uuid.UUID
+    due_date: datetime.date
+
+
+class NotificationActionInputSchema(Schema):
+    action: str
+    budget_item_id: Optional[uuid.UUID] = None
+
+
+def _today():
+    return payment_service.local_date(datetime.datetime.now(datetime.timezone.utc))
+
+
+@api.post("/payments/sync/", response={200: PaymentSyncResultSchema, 400: dict})
+def payments_sync(request):
+    if not MonzoConnection.objects.exists():
+        return 400, {"detail": "Nobody has connected Monzo yet — connect it from the FIRE tab."}
+    return 200, payment_service.sync_transactions(today=_today())
+
+
+@api.get("/payments/calendar/{month_id}/", response=dict)
+def payments_calendar(request, month_id: str):
+    month_obj = get_object_or_404(Month, month_id=month_id)
+    return payment_service.calendar_for_month(month_obj, _today())
+
+
+@api.get("/payments/payees/search/", response=List[dict])
+def payments_search_payees(request, q: str = "", amount: Optional[float] = None, incoming: bool = False):
+    """Search Monzo payees by name (or by amount when no name is given), for
+    linking an item whose name doesn't match how its payee appears in Monzo.
+    `incoming` searches money in (for income items) instead of money out."""
+    return payment_service.search_payees(q, amount, incoming)
+
+
+@api.get("/payments/suggestions/", response=List[dict])
+def payments_suggestions(request):
+    return payment_service.payee_suggestions(_today())
+
+
+@api.post("/payments/ignore/", response={204: None})
+def payments_ignore_payee(request, payload: PaymentLinkInputSchema):
+    """'Not a budget item' on a suggestion: stop suggesting this payee."""
+    from .models import IgnoredPayee
+    from .payments import normalise_payee
+    key = normalise_payee(payload.payee_match)
+    if key:
+        IgnoredPayee.objects.get_or_create(payee_key=key)
+        Notification.objects.filter(kind='new_payee', payee_key=key, status='open').update(
+            status='dismissed', resolved_at=datetime.datetime.now(datetime.timezone.utc), resolved_by=request.user,
+        )
+    return 204, None
+
+
+@api.put("/budgetitems/{budget_item_id}/payment-link/", response={200: dict, 400: dict})
+def payments_link_item(request, budget_item_id: uuid.UUID, payload: PaymentLinkInputSchema):
+    """Link an item to a payee and/or pin its payment day.
+
+    A blank payee_match with a payment_day just schedules the item by hand
+    (it can then only be ticked manually). Linking re-learns the day (unless
+    pinned) and backfills matches for the last two months.
+    """
+    item = get_object_or_404(BudgetItem, budget_item_id=budget_item_id)
+    if payload.payment_day is not None and not 1 <= payload.payment_day <= 31:
+        return 400, {"detail": "Payment day must be between 1 and 31."}
+    if not payload.payee_match.strip() and payload.payment_day is None and payload.payment_day_manual is None:
+        return 400, {"detail": "Give a payee to match or a payment day."}
+    if payload.payee_match.strip():
+        payment_service.link_item(item, payload.payee_match, payload.payment_day,
+                                  payload.payment_day_manual, today=_today())
+    else:
+        if payload.payment_day_manual is not None:
+            item.payment_day_manual = payload.payment_day_manual
+        if payload.payment_day is not None:
+            item.payment_day = payload.payment_day
+        item.save()
+        if item.payee_match and not item.payment_day_manual:
+            payment_service.relearn_item(item)
+    return 200, {
+        "budget_item_id": str(item.pk),
+        "payee_match": item.payee_match,
+        "payment_day": item.payment_day,
+        "payment_day_manual": item.payment_day_manual,
+        "payment_method": item.payment_method,
+    }
+
+
+@api.delete("/budgetitems/{budget_item_id}/payment-link/", response={204: None})
+def payments_unlink_item(request, budget_item_id: uuid.UUID):
+    payment_service.unlink_item(get_object_or_404(BudgetItem, budget_item_id=budget_item_id))
+    return 204, None
+
+
+@api.post("/payments/mark/", response={200: dict, 400: dict})
+def payments_mark_paid(request, payload: PaymentMarkInputSchema):
+    """Tick an occurrence off by hand (money that didn't go through Monzo)."""
+    item = get_object_or_404(BudgetItem, budget_item_id=payload.budget_item_id)
+    month_id = payload.due_date.strftime('%Y-%m')
+    month_obj = Month.objects.filter(month_id=month_id).first()
+    if month_obj is None:
+        return 400, {"detail": f"No budget month {month_id}."}
+    payment, _ = ItemPayment.objects.get_or_create(
+        budget_item=item, due_date=payload.due_date,
+        defaults={"month": month_obj, "source": "manual"},
+    )
+    Notification.objects.filter(kind='missed', budget_item=item, month=month_obj, status='open').update(
+        status='resolved', resolved_at=datetime.datetime.now(datetime.timezone.utc), resolved_by=request.user,
+    )
+    return 200, {"id": payment.pk, "source": payment.source}
+
+
+@api.delete("/payments/mark/{payment_id}/", response={204: None, 400: dict})
+def payments_unmark(request, payment_id: int):
+    """Undo a hand tick. Automatic matches can't be undone this way — the next
+    sync would just find them again; fix the item's payee link instead."""
+    payment = get_object_or_404(ItemPayment, pk=payment_id)
+    if payment.source == 'auto':
+        return 400, {"detail": "This was matched to a Monzo payment — change the item's payee link instead."}
+    payment.delete()
+    return 204, None
+
+
+@api.get("/notifications/", response=List[dict])
+def list_notifications(request, status: str = "open"):
+    qs = Notification.objects.select_related('month')
+    if status != "all":
+        qs = qs.filter(status=status)
+    today = _today()
+    return [notifications.serialize(n, today) for n in qs[:200]]
+
+
+@api.post("/notifications/{notification_id}/action/", response={200: dict, 400: dict})
+def notification_action(request, notification_id: int, payload: NotificationActionInputSchema):
+    n = get_object_or_404(Notification.objects.select_related('month', 'budget_item'), pk=notification_id)
+    today = _today()
+    try:
+        notifications.apply_action(n, payload.action, request.user, today,
+                                   item_id=payload.budget_item_id)
+    except notifications.ActionError as exc:
+        return 400, {"detail": str(exc)}
+    n.refresh_from_db()
+    return 200, notifications.serialize(n, today)
+
+
+POT_KEYS = {key for key, _ in BudgetItem.EXPENSE_POT_CHOICES if key}
+
+
+class PotLinkInputSchema(Schema):
+    pot_id: str = ""
+
+
+@api.get("/payments/pots/", response=dict)
+def payments_pot_balances(request):
+    """Live balances of the Monzo pots linked to budget pots (bills, …)."""
+    balances, errors = payment_service.linked_pot_balances()
+    return {"pots": balances, "errors": errors}
+
+
+@api.get("/payments/pots/available/", response={200: List[MonzoPotSchema], 400: dict})
+def payments_available_pots(request):
+    """Monzo pots across both people's connections, to choose from."""
+    if not MonzoConnection.objects.exists():
+        return 400, {"detail": "Nobody has connected Monzo yet."}
+    pots, errors = payment_service.household_pots()
+    if not pots and errors:
+        return 400, {"detail": " · ".join(errors)}
+    return 200, pots
+
+
+@api.put("/payments/pots/{pot_key}/", response={200: dict, 400: dict})
+def payments_link_pot(request, pot_key: str, payload: PotLinkInputSchema):
+    """Say which Monzo pot holds a budget pot's money (blank pot_id unlinks)."""
+    if pot_key not in POT_KEYS:
+        return 400, {"detail": f"Unknown budget pot '{pot_key}'."}
+    settings = PaymentsSettings.get_solo()
+    pot_ids = dict(settings.pot_ids)
+    if payload.pot_id:
+        pot_ids[pot_key] = payload.pot_id
+    else:
+        pot_ids.pop(pot_key, None)
+    settings.pot_ids = pot_ids
+    settings.save()
+    return 200, {"pot_ids": pot_ids}

@@ -83,7 +83,7 @@ See README.md for the pipeline. Three things worth knowing before you edit it:
 
 ## Domain model
 
-Eleven models in `budget/models.py`. Field-level meaning is in each field's
+Nineteen models in `budget/models.py`. Field-level meaning is in each field's
 `help_text` — read that rather than guessing. What follows is the part the
 field definitions don't tell you.
 
@@ -187,6 +187,40 @@ snapshot rows); equity/LTV use the combined balance. All FIRE maths
 lives in `src/utils/fireCalc.js` (real returns, today's money); spending and
 savings averages come from `/api/fire/monthly-items/`, re-using
 `computeBudgetTotals` per month on the frontend.
+
+**Payments calendar** (`BankTransaction`, `ItemPayment`, `IgnoredPayee`,
+`Notification`, `PaymentsSettings`, plus `payee_match` / `payment_day` / `payment_method` on
+`BudgetItem`) — the Calendar tab and the header bell. Rules are pure functions
+in `budget/payments.py`; DB work (Monzo sync, matching, the calendar payload)
+is in `budget/payment_service.py`; notifications in `budget/notifications.py`.
+What the code won't tell you at a glance:
+- Sync reads **every** household `MonzoConnection`, whoever presses Sync, and
+  dedupes on the Monzo id. Monzo serves >90 days of history only just after
+  the user approves access in the app, so a 12-month backfill is attempted for
+  30 minutes after the OAuth callback (`authorised_at`); otherwise the sync
+  stays within 89 days or Monzo returns 403.
+- The model is `BankTransaction`, **not** `MonzoTransaction`: an old
+  `budget_monzotransaction` table may still exist (see migration 0028).
+- Income items match money in, everything else money out. Only direct
+  debits roll forward over weekends/bank holidays, and Bacs income (salary,
+  `bacs_credit`) rolls back to the working day before. `BANK_HOLIDAYS` in
+  `payments.py` mirrors the one in `src/utils/nurseryCalc.js` — keep the two
+  in step.
+- An item's name rarely matches its Monzo payee ("Broadband" → "SKY
+  DIGITAL"): the item sheet's payee search (`/payments/payees/search/`)
+  finds payees by name, or by the budgeted amount when no name is typed.
+- `PaymentsSettings.pot_ids` maps a budget pot (`bills`, …) to a Monzo pot;
+  the Calendar's Bills pot card compares its live balance with the bills
+  still unticked this month (childcare figures substituted client-side).
+- Matching is by payee + date window, never amount: a different amount raises
+  an `amount_changed` notification whose primary action ("Reconcile") writes a
+  new `BudgetItemVersion` from the payment's month (or this month, if that's
+  past). Childcare-linked items are skipped — their value is client-side.
+- `new_payee` notifications only fire for payees first paid in the last 45
+  days; older regulars go to the Link-payees screen so the first sync doesn't
+  flood the bell.
+- No Monzo locally or on demo: `uv run manage.py seed_demo_transactions
+  [--link] [--clear]` writes fake transactions (refuses when `APP_ENV=prod`).
 
 **Childcare calculators live in the frontend**, not the backend:
 `src/utils/nurseryCalc.js` (Ellis's nursery invoice model, funded hours, TFC

@@ -92,6 +92,15 @@ class BudgetItem(models.Model):
         ('end', 'Paid at end of term'),
     ]
 
+    PAYMENT_METHOD_CHOICES = [
+        ('', '—'),
+        ('direct_debit', 'Direct Debit'),
+        ('bacs_credit', 'Bacs payment in'),
+        ('standing_order', 'Standing order'),
+        ('card', 'Card'),
+        ('other', 'Other'),
+    ]
+
     EXPENSE_POT_CHOICES = [
         ('bills', 'Bills Pot'),
         ('groceries', 'Groceries Pot'),
@@ -212,6 +221,33 @@ class BudgetItem(models.Model):
         blank=True,
         related_name='terminating_items',
         help_text="Optional: The last month this item will be active. It will not appear in subsequent months."
+    )
+    # --- Payments calendar (see budget/payments.py) ---
+    payee_match = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text="Normalised payee text (see payments.normalise_payee) a Monzo transaction's "
+                  "payee must contain to count as this item's payment. Blank = not linked; "
+                  "the item then sits in the calendar's Unscheduled list."
+    )
+    payment_day = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Scheduled day of the month (1-31; clamped to short months) for fixed items. "
+                  "Learned from matched transactions unless payment_day_manual is set."
+    )
+    payment_day_manual = models.BooleanField(
+        default=False,
+        help_text="If true, payment_day was set by hand and learning never overwrites it."
+    )
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        blank=True,
+        default='',
+        help_text="How the payment leaves the account, learned from the transaction scheme. "
+                  "Only direct debits roll forward over weekends and bank holidays."
     )
 
 
@@ -570,7 +606,15 @@ class MonzoConnection(models.Model):
     refresh_token = models.TextField(blank=True, default='')
     monzo_user_id = models.CharField(max_length=100, blank=True, default='')
     token_expires_at = models.DateTimeField(null=True, blank=True)
-    last_synced_at = models.DateTimeField(null=True, blank=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True, help_text="Last FIRE pot sync.")
+    authorised_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the OAuth handshake last completed. Monzo serves history older than "
+                  "90 days only in the 5 minutes after the user approves access in the app, so "
+                  "the payments sync tries a 12-month backfill while this is recent.",
+    )
+    history_backfilled_at = models.DateTimeField(null=True, blank=True, help_text="When the 12-month transaction backfill succeeded.")
+    transactions_synced_at = models.DateTimeField(null=True, blank=True, help_text="Last payments-calendar transaction sync.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -604,6 +648,154 @@ class NurserySettings(models.Model):
     @classmethod
     def get_solo(cls):
         """Return the household row, creating it on first use."""
+        obj = cls.objects.order_by("pk").first()
+        if obj is None:
+            obj = cls.objects.create()
+        return obj
+
+
+class BankTransaction(models.Model):
+    """A Monzo transaction, cached for the payments calendar.
+
+    Deliberately NOT named MonzoTransaction: a removed integration left a
+    `budget_monzotransaction` table behind in older databases (see migration
+    0028), and a model of that name would collide with it.
+
+    Synced from every household MonzoConnection (both people's accounts, the
+    joint account seen through either), deduplicated on `monzo_id` and
+    upserted because pending transactions change amount/payee when they
+    settle. Lives only in the volume-mounted SQLite database — never the repo.
+    """
+    monzo_id = models.CharField(max_length=100, unique=True)
+    account_id = models.CharField(max_length=100)
+    account_type = models.CharField(max_length=50, blank=True, default='')
+    created = models.DateTimeField(help_text="When Monzo created the transaction (UTC).")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Pounds; negative = money out.")
+    payee = models.CharField(max_length=200, blank=True, default='', help_text="Merchant name, else counterparty name, else description.")
+    payee_key = models.CharField(max_length=200, blank=True, default='', db_index=True, help_text="normalise_payee(payee) — what payee_match is compared against.")
+    scheme = models.CharField(max_length=50, blank=True, default='', help_text="Monzo scheme, e.g. bacs (Direct Debit), mastercard, payport_faster_payments.")
+    payment_method = models.CharField(max_length=20, blank=True, default='', help_text="direct_debit / standing_order / card / other, derived from scheme + metadata.")
+    category = models.CharField(max_length=50, blank=True, default='')
+    declined = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"{self.created:%Y-%m-%d} {self.payee} {self.amount}"
+
+
+class ItemPayment(models.Model):
+    """One occurrence of a budget item marked as paid on the calendar.
+
+    `due_date` is the date the calendar expected it (after the working-day
+    roll for direct debits). Rows with a transaction come from matching
+    (`auto`) or the user picking a match (`confirmed`); `manual` rows have no
+    transaction — "mark as paid" for money that didn't go through Monzo.
+    """
+    SOURCE_CHOICES = [
+        ('auto', 'Matched automatically'),
+        ('confirmed', 'Matched by hand'),
+        ('manual', 'Marked paid by hand'),
+    ]
+    budget_item = models.ForeignKey(BudgetItem, on_delete=models.CASCADE, related_name='payments')
+    month = models.ForeignKey(Month, on_delete=models.CASCADE, related_name='item_payments')
+    due_date = models.DateField()
+    transaction = models.OneToOneField(
+        BankTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='item_payment',
+    )
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default='auto')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('budget_item', 'due_date')
+        ordering = ['due_date']
+
+    def __str__(self):
+        return f"{self.budget_item.item_name} paid for {self.due_date}"
+
+
+class IgnoredPayee(models.Model):
+    """A recurring payee the household said is not a budget item.
+
+    Suppresses it from the link suggestions and from new-payee notifications.
+    Keyed on the normalised payee (payments.normalise_payee).
+    """
+    payee_key = models.CharField(max_length=200, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.payee_key
+
+
+class Notification(models.Model):
+    """Something on the payments calendar that needs a decision.
+
+    Household-wide (not per login): resolving or dismissing one clears it for
+    both people. The unique constraints mean each item/month (or payee) raises
+    a given kind at most once, so a dismissed notification stays dismissed
+    across syncs. Generated by budget/notifications.py after each sync.
+    """
+    KIND_CHOICES = [
+        ('amount_changed', 'Payment amount differs from budget'),
+        ('missed', 'Expected payment not seen'),
+        ('new_payee', 'New recurring payee'),
+    ]
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ]
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
+    budget_item = models.ForeignKey(BudgetItem, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    month = models.ForeignKey(Month, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    transaction = models.ForeignKey('BankTransaction', on_delete=models.SET_NULL, null=True, blank=True, related_name='notifications')
+    payee_key = models.CharField(max_length=200, blank=True, default='')
+    data = models.JSONField(default=dict, blank=True, help_text="Display details, e.g. expected/actual amounts, due date, payee.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['kind', 'budget_item', 'month'],
+                condition=models.Q(budget_item__isnull=False),
+                name='unique_item_notification_per_month',
+            ),
+            models.UniqueConstraint(
+                fields=['kind', 'payee_key'],
+                condition=models.Q(kind='new_payee'),
+                name='unique_new_payee_notification',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} ({self.status})"
+
+
+class PaymentsSettings(models.Model):
+    """Household settings for the payments calendar (a single row).
+
+    `pot_ids` maps a budget pot (BudgetItem.expense_pot value, e.g. "bills")
+    to the Monzo pot id that holds its money, so the Calendar can show the
+    pot's live balance against what's still to pay from it. Shared by both
+    people, like NurserySettings. Use ``get_solo()``.
+    """
+    pot_ids = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Payments Settings"
+        verbose_name_plural = "Payments Settings"
+
+    def __str__(self):
+        return "Household payments settings"
+
+    @classmethod
+    def get_solo(cls):
         obj = cls.objects.order_by("pk").first()
         if obj is None:
             obj = cls.objects.create()
