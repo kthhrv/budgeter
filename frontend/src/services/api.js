@@ -185,7 +185,30 @@ const apiService = {
     getMonzoPots() { return this._fireGet('/fire/monzo/pots/', 'Failed to fetch Monzo pots'); },
     getMonzoJointBalance() { return this._fireGet('/fire/monzo/joint-balance/', 'Failed to fetch the Monzo joint balance'); },
     syncMonzo() { return this._fireSend('POST', '/fire/monzo/sync/', {}, 'Monzo sync failed'); },
-    disconnectMonzo() { return this._fireSend('POST', '/fire/monzo/disconnect/', {}, 'Failed to disconnect Monzo'); }
+    disconnectMonzo() { return this._fireSend('POST', '/fire/monzo/disconnect/', {}, 'Failed to disconnect Monzo'); },
+    // --- Payments calendar & notifications ---
+    syncPayments() { return this._fireSend('POST', '/payments/sync/', {}, 'Payment sync failed'); },
+    getPaymentCalendar(monthId) { return this._fireGet(`/payments/calendar/${monthId}/`, 'Failed to load the payments calendar'); },
+    searchPayees(q, amount, incoming = false) {
+        const params = new URLSearchParams();
+        if (q) params.set('q', q);
+        if (amount != null) params.set('amount', amount);
+        if (incoming) params.set('incoming', 'true');
+        return this._fireGet(`/payments/payees/search/?${params}`, 'Payee search failed');
+    },
+    getPotBalances() { return this._fireGet('/payments/pots/', 'Failed to load pot balances'); },
+    getAvailablePots() { return this._fireGet('/payments/pots/available/', 'Failed to load Monzo pots'); },
+    linkBudgetPot(potKey, potId) { return this._fireSend('PUT', `/payments/pots/${potKey}/`, { pot_id: potId }, 'Failed to save the pot'); },
+    getPayeeSuggestions() { return this._fireGet('/payments/suggestions/', 'Failed to load payee suggestions'); },
+    ignorePayee(payeeKey) { return this._fireSend('POST', '/payments/ignore/', { payee_match: payeeKey }, 'Failed to ignore payee'); },
+    linkItemPayment(itemId, payload) { return this._fireSend('PUT', `/budgetitems/${itemId}/payment-link/`, payload, 'Failed to link payee'); },
+    unlinkItemPayment(itemId) { return this._fireSend('DELETE', `/budgetitems/${itemId}/payment-link/`, undefined, 'Failed to unlink payee'); },
+    markPaid(budgetItemId, dueDate) { return this._fireSend('POST', '/payments/mark/', { budget_item_id: budgetItemId, due_date: dueDate }, 'Failed to mark as paid'); },
+    unmarkPaid(paymentId) { return this._fireSend('DELETE', `/payments/mark/${paymentId}/`, undefined, 'Failed to undo'); },
+    getNotifications(status = 'open') { return this._fireGet(`/notifications/?status=${status}`, 'Failed to load notifications'); },
+    notificationAction(id, action, budgetItemId) {
+        return this._fireSend('POST', `/notifications/${id}/action/`, { action, budget_item_id: budgetItemId || null }, 'Action failed');
+    }
 };
 
 export default apiService;

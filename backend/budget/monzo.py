@@ -150,3 +150,34 @@ def list_pots(connection):
                 "currency": pot.get("currency", "GBP"),
             })
     return pots
+
+
+TRANSACTION_PAGE_SIZE = 100
+
+
+def list_transactions(connection, account_id, since, before=None):
+    """Every transaction on `account_id` created after `since` (a datetime).
+
+    Pages forward with Monzo's cursor (the last transaction id as `since`)
+    until a short page comes back. Monzo only serves history older than 90
+    days in the first 5 minutes after the OAuth handshake — outside that
+    window callers must keep `since` within the last 89 days or get a 403.
+    Amounts stay in raw Monzo form (pence, negative = money out); see
+    `budget.payments.transaction_fields` for the conversion.
+    """
+    cursor = since.isoformat().replace("+00:00", "Z")
+    out = []
+    while True:
+        params = {
+            "account_id": account_id,
+            "since": cursor,
+            "limit": TRANSACTION_PAGE_SIZE,
+            "expand[]": "merchant",
+        }
+        if before is not None:
+            params["before"] = before.isoformat().replace("+00:00", "Z")
+        page = _api_get(connection, "/transactions", params).get("transactions", [])
+        out.extend(page)
+        if len(page) < TRANSACTION_PAGE_SIZE:
+            return out
+        cursor = page[-1]["id"]

@@ -122,7 +122,8 @@ docker run -p8000:80 -v /tmp/data:/data -it budgeter
   All four run in CI and all four must pass before a PR can merge.
 
   To run a single Django test — the backend suite is split across
-  `tests.py`, `tests_health.py`, `tests_tabs.py` and `tests_weekly.py`:
+  `tests.py`, `tests_health.py`, `tests_tabs.py`, `tests_weekly.py`,
+  `tests_payments.py` and others (`budget/tests_*.py`):
   ```bash
   cd backend && uv run manage.py test budget.tests_tabs.TestClassName.test_method
   ```
