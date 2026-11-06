@@ -49,10 +49,16 @@ export const cadenceText = (s) => (s.cadence === 'weekly'
 // What's still to go out this month: unticked outgoing entries on the
 // calendar that `include` picks, plus those with no known day yet.
 export function leftToPay(entries, unscheduled, include = () => true) {
+    // `items` lists what's counted, by due date (undated last).
     const isDue = (e) => e.item_type !== 'income' && include(e);
-    const dated = entries.filter(e => isDue(e) && !e.payment).reduce((t, e) => t + e.expected_amount, 0);
-    const undated = unscheduled.filter(isDue).reduce((t, e) => t + e.expected_amount, 0);
-    return { total: dated + undated, undated };
+    const datedItems = entries.filter(e => isDue(e) && !e.payment);
+    const undatedItems = unscheduled.filter(isDue);
+    const sum = (list) => list.reduce((t, e) => t + e.expected_amount, 0);
+    const undated = sum(undatedItems);
+    const items = [...datedItems, ...undatedItems].map(e => ({
+        key: `${e.budget_item_id}-${e.due_date || 'none'}`, name: e.item_name, amount: e.expected_amount, due: e.due_date || null,
+    }));
+    return { total: sum(datedItems) + undated, undated, items };
 }
 
 // What's still to leave the bills pot this month.

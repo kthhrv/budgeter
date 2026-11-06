@@ -345,8 +345,8 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
             )}
 
             {data?.connected && today.startsWith(monthId) && (view === 'shared'
-                ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} />
-                : <AccountBalanceCard owner={view} entries={entries} unscheduled={unscheduled} showToast={showToast} />
+                ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} onReload={load} />
+                : <AccountBalanceCard owner={view} entries={entries} unscheduled={unscheduled} showToast={showToast} onReload={load} />
             )}
 
             <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-sm text-ink-soft">

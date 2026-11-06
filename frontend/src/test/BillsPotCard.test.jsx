@@ -20,7 +20,7 @@ const unscheduled = [{ expense_pot: 'bills', item_type: 'expense', expected_amou
 
 describe('billsLeftToPay', () => {
     it('counts unticked bills-pot expenses plus undated ones', () => {
-        expect(billsLeftToPay(entries, unscheduled)).toEqual({ total: 120, undated: 20 });
+        expect(billsLeftToPay(entries, unscheduled)).toMatchObject({ total: 120, undated: 20 });
     });
 });
 
@@ -54,5 +54,17 @@ describe('BillsPotCard', () => {
         await user.click(await screen.findByRole('button', { name: /Bills/ }));
         expect(apiService.linkBudgetPot).toHaveBeenCalledWith('bills', 'p1');
         expect(await screen.findByTestId('bills-pot')).toHaveTextContent('Spare£800.00');
+    });
+
+    it('Refresh reloads the payments as well as the balance, and lists what is left', async () => {
+        const user = userEvent.setup();
+        const onReload = vi.fn();
+        apiService.getPotBalances.mockResolvedValue({ pots: { bills: { pot_id: 'p', name: 'Bills', balance: 100 } }, errors: [] });
+        render(<BillsPotCard entries={entries} unscheduled={unscheduled} showToast={vi.fn()} onReload={onReload} />);
+        const card = await screen.findByTestId('bills-pot');
+        await user.click(screen.getByRole('button', { name: /Refresh/ }));
+        expect(onReload).toHaveBeenCalledTimes(1);
+        expect(apiService.getPotBalances).toHaveBeenCalledTimes(2);
+        expect(card).toHaveTextContent('What’s left to pay (2)');
     });
 });

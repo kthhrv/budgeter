@@ -8,7 +8,7 @@ const NAMES = { keith: 'Keith', tild: 'Tild' };
 
 // One person's own Monzo current account against what's still to go out
 // of it this month (their unticked items). Current month only.
-const AccountBalanceCard = ({ owner, entries, unscheduled, showToast }) => {
+const AccountBalanceCard = ({ owner, entries, unscheduled, showToast, onReload }) => {
     const [account, setAccount] = useState(undefined); // undefined = loading, null = not connected
     const [loading, setLoading] = useState(false);
 
@@ -40,7 +40,7 @@ const AccountBalanceCard = ({ owner, entries, unscheduled, showToast }) => {
     }
     return (
         <BalanceSummary title={`${NAMES[owner]}’s account`} balance={account.balance} left={left}
-            loading={loading} onRefresh={load} testId="account-balance" />
+            loading={loading} onRefresh={() => { load(); onReload?.(); }} testId="account-balance" />
     );
 };
 

@@ -7,7 +7,7 @@ import BalanceSummary from './BalanceSummary';
 // The bills pot's live Monzo balance against what's still to pay from it.
 // Shown for the current month only (the balance is live). The pot is chosen
 // once and shared by the household.
-const BillsPotCard = ({ entries, unscheduled, showToast }) => {
+const BillsPotCard = ({ entries, unscheduled, showToast, onReload }) => {
     const [pot, setPot] = useState(undefined); // undefined = loading, null = not linked
     const [choices, setChoices] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ const BillsPotCard = ({ entries, unscheduled, showToast }) => {
 
     return (
         <BalanceSummary title={`${pot.name} pot`} balance={pot.balance} left={left} loading={loading}
-            onRefresh={load} testId="bills-pot"
+            onRefresh={() => { load(); onReload?.(); }} testId="bills-pot"
             actions={<button type="button" onClick={choose} className="text-ink-faint hover:text-ink">Change</button>} />
     );
 };
