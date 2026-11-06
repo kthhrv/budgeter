@@ -150,4 +150,14 @@ describe('CalendarPage', () => {
         await user.click(screen.getByRole('button', { name: 'Show again' }));
         expect(apiService.setCalendarHidden).toHaveBeenCalledWith('b2', false);
     });
+
+    it('lists a childcare line with no day at its calculator amount, and drops it at £0', async () => {
+        const nursery = { budget_item_id: 'c1', item_name: 'Ellis nursery', owner: 'shared', childcare_link: 'ellis_nursery', expected_amount: 0, payee_match: '' };
+        const gaspard = { budget_item_id: 'c2', item_name: 'Gaspard childcare', owner: 'shared', childcare_link: 'gaspard_childcare', expected_amount: 0, payee_match: '' };
+        apiService.getPaymentCalendar.mockResolvedValue(calendar({ unscheduled: [nursery, gaspard] }));
+        render(<CalendarPage currentDate={NOV} childcareNets={{ ellis_nursery: 812.5, gaspard_childcare: 0 }} showToast={vi.fn()} />);
+        const row = await screen.findByText('Ellis nursery');
+        expect(within(row.closest('button')).getByText('£812.50')).toBeInTheDocument();
+        expect(screen.queryByText('Gaspard childcare')).not.toBeInTheDocument();
+    });
 });

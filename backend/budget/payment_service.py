@@ -367,7 +367,8 @@ def calendar_for_month(month_obj, today):
         if item.calculation_type != 'fixed' or item.payment_day or _is_expired(item, month_obj):
             continue
         version = effective_version(item, month_obj)
-        if version is not None and version.value:
+        # Childcare-linked items store £0: their amount is filled in client-side.
+        if version is not None and (version.value or item.childcare_link):
             unscheduled.append(_item_summary(item, version))
     unscheduled.sort(key=lambda e: e['item_name'])
 

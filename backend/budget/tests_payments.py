@@ -291,6 +291,17 @@ class PaymentsFlowTests(TestCase):
         generate_notifications(TODAY)
         self.assertEqual(Notification.objects.filter(kind='amount_changed', status='open').count(), 0)
 
+    def test_childcare_linked_item_with_no_day_is_unscheduled(self, *_):
+        # Its stored value is £0 — the real figure is substituted client-side.
+        nursery = self._item('Ellis nursery', 0)
+        nursery.childcare_link = 'ellis_nursery'
+        nursery.save()
+        self._item('Nothing budgeted', 0)
+        cal = self.client.get('/api/payments/calendar/2026-11/').json()
+        names = [u['item_name'] for u in cal['unscheduled']]
+        self.assertIn('Ellis nursery', names)
+        self.assertNotIn('Nothing budgeted', names)
+
     def test_hide_item_from_calendar(self, *_):
         self._link(self.broadband, 'SKY DIGITAL')
         from .notifications import generate_notifications

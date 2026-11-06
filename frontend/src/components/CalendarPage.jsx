@@ -256,7 +256,9 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     };
     const mine = useCallback((e) => e.owner === view, [view]);
     const entries = useMemo(() => withChildcareAmounts((data?.entries || []).filter(mine), childcareNets), [data, childcareNets, mine]);
-    const unscheduled = useMemo(() => withChildcareAmounts((data?.unscheduled || []).filter(mine), childcareNets), [data, childcareNets, mine]);
+    // A childcare line with nothing to pay this month (£0 once substituted) isn't worth listing.
+    const unscheduled = useMemo(() => withChildcareAmounts((data?.unscheduled || []).filter(mine), childcareNets)
+        .filter(u => u.expected_amount > 0), [data, childcareNets, mine]);
     const hidden = useMemo(() => (data?.hidden || []).filter(mine), [data, mine]);
     const byDay = useMemo(() => entriesByDay(entries), [entries]);
     const weeks = useMemo(() => monthWeeks(currentDate.getFullYear(), currentDate.getMonth()), [currentDate]);
