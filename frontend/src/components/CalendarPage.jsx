@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Circle, Clock, AlertCircle, RefreshCw, Link2, EyeOff } from 'lucide-react';
+import { Check, Circle, Clock, AlertCircle, RefreshCw, EyeOff } from 'lucide-react';
 import apiService from '../services/api';
 import MonthSelector from './MonthSelector';
 import Sheet from './Sheet';
-import PayeeLinkModal from './PayeeLinkModal';
 import PayeeSearch from './PayeeSearch';
 import BillsPotCard from './BillsPotCard';
 import AccountBalanceCard from './AccountBalanceCard';
@@ -12,7 +11,6 @@ import {
     monthWeeks, todayIso, entriesByDay, withChildcareAmounts, ordinal, METHOD_LABELS,
 } from '../utils/calendarGrid';
 
-const AUTO_SYNC_AFTER_MS = 60 * 60 * 1000;
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const STATUS = {
@@ -197,9 +195,11 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     const [syncing, setSyncing] = useState(false);
     const [selectedDay, setSelectedDay] = useState(null);
     const [openEntry, setOpenEntry] = useState(null);
-    const [linkOpen, setLinkOpen] = useState(false);
+    const [syncKey, setSyncKey] = useState(0);
     const [view, setViewState] = useState(storedView);
     const autoSynced = useRef(false);
+    const syncRun = useRef(null); // the sync in flight, if any
+    const syncAgain = useRef(false);
     const monthId = formatDate(currentDate, 'YYYY-MM');
 
     const load = useCallback(async () => {
@@ -218,26 +218,43 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     }, [currentDate, monthId, showToast]);
 
     const sync = useCallback(async (silent = false) => {
+        // One at a time: a change made mid-sync gets one more sync afterwards.
+        if (syncRun.current) {
+            syncAgain.current = true;
+            return syncRun.current;
+        }
         setSyncing(true);
-        try {
-            const r = await apiService.syncPayments();
-            if (r.errors.length) showToast(r.errors.join(' · '), 'error');
-            else if (!silent) showToast(r.matched ? `Synced — ${r.matched} new payment${r.matched === 1 ? '' : 's'} ticked off` : 'Synced — nothing new');
-            await load();
-            onNotificationsChanged?.();
-        } catch (e) {
-            if (!silent) showToast(e.message, 'error');
-        } finally {
+        syncRun.current = (async () => {
+            try {
+                const r = await apiService.syncPayments();
+                if (r.errors.length) showToast(r.errors.join(' · '), 'error');
+                else if (!silent) showToast(r.matched ? `Synced — ${r.matched} new payment${r.matched === 1 ? '' : 's'} ticked off` : 'Synced — nothing new');
+                await load();
+                setSyncKey(k => k + 1);
+                onNotificationsChanged?.();
+            } catch (e) {
+                if (!silent) showToast(e.message, 'error');
+            }
+        })();
+        await syncRun.current;
+        syncRun.current = null;
+        if (syncAgain.current) {
+            syncAgain.current = false;
+            await sync(true);
+        } else {
             setSyncing(false);
         }
     }, [load, onNotificationsChanged, showToast]);
+
+    // After an item is changed here: sync with Monzo (which also reloads), or
+    // just reload when nobody has connected it.
+    const afterChange = useCallback(() => (data?.connected ? sync(true) : load()), [data, sync, load]);
 
     useEffect(() => {
         load().then(cal => {
             if (!cal || autoSynced.current || !cal.connected) return;
             autoSynced.current = true;
-            const last = cal.last_synced_at ? new Date(cal.last_synced_at).getTime() : 0;
-            if (Date.now() - last > AUTO_SYNC_AFTER_MS) sync(true);
+            sync(true); // every visit picks up the latest payments
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [monthId]);
@@ -281,19 +298,11 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
         return t;
     }, [entries]);
 
-    const linkableItems = useMemo(() => {
-        const seen = new Map();
-        for (const e of [...(data?.entries || []), ...(data?.unscheduled || [])]) {
-            if (!e.payee_match && !seen.has(e.budget_item_id)) seen.set(e.budget_item_id, { id: e.budget_item_id, name: e.item_name, incoming: e.item_type === 'income' });
-        }
-        return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-    }, [data]);
-
     const showAgain = async (item) => {
         try {
             await apiService.setCalendarHidden(item.budget_item_id, false);
             showToast(`${item.item_name} is back on the calendar`);
-            load();
+            afterChange();
         } catch (e) {
             showToast(e.message, 'error');
         }
@@ -326,10 +335,6 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
                             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} /> Sync
                         </button>
                     )}
-                    <button type="button" onClick={() => setLinkOpen(true)} disabled={!data?.connected && !data?.has_transactions}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent text-paper text-sm font-medium hover:bg-accent-strong active:scale-[0.98] disabled:opacity-50">
-                        <Link2 className="h-4 w-4" /> Link payees
-                    </button>
                 </div>
             </div>
 
@@ -338,15 +343,10 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
                     Connect Monzo from the FIRE tab and payments will tick themselves off here. Until then you can still set a day on an item and tick it by hand.
                 </p>
             )}
-            {data?.connected && !data.history_backfilled && (
-                <p className="mb-4 rounded-xl border border-line bg-warn-soft px-4 py-3 text-sm text-ink-soft">
-                    Only the last 90 days of payments are loaded. For a year of history (better suggestions), disconnect and reconnect Monzo on the FIRE tab, approve in the Monzo app, then open this tab within a few minutes.
-                </p>
-            )}
 
             {data?.connected && today.startsWith(monthId) && (view === 'shared'
-                ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} />
-                : <AccountBalanceCard owner={view} entries={entries} unscheduled={unscheduled} showToast={showToast} />
+                ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} syncKey={syncKey} />
+                : <AccountBalanceCard owner={view} entries={entries} unscheduled={unscheduled} showToast={showToast} syncKey={syncKey} />
             )}
 
             <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-sm text-ink-soft">
@@ -436,13 +436,11 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
             </div>
 
             {openEntry && !openEntry.unscheduled && (
-                <EntrySheet entry={openEntry} onClose={() => setOpenEntry(null)} onChanged={load} showToast={showToast} />
+                <EntrySheet entry={openEntry} onClose={() => setOpenEntry(null)} onChanged={afterChange} showToast={showToast} />
             )}
             {openEntry?.unscheduled && (
-                <UnscheduledSheet item={openEntry} onClose={() => setOpenEntry(null)} onChanged={load} showToast={showToast} />
+                <UnscheduledSheet item={openEntry} onClose={() => setOpenEntry(null)} onChanged={afterChange} showToast={showToast} />
             )}
-            <PayeeLinkModal isOpen={linkOpen} onClose={() => setLinkOpen(false)} items={linkableItems}
-                onLinked={() => { load(); onNotificationsChanged?.(); }} showToast={showToast} />
         </div>
     );
 };

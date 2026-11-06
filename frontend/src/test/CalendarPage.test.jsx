@@ -10,12 +10,10 @@ vi.mock('../services/api', () => ({
         createOrGetMonth: vi.fn(),
         getPaymentCalendar: vi.fn(),
         syncPayments: vi.fn(),
-        getPayeeSuggestions: vi.fn(),
         markPaid: vi.fn(),
         unmarkPaid: vi.fn(),
         linkItemPayment: vi.fn(),
         unlinkItemPayment: vi.fn(),
-        ignorePayee: vi.fn(),
         setCalendarHidden: vi.fn(),
         getPersonalBalance: vi.fn(),
         getPotBalances: vi.fn(),
@@ -97,10 +95,20 @@ describe('CalendarPage', () => {
         expect(apiService.markPaid).toHaveBeenCalledWith('b2', '2026-11-05');
     });
 
-    it('auto-syncs when the last sync is stale', async () => {
-        apiService.getPaymentCalendar.mockResolvedValue(calendar({ last_synced_at: null }));
+    it('syncs on every visit, even straight after a sync', async () => {
         render(<CalendarPage currentDate={NOV} showToast={vi.fn()} onNotificationsChanged={vi.fn()} />);
         await waitFor(() => expect(apiService.syncPayments).toHaveBeenCalledTimes(1));
+    });
+
+    it('syncs again after an item is changed', async () => {
+        const user = userEvent.setup();
+        apiService.markPaid.mockResolvedValue({ id: 9, source: 'manual' });
+        render(<CalendarPage currentDate={NOV} showToast={vi.fn()} />);
+        await waitFor(() => expect(apiService.syncPayments).toHaveBeenCalledTimes(1));
+        await user.click(await screen.findByTestId('day-2026-11-05'));
+        await user.click(screen.getByTestId('calendar-entry'));
+        await user.click(screen.getByRole('button', { name: 'Mark as paid' }));
+        await waitFor(() => expect(apiService.syncPayments).toHaveBeenCalledTimes(2));
     });
 
     it('does not sync when nobody has connected Monzo', async () => {

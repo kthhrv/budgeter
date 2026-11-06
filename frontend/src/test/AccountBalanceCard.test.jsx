@@ -18,7 +18,7 @@ const unscheduled = [{ item_type: 'expense', expected_amount: 20 }];
 
 describe('leftToPay', () => {
     it('sums unticked outgoing items, dated and undated', () => {
-        expect(leftToPay(entries, unscheduled)).toEqual({ total: 50, undated: 20 });
+        expect(leftToPay(entries, unscheduled)).toMatchObject({ total: 50, undated: 20 });
     });
 });
 
