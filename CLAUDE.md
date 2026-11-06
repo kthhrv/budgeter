@@ -217,8 +217,9 @@ What the code won't tell you at a glance:
   new `BudgetItemVersion` from the payment's month (or this month, if that's
   past). Childcare-linked items are skipped — their value is client-side.
 - `new_payee` notifications only fire for payees first paid in the last 45
-  days; older regulars go to the Link-payees screen so the first sync doesn't
-  flood the bell.
+  days, so the first sync doesn't flood the bell; older regulars are linked
+  from each item's sheet (payee search). `/payments/suggestions/` is no
+  longer called by the frontend.
 - The Calendar has Joint / Tild / Keith views, filtered on `owner`. Joint
   weighs the bills pot; a person's view weighs their own Monzo current
   account, found via `OWNER_BY_EMAIL` in `settings.py` (login email →

@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Circle, Clock, AlertCircle, RefreshCw, Link2, EyeOff } from 'lucide-react';
+import { Check, Circle, Clock, AlertCircle, RefreshCw, EyeOff } from 'lucide-react';
 import apiService from '../services/api';
 import MonthSelector from './MonthSelector';
 import Sheet from './Sheet';
-import PayeeLinkModal from './PayeeLinkModal';
 import PayeeSearch from './PayeeSearch';
 import BillsPotCard from './BillsPotCard';
 import AccountBalanceCard from './AccountBalanceCard';
@@ -197,7 +196,7 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
     const [syncing, setSyncing] = useState(false);
     const [selectedDay, setSelectedDay] = useState(null);
     const [openEntry, setOpenEntry] = useState(null);
-    const [linkOpen, setLinkOpen] = useState(false);
+    const [syncKey, setSyncKey] = useState(0);
     const [view, setViewState] = useState(storedView);
     const autoSynced = useRef(false);
     const monthId = formatDate(currentDate, 'YYYY-MM');
@@ -224,6 +223,7 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
             if (r.errors.length) showToast(r.errors.join(' · '), 'error');
             else if (!silent) showToast(r.matched ? `Synced — ${r.matched} new payment${r.matched === 1 ? '' : 's'} ticked off` : 'Synced — nothing new');
             await load();
+            setSyncKey(k => k + 1);
             onNotificationsChanged?.();
         } catch (e) {
             if (!silent) showToast(e.message, 'error');
@@ -281,14 +281,6 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
         return t;
     }, [entries]);
 
-    const linkableItems = useMemo(() => {
-        const seen = new Map();
-        for (const e of [...(data?.entries || []), ...(data?.unscheduled || [])]) {
-            if (!e.payee_match && !seen.has(e.budget_item_id)) seen.set(e.budget_item_id, { id: e.budget_item_id, name: e.item_name, incoming: e.item_type === 'income' });
-        }
-        return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-    }, [data]);
-
     const showAgain = async (item) => {
         try {
             await apiService.setCalendarHidden(item.budget_item_id, false);
@@ -326,10 +318,6 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
                             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} /> Sync
                         </button>
                     )}
-                    <button type="button" onClick={() => setLinkOpen(true)} disabled={!data?.connected && !data?.has_transactions}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent text-paper text-sm font-medium hover:bg-accent-strong active:scale-[0.98] disabled:opacity-50">
-                        <Link2 className="h-4 w-4" /> Link payees
-                    </button>
                 </div>
             </div>
 
@@ -340,8 +328,8 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
             )}
 
             {data?.connected && today.startsWith(monthId) && (view === 'shared'
-                ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} onReload={load} />
-                : <AccountBalanceCard owner={view} entries={entries} unscheduled={unscheduled} showToast={showToast} onReload={load} />
+                ? <BillsPotCard entries={entries} unscheduled={unscheduled} showToast={showToast} syncKey={syncKey} />
+                : <AccountBalanceCard owner={view} entries={entries} unscheduled={unscheduled} showToast={showToast} syncKey={syncKey} />
             )}
 
             <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-sm text-ink-soft">
@@ -436,8 +424,6 @@ const CalendarPage = ({ currentDate, childcareNets, showToast, onNotificationsCh
             {openEntry?.unscheduled && (
                 <UnscheduledSheet item={openEntry} onClose={() => setOpenEntry(null)} onChanged={load} showToast={showToast} />
             )}
-            <PayeeLinkModal isOpen={linkOpen} onClose={() => setLinkOpen(false)} items={linkableItems}
-                onLinked={() => { load(); onNotificationsChanged?.(); }} showToast={showToast} />
         </div>
     );
 };

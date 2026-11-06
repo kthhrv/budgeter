@@ -7,13 +7,11 @@ import BalanceSummary from './BalanceSummary';
 // The bills pot's live Monzo balance against what's still to pay from it.
 // Shown for the current month only (the balance is live). The pot is chosen
 // once and shared by the household.
-const BillsPotCard = ({ entries, unscheduled, showToast, onReload }) => {
+const BillsPotCard = ({ entries, unscheduled, showToast, syncKey = 0 }) => {
     const [pot, setPot] = useState(undefined); // undefined = loading, null = not linked
     const [choices, setChoices] = useState(null);
-    const [loading, setLoading] = useState(false);
 
     const load = useCallback(async () => {
-        setLoading(true);
         try {
             const r = await apiService.getPotBalances();
             setPot(r.pots.bills ?? null);
@@ -21,12 +19,11 @@ const BillsPotCard = ({ entries, unscheduled, showToast, onReload }) => {
         } catch (e) {
             showToast(e.message, 'error');
             setPot(null);
-        } finally {
-            setLoading(false);
         }
     }, [showToast]);
 
-    useEffect(() => { load(); }, [load]);
+    // Re-read the live balance on load and after every Sync.
+    useEffect(() => { load(); }, [load, syncKey]);
 
     const choose = async () => {
         try {
@@ -81,8 +78,7 @@ const BillsPotCard = ({ entries, unscheduled, showToast, onReload }) => {
     }
 
     return (
-        <BalanceSummary title={`${pot.name} pot`} balance={pot.balance} left={left} loading={loading}
-            onRefresh={() => { load(); onReload?.(); }} testId="bills-pot"
+        <BalanceSummary title={`${pot.name} pot`} balance={pot.balance} left={left} testId="bills-pot"
             actions={<button type="button" onClick={choose} className="text-ink-faint hover:text-ink">Change</button>} />
     );
 };

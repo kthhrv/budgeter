@@ -1,24 +1,18 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
 import { money } from '../utils/helpers';
 
 const fmtDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
 // Balance / Left to pay / Spare-or-short, shared by the Calendar's balance
 // cards (the bills pot in the Joint view, a personal account otherwise).
-const BalanceSummary = ({ title, balance, left, loading, onRefresh, actions = null, testId }) => {
+const BalanceSummary = ({ title, balance, left, actions = null, testId }) => {
     const diff = balance - left.total;
     const short = diff < -0.005;
     return (
         <section className="mb-4 rounded-2xl border border-line bg-card px-4 py-3" data-testid={testId}>
             <div className="flex items-center justify-between mb-2">
                 <h2 className="font-serif italic text-xl text-accent-strong">{title}</h2>
-                <span className="flex items-center gap-3 text-xs">
-                    <button type="button" onClick={onRefresh} disabled={loading} className="flex items-center gap-1 text-ink-faint hover:text-ink" title="Refresh balance">
-                        <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
-                    </button>
-                    {actions}
-                </span>
+                {actions && <span className="flex items-center gap-3 text-xs">{actions}</span>}
             </div>
             <dl className="grid grid-cols-3 gap-3">
                 <div>

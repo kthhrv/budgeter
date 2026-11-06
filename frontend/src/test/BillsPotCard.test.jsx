@@ -56,15 +56,14 @@ describe('BillsPotCard', () => {
         expect(await screen.findByTestId('bills-pot')).toHaveTextContent('Spare£800.00');
     });
 
-    it('Refresh reloads the payments as well as the balance, and lists what is left', async () => {
-        const user = userEvent.setup();
-        const onReload = vi.fn();
+    it('re-reads the balance after a Sync, and lists what is left', async () => {
         apiService.getPotBalances.mockResolvedValue({ pots: { bills: { pot_id: 'p', name: 'Bills', balance: 100 } }, errors: [] });
-        render(<BillsPotCard entries={entries} unscheduled={unscheduled} showToast={vi.fn()} onReload={onReload} />);
+        const { rerender } = render(<BillsPotCard entries={entries} unscheduled={unscheduled} showToast={vi.fn()} syncKey={0} />);
         const card = await screen.findByTestId('bills-pot');
-        await user.click(screen.getByRole('button', { name: /Refresh/ }));
-        expect(onReload).toHaveBeenCalledTimes(1);
-        expect(apiService.getPotBalances).toHaveBeenCalledTimes(2);
         expect(card).toHaveTextContent('What’s left to pay (2)');
+        expect(screen.queryByRole('button', { name: /Refresh/ })).not.toBeInTheDocument();
+        apiService.getPotBalances.mockResolvedValue({ pots: { bills: { pot_id: 'p', name: 'Bills', balance: 300 } }, errors: [] });
+        rerender(<BillsPotCard entries={entries} unscheduled={unscheduled} showToast={vi.fn()} syncKey={1} />);
+        expect(await screen.findByText('£300.00')).toBeInTheDocument();
     });
 });

@@ -8,12 +8,10 @@ const NAMES = { keith: 'Keith', tild: 'Tild' };
 
 // One person's own Monzo current account against what's still to go out
 // of it this month (their unticked items). Current month only.
-const AccountBalanceCard = ({ owner, entries, unscheduled, showToast, onReload }) => {
+const AccountBalanceCard = ({ owner, entries, unscheduled, showToast, syncKey = 0 }) => {
     const [account, setAccount] = useState(undefined); // undefined = loading, null = not connected
-    const [loading, setLoading] = useState(false);
 
     const load = useCallback(async () => {
-        setLoading(true);
         try {
             const r = await apiService.getPersonalBalance(owner);
             setAccount(r.account);
@@ -21,12 +19,17 @@ const AccountBalanceCard = ({ owner, entries, unscheduled, showToast, onReload }
         } catch (e) {
             showToast(e.message, 'error');
             setAccount(null);
-        } finally {
-            setLoading(false);
         }
     }, [owner, showToast]);
 
     useEffect(() => { setAccount(undefined); load(); }, [load]);
+    // Re-read the live balance after every Sync (keeping the old figure meanwhile).
+    const firstSync = React.useRef(true);
+    useEffect(() => {
+        if (firstSync.current) { firstSync.current = false; return; }
+        load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [syncKey]);
 
     const left = useMemo(() => leftToPay(entries, unscheduled), [entries, unscheduled]);
 
@@ -39,8 +42,7 @@ const AccountBalanceCard = ({ owner, entries, unscheduled, showToast, onReload }
         );
     }
     return (
-        <BalanceSummary title={`${NAMES[owner]}’s account`} balance={account.balance} left={left}
-            loading={loading} onRefresh={() => { load(); onReload?.(); }} testId="account-balance" />
+        <BalanceSummary title={`${NAMES[owner]}’s account`} balance={account.balance} left={left} testId="account-balance" />
     );
 };
 

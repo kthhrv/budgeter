@@ -201,8 +201,6 @@ const apiService = {
     setCalendarHidden(itemId, hidden) { return this._fireSend('PUT', `/budgetitems/${itemId}/calendar-hidden/`, { hidden }, hidden ? 'Failed to remove from the calendar' : 'Failed to show on the calendar'); },
     getAvailablePots() { return this._fireGet('/payments/pots/available/', 'Failed to load Monzo pots'); },
     linkBudgetPot(potKey, potId) { return this._fireSend('PUT', `/payments/pots/${potKey}/`, { pot_id: potId }, 'Failed to save the pot'); },
-    getPayeeSuggestions() { return this._fireGet('/payments/suggestions/', 'Failed to load payee suggestions'); },
-    ignorePayee(payeeKey) { return this._fireSend('POST', '/payments/ignore/', { payee_match: payeeKey }, 'Failed to ignore payee'); },
     linkItemPayment(itemId, payload) { return this._fireSend('PUT', `/budgetitems/${itemId}/payment-link/`, payload, 'Failed to link payee'); },
     unlinkItemPayment(itemId) { return this._fireSend('DELETE', `/budgetitems/${itemId}/payment-link/`, undefined, 'Failed to unlink payee'); },
     markPaid(budgetItemId, dueDate) { return this._fireSend('POST', '/payments/mark/', { budget_item_id: budgetItemId, due_date: dueDate }, 'Failed to mark as paid'); },
