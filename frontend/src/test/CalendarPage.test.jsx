@@ -181,4 +181,18 @@ describe('CalendarPage', () => {
         await user.click(screen.getByTestId('calendar-entry'));
         expect(screen.getByTestId('payment-parts')).toHaveTextContent('£600.00');
     });
+
+    it('shows a due payment with no payee as assumed paid', async () => {
+        const user = userEvent.setup();
+        apiService.getPaymentCalendar.mockResolvedValue(calendar({
+            entries: [entry({ item_name: 'Window cleaner', payee_match: '', status: 'paid',
+                payment: { id: null, source: 'assumed', date: '2026-11-12', amount: null, payee: '', parts: [] } })],
+        }));
+        render(<CalendarPage currentDate={NOV} showToast={vi.fn()} />);
+        await user.click(await screen.findByTestId('day-2026-11-12'));
+        expect(screen.getByText('assumed paid — not linked to a payee')).toBeInTheDocument();
+        await user.click(screen.getByTestId('calendar-entry'));
+        expect(screen.getByText(/Assumed paid on the day/)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Undo tick' })).not.toBeInTheDocument();
+    });
 });

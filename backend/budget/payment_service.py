@@ -433,6 +433,11 @@ def calendar_for_month(month_obj, today):
         assigned = _assign_payments(item_occs, by_item.get(item_id, []))
         for occ in item_occs:
             payment, partial = _payment_payload(assigned.get(id(occ), []), occ['item'].payment_parts)
+            if payment is None and not occ['item'].payee_match and occ['due_date'] <= today:
+                # Not linked to a payee, so nothing can tick it off: assume it
+                # went out on the day. Linking a payee brings real matching back.
+                payment = {'id': None, 'source': 'assumed', 'date': occ['due_date'].isoformat(),
+                           'amount': None, 'payee': '', 'parts': []}
             entries.append({
                 **_item_summary(occ['item'], occ['version']),
                 'scheduled_date': occ['scheduled_date'].isoformat(),
