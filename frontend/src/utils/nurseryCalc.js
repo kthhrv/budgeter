@@ -3,7 +3,7 @@
 
 import { computeChildcare, termClubBills } from './childcareCalc';
 
-// ------------------------- Fee data (Effective 1 Jan 2026) -------------------------
+// ------------------------- Fee data (unchanged on the fee sheet effective 1 Sep 2026) -------------------------
 
 export const STANDARD_RATES = {
     '0-2': { fullDay: 91.50, morning: 47.50, afternoon: 47.50, fullWeek: 356.00 },
@@ -60,6 +60,59 @@ export const BANK_HOLIDAYS = new Set([
 
 export const ymd = (y, m, d) =>
     `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+// Inclusive ISO date range → array of ISO dates (weekends included; only
+// weekdays are ever looked up).
+function isoRange(fromIso, toIso) {
+    const out = [];
+    const [fy, fm, fd] = fromIso.split('-').map(Number);
+    const [ty, tm, td] = toIso.split('-').map(Number);
+    const end = new Date(ty, tm - 1, td);
+    for (let d = new Date(fy, fm - 1, fd); d <= end; d.setDate(d.getDate() + 1)) {
+        out.push(ymd(d.getFullYear(), d.getMonth(), d.getDate()));
+    }
+    return out;
+}
+
+// Days on which funding is NOT applied and the standard (non-funded) daily
+// rate is charged instead. Funded hours are stretched over 50 weeks, so each
+// funding year (Sep–Aug) has two non-funded weeks, whose dates the nursery
+// sets per year on its fee sheet. Add each new year's dates here when the
+// fee sheet arrives.
+//   2025/26: 25–31 Dec 2025 and 1–7 Apr 2026 (the rule this model started with).
+//   2026/27: 5–9 Apr 2027, 3–7 May 2027, and 31 Aug 2027 (working-day count
+//            to 31 Aug) — Busy Bees Tunbridge Wells fee sheet effective
+//            1 Sep 2026. Christmas 2026 is funded as normal (invoice 1240222).
+export const NON_FUNDED_DAYS = new Set([
+    ...isoRange('2025-12-25', '2025-12-31'),
+    ...isoRange('2026-04-01', '2026-04-07'),
+    ...isoRange('2027-04-05', '2027-04-09'),
+    ...isoRange('2027-05-03', '2027-05-07'),
+    '2027-08-31',
+]);
+
+// Count each weekday's occurrences in the month, split into funded days,
+// non-funded ("standard") days, and bank holidays. A bank holiday that falls
+// on a non-funded day is charged at the standard rate like the rest of that
+// week, so it is counted as standard only — `bankHols` is always a subset of
+// `funded`, which `nFundNorm = nFunded - nBankHols` relies on.
+export function weekdayCountsFor(year, monthIdx) {
+    const counts = { funded: [0, 0, 0, 0, 0], standard: [0, 0, 0, 0, 0], bankHols: [0, 0, 0, 0, 0] };
+    const days = new Date(year, monthIdx + 1, 0).getDate();
+    for (let d = 1; d <= days; d++) {
+        const dow = new Date(year, monthIdx, d).getDay();
+        if (dow < 1 || dow > 5) continue;
+        const wd = dow - 1;
+        const iso = ymd(year, monthIdx, d);
+        if (NON_FUNDED_DAYS.has(iso)) {
+            counts.standard[wd]++;
+        } else {
+            counts.funded[wd]++;
+            if (BANK_HOLIDAYS.has(iso)) counts.bankHols[wd]++;
+        }
+    }
+    return counts;
+}
 
 // ------------------------- Helpers -------------------------
 
@@ -262,21 +315,7 @@ function rawInvoicedForMonth(settings, monthKey) {
     const [y, m] = monthKey.split('-').map(Number);
     const year = y, monthIdx = m - 1;
     const eff = effectiveForMonth(settings, monthKey);
-
-    const weekdayCounts = { funded: [0, 0, 0, 0, 0], standard: [0, 0, 0, 0, 0], bankHols: [0, 0, 0, 0, 0] };
-    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dow = new Date(year, monthIdx, d).getDay();
-        if (dow >= 1 && dow <= 5) {
-            const wd = dow - 1;
-            const iso = ymd(year, monthIdx, d);
-            const isBankHol = BANK_HOLIDAYS.has(iso);
-            const isStandard = (monthIdx === 3 && d <= 7) || (monthIdx === 11 && d >= 25);
-            if (isStandard) weekdayCounts.standard[wd]++;
-            else            weekdayCounts.funded[wd]++;
-            if (isBankHol)  weekdayCounts.bankHols[wd]++;
-        }
-    }
+    const weekdayCounts = weekdayCountsFor(year, monthIdx);
 
     const ellisStretched   = weeklyStretched(eff.ellisSchedule,   eff.ellis.ageBracket,   eff.ellis.scheme,   eff.fullWeekModel);
     const ellisStandard    = weeklyStandard (eff.ellisSchedule,   eff.ellis.ageBracket);
@@ -381,22 +420,10 @@ export function computeMonthSummary(settings, date) {
     const monthKey = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
     const eff = effectiveForMonth(settings, monthKey);
 
-    // Weekday occurrences (split into funded weeks, "standard" weeks Apr 1-7 and
-    // Dec 25-31, and bank holidays) for the month.
-    const weekdayCounts = { funded: [0, 0, 0, 0, 0], standard: [0, 0, 0, 0, 0], bankHols: [0, 0, 0, 0, 0] };
+    // Weekday occurrences (split into funded days, non-funded "standard" days
+    // per NON_FUNDED_DAYS, and bank holidays) for the month.
     const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dow = new Date(year, monthIdx, d).getDay();
-        if (dow >= 1 && dow <= 5) {
-            const wd = dow - 1;
-            const iso = ymd(year, monthIdx, d);
-            const isBankHol = BANK_HOLIDAYS.has(iso);
-            const isStandard = (monthIdx === 3 && d <= 7) || (monthIdx === 11 && d >= 25);
-            if (isStandard) weekdayCounts.standard[wd]++;
-            else            weekdayCounts.funded[wd]++;
-            if (isBankHol)  weekdayCounts.bankHols[wd]++;
-        }
-    }
+    const weekdayCounts = weekdayCountsFor(year, monthIdx);
 
     const ellisStretched   = weeklyStretched(eff.ellisSchedule,   eff.ellis.ageBracket,   eff.ellis.scheme,   eff.fullWeekModel);
     const ellisStandard    = weeklyStandard (eff.ellisSchedule,   eff.ellis.ageBracket);
