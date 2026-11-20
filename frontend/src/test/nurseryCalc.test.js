@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     computeMonthSummary, effectiveForMonth, applyChildcareLinks,
     tfcSavingForMonth, TFC_QUARTERLY_CAP, ageBracketFor, ELLIS_DOB,
+    weekdayCountsFor, NON_FUNDED_DAYS,
 } from '../utils/nurseryCalc';
 
 const baseSettings = () => ({
@@ -346,5 +347,39 @@ describe('ageBracketFor (Ellis, born 23 May 2024)', () => {
         s.ellis.ageBracket = '0-2'; // stale stored value
         expect(effectiveForMonth(s, '2026-06').ellis.ageBracket).toBe('2-3');
         expect(effectiveForMonth(s, '2027-07').ellis.ageBracket).toBe('3-5');
+    });
+});
+
+describe('non-funded weeks and real invoices (Ellis, 30hr, full week)', () => {
+    // Real Busy Bees invoices; the model rounds once, the nursery per line, so
+    // allow a few pence.
+    const ellisInvoiced = (y, m) => computeMonthSummary(baseSettings(), new Date(y, m, 1)).ellisInvoiced;
+
+    it('November 2026 matches invoice 1178406 (£896.12)', () => {
+        expect(Math.abs(ellisInvoiced(2026, 10) - 896.12)).toBeLessThan(0.05);
+    });
+
+    it('December 2026 matches invoice 1240222 (£1,009.95) — Christmas week is funded', () => {
+        expect(Math.abs(ellisInvoiced(2026, 11) - 1009.95)).toBeLessThan(0.05);
+        const c = weekdayCountsFor(2026, 11);
+        expect(c.standard).toEqual([0, 0, 0, 0, 0]);
+        // 25 Dec (Fri) and 28 Dec (Mon) are bank holidays on funded days.
+        expect(c.bankHols).toEqual([1, 0, 0, 0, 1]);
+    });
+
+    it('2026/27 non-funded days come from the fee sheet: 5–9 Apr, 3–7 May, 31 Aug 2027', () => {
+        expect(weekdayCountsFor(2027, 3).standard).toEqual([1, 1, 1, 1, 1]);
+        expect(NON_FUNDED_DAYS.has('2026-04-01')).toBe(true);      // 2025/26 rule kept for history
+        expect(NON_FUNDED_DAYS.has('2027-04-01')).toBe(false);
+        expect(weekdayCountsFor(2027, 7).standard).toEqual([0, 1, 0, 0, 0]); // Tue 31 Aug
+    });
+
+    it('a bank holiday inside a non-funded week is counted once, as standard', () => {
+        // May 2027: 3 May (bank hol) is in the non-funded week; 31 May is a
+        // normal funded bank holiday.
+        const c = weekdayCountsFor(2027, 4);
+        expect(c.standard).toEqual([1, 1, 1, 1, 1]);
+        expect(c.bankHols).toEqual([1, 0, 0, 0, 0]);
+        expect(c.funded[0]).toBe(4); // 10, 17, 24, 31 May
     });
 });
